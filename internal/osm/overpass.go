@@ -31,6 +31,11 @@ type overpassClient struct {
 	httpC    *http.Client
 }
 
+// CacheKey identifies the exact endpoint and query used by Fetch.
+func (c *overpassClient) CacheKey(p FetchParam) string {
+	return cacheKey(c.endpoint + "\n" + query(p.Lat, p.Long, p.RadM, p.TimeoutSec))
+}
+
 func NewOverpassClient() *overpassClient {
 	return &overpassClient{
 		endpoint: "https://overpass-api.de/api/interpreter",
@@ -74,14 +79,19 @@ func (c *overpassClient) Fetch(ctx context.Context, p FetchParam) (OSMData, erro
 		return OSMData{}, err
 	}
 	q := query(p.Lat, p.Long, p.RadM, p.TimeoutSec)
+	logger.Debug(ctx, "Prepared Overpass query", logger.String("endpoint", c.endpoint), logger.String("query", q))
 	var lastErr error
 
 	for attempt := 1; attempt <= maxAttempt; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return OSMData{}, fmt.Errorf("overpass: request canceled: %w", err)
 		}
+		logger.Debug(ctx, "Sending Overpass request", logger.Int("attempt", attempt), logger.Int("max_attempts", maxAttempt))
+		started := time.Now()
 		data, status, err := c.fetchOnce(ctx, q)
 		if err == nil {
+			logger.Debug(ctx, "Overpass response received", logger.Int("status", status),
+				logger.Int("elements", len(data.Elements)), logger.Duration("duration", time.Since(started)))
 			return data, nil
 		}
 		lastErr = err
@@ -102,6 +112,8 @@ func (c *overpassClient) Fetch(ctx context.Context, p FetchParam) (OSMData, erro
 			// The public Overpass operator requires at least 30 seconds after a 429.
 			delay = 30 * time.Second
 		}
+		logger.Warn(ctx, "Overpass request failed; retry scheduled", logger.Int("status", status),
+			logger.Int("attempt", attempt), logger.Int("max_attempts", maxAttempt), logger.Duration("delay", delay))
 		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
@@ -127,7 +139,6 @@ func (c *overpassClient) fetchOnce(ctx context.Context, q string) (OSMData, int,
 
 	resp, err := c.httpC.Do(req)
 	if err != nil {
-		logger.Error(ctx, "Overpass request failed", logger.Err(err))
 		return OSMData{}, 0, fmt.Errorf("overpass: send request: %w", err)
 	}
 	defer resp.Body.Close()

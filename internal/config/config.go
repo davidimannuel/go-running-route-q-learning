@@ -18,6 +18,7 @@ type Config struct {
 	SchemaVersion int
 	Map           MapConfig
 	OutputDir     string
+	CacheDir      string
 }
 
 type MapConfig struct {
@@ -36,6 +37,7 @@ type configFile struct {
 	SchemaVersion *int     `yaml:"schema_version"`
 	Map           *mapFile `yaml:"map"`
 	OutputDir     *string  `yaml:"output_dir"`
+	CacheDir      *string  `yaml:"cache_dir"`
 }
 
 type mapFile struct {
@@ -100,14 +102,24 @@ func Load(workdir string) (Config, error) {
 			TimeoutSec: *raw.Map.TimeoutSec,
 		},
 		OutputDir: "output",
+		CacheDir:  "cache",
 	}
 	if raw.OutputDir != nil {
 		cfg.OutputDir = strings.TrimSpace(*raw.OutputDir)
 	}
-	if !filepath.IsLocal(cfg.OutputDir) {
-		return Config{}, fmt.Errorf("config: output_dir must be a non-empty relative path within workdir")
+	if raw.CacheDir != nil {
+		cfg.CacheDir = strings.TrimSpace(*raw.CacheDir)
+	}
+	for _, directory := range []struct{ name, value string }{
+		{"output_dir", cfg.OutputDir},
+		{"cache_dir", cfg.CacheDir},
+	} {
+		if !filepath.IsLocal(directory.value) {
+			return Config{}, fmt.Errorf("config: %s must be a non-empty relative path within workdir", directory.name)
+		}
 	}
 	cfg.OutputDir = filepath.Clean(cfg.OutputDir)
+	cfg.CacheDir = filepath.Clean(cfg.CacheDir)
 	if err := cfg.Map.FetchParam().Validate(); err != nil {
 		return Config{}, fmt.Errorf("config: invalid map settings: %w", err)
 	}

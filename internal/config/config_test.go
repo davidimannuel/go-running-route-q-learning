@@ -38,7 +38,7 @@ func TestLoad(t *testing.T) {
 				t.Fatal(err)
 			}
 			want := osm.FetchParam{Lat: -7.282187, Long: 112.709282, RadM: 3025, TimeoutSec: 90}
-			if cfg.SchemaVersion != 1 || cfg.OutputDir != tc.want || cfg.Map.FetchParam() != want {
+			if cfg.SchemaVersion != 1 || cfg.OutputDir != tc.want || cfg.CacheDir != "cache" || cfg.Map.FetchParam() != want {
 				t.Fatalf("unexpected config: %+v", cfg)
 			}
 		})
@@ -75,6 +75,9 @@ func TestLoadRejectsInvalidConfig(t *testing.T) {
 		{"NaN latitude", strings.ReplaceAll(validYAML, "-7.282187", ".nan")},
 		{"zero radius", strings.ReplaceAll(validYAML, "radius_m: 3025", "radius_m: 0")},
 		{"negative timeout", strings.ReplaceAll(validYAML, "timeout_sec: 90", "timeout_sec: -1")},
+		{"blank cache", validYAML + "cache_dir: ''\n"},
+		{"absolute cache", validYAML + "cache_dir: /tmp/cache\n"},
+		{"escaping cache", validYAML + "cache_dir: ../cache\n"},
 		{"blank output", validYAML + "output_dir: ''\n"},
 		{"absolute output", validYAML + "output_dir: /tmp/results\n"},
 		{"escaping output", validYAML + "output_dir: ../results\n"},
@@ -93,5 +96,12 @@ func TestLoadMissingWorkdir(t *testing.T) {
 		if _, err := Load(workdir); err == nil {
 			t.Fatalf("expected an error for workdir %q", workdir)
 		}
+	}
+}
+
+func TestLoadCacheDirectory(t *testing.T) {
+	cfg, err := loadYAML(t, validYAML+"cache_dir: artifacts/osm-cache\n")
+	if err != nil || cfg.CacheDir != filepath.Join("artifacts", "osm-cache") {
+		t.Fatalf("config=%+v, error=%v", cfg, err)
 	}
 }

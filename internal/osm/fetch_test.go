@@ -1,8 +1,11 @@
 package osm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/davidimannuel/go-running-route-q-learning/internal/logger"
 	"io"
 	"math"
 	"net/http"
@@ -82,12 +85,28 @@ func validFetchParam() FetchParam {
 
 func TestFetchSuccess(t *testing.T) {
 	client, sequence := newSequenceClient(t, []int{200}, `{"version":0.6,"elements":[]}`)
-	data, err := client.Fetch(context.Background(), validFetchParam())
+	var logs bytes.Buffer
+	ctx := logger.ContextWithLogger(context.Background(), logger.New(&logs, true))
+	data, err := client.Fetch(ctx, validFetchParam())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if data.Version != 0.6 || sequence.calls != 1 || sequence.closed != 1 {
 		t.Fatalf("version=%v, requests=%d, closed bodies=%d", data.Version, sequence.calls, sequence.closed)
+	}
+	var queryLog struct {
+		Query string `json:"query"`
+	}
+	if err := json.NewDecoder(bytes.NewReader(logs.Bytes())).Decode(&queryLog); err != nil {
+		t.Fatal(err)
+	}
+	if queryLog.Query != sequence.form.Get("data") {
+		t.Fatalf("logged query=%q; sent query=%q", queryLog.Query, sequence.form.Get("data"))
+	}
+	for _, message := range []string{"Prepared Overpass query", "Sending Overpass request", "Overpass response received"} {
+		if !strings.Contains(logs.String(), message) {
+			t.Fatalf("missing debug message %q: %s", message, logs.String())
+		}
 	}
 	if sequence.request.Method != http.MethodPost {
 		t.Errorf("method=%q; want POST", sequence.request.Method)
@@ -104,7 +123,12 @@ func TestFetchSuccess(t *testing.T) {
 
 func TestFetchRetriesThenSucceeds(t *testing.T) {
 	client, sequence := newSequenceClient(t, []int{503, 200}, `{"version":0.6,"elements":[]}`)
-	_, err := client.Fetch(context.Background(), validFetchParam())
+	var logs bytes.Buffer
+	ctx := logger.ContextWithLogger(context.Background(), logger.New(&logs, false))
+	_, err := client.Fetch(ctx, validFetchParam())
+	if !strings.Contains(logs.String(), `"level":"WARN"`) || !strings.Contains(logs.String(), `"status":503`) || !strings.Contains(logs.String(), `"delay":1000000000`) || strings.Contains(logs.String(), `"level":"DEBUG"`) {
+		t.Fatalf("unexpected retry logs: %s", logs.String())
+	}
 	if err != nil || sequence.calls != 2 || sequence.closed != 2 {
 		t.Fatalf("error=%v, requests=%d, closed bodies=%d", err, sequence.calls, sequence.closed)
 	}

@@ -29,6 +29,10 @@ type fakeFetcher struct {
 	err    error
 }
 
+func (f *fakeFetcher) CacheKey(params osm.FetchParam) string {
+	return osm.NewOverpassClient().CacheKey(params)
+}
+
 func (f *fakeFetcher) Fetch(ctx context.Context, params osm.FetchParam) (osm.OSMData, error) {
 	f.calls++
 	f.params = params
@@ -68,7 +72,7 @@ func TestDownload(t *testing.T) {
 				{Type: "way", ID: 21, Nodes: []int{17, 18}, Tags: map[string]string{"highway": "residential"}},
 			}}}
 			var out bytes.Buffer
-			if err := run(context.Background(), []string{"download", "--workdir", workdir}, &out, fetcher); err != nil {
+			if err := run(context.Background(), []string{"download", "--workdir", workdir}, &out, &out, fetcher); err != nil {
 				t.Fatal(err)
 			}
 			want := osm.FetchParam{Lat: -7.282187, Long: 112.709282, RadM: 3025, TimeoutSec: 90}
@@ -95,9 +99,9 @@ func TestDownload(t *testing.T) {
 
 func TestDownloadOverwritesOnlyMap(t *testing.T) {
 	workdir := newWorkdir(t, testConfig)
-	fetcher := &fakeFetcher{data: osm.OSMData{Generator: "first"}}
+	fetcher := &fakeFetcher{data: osm.OSMData{Version: 0.6, Generator: "first", Elements: []osm.Element{}}}
 	args := []string{"download", "--workdir", workdir}
-	if err := run(context.Background(), args, &bytes.Buffer{}, fetcher); err != nil {
+	if err := run(context.Background(), args, &bytes.Buffer{}, &bytes.Buffer{}, fetcher); err != nil {
 		t.Fatal(err)
 	}
 	other := filepath.Join(workdir, "output", "training.csv")
@@ -105,7 +109,7 @@ func TestDownloadOverwritesOnlyMap(t *testing.T) {
 		t.Fatal(err)
 	}
 	fetcher.data.Generator = "second"
-	if err := run(context.Background(), args, &bytes.Buffer{}, fetcher); err != nil {
+	if err := run(context.Background(), append(args, "--force"), &bytes.Buffer{}, &bytes.Buffer{}, fetcher); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Contains(readFile(t, filepath.Join(workdir, "output", "osm.json")), []byte("second")) || string(readFile(t, other)) != "keep" {
@@ -141,7 +145,7 @@ func TestDownloadFailurePreservesPreviousResult(t *testing.T) {
 			case "cancellation":
 				cancel()
 			}
-			err := run(ctx, []string{"download", "--workdir", workdir}, &bytes.Buffer{}, fetcher)
+			err := run(ctx, []string{"download", "--workdir", workdir}, &bytes.Buffer{}, &bytes.Buffer{}, fetcher)
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -173,7 +177,7 @@ func TestCommandValidation(t *testing.T) {
 		{"download", "--workdir", newWorkdir(t, "schema_version: 1\nouput_dir: output\n")},
 	} {
 		fetcher := &fakeFetcher{}
-		if err := run(context.Background(), args, &bytes.Buffer{}, fetcher); err == nil || fetcher.calls != 0 {
+		if err := run(context.Background(), args, &bytes.Buffer{}, &bytes.Buffer{}, fetcher); err == nil || fetcher.calls != 0 {
 			t.Fatalf("args=%v, error=%v, requests=%d", args, err, fetcher.calls)
 		}
 	}
@@ -183,7 +187,7 @@ func TestCommandHelp(t *testing.T) {
 	for _, args := range [][]string{{"--help"}, {"download", "--help"}} {
 		var out bytes.Buffer
 		fetcher := &fakeFetcher{}
-		err := run(context.Background(), args, &out, fetcher)
+		err := run(context.Background(), args, &out, &out, fetcher)
 		if err != nil || fetcher.calls != 0 || !strings.Contains(out.String(), "--workdir") {
 			t.Fatalf("args=%v, output=%q, error=%v, requests=%d", args, out.String(), err, fetcher.calls)
 		}
