@@ -25,9 +25,10 @@ func NewGraph() *Graph {
 // OSMEdge describes one directed road segment and its OSM attributes.
 // Parallel segments have separate keys even when their endpoints are identical.
 type OSMEdge struct {
-	From    int
-	To      int
-	Key     int
+	From int
+	To   int
+	Key  int
+	// LengthM is the great-circle distance of this raw segment, in meters.
 	LengthM float64
 	Name    string
 	Highway string
@@ -37,7 +38,8 @@ type OSMEdge struct {
 }
 
 // LoadOSM replaces the graph with bidirectional segments between consecutive way nodes.
-// LengthM remains zero until distance calculation is implemented.
+// LengthM is computed per raw segment from node coordinates, before simplification.
+// Reference: https://github.com/gboeing/osmnx/blob/v2.1.1/osmnx/distance.py#L158-L179
 // Invalid input leaves the previous graph unchanged; repeated loads replace old data.
 // Every segment currently gets a reverse edge; walking direction rules are a later step.
 // OSM ways contain ordered node references: https://wiki.openstreetmap.org/wiki/Way
@@ -79,6 +81,13 @@ func (g *Graph) LoadOSM(data OSMData) error {
 		// [A, B, C] becomes A->B and B->C, each with its reverse direction.
 		for i := 1; i < len(way.Nodes); i++ {
 			edge.From, edge.To = way.Nodes[i-1], way.Nodes[i]
+			from, to := graph.Nodes[edge.From], graph.Nodes[edge.To]
+			lengthM, err := greatCircleDistanceM(from.Lat, from.Lon, to.Lat, to.Lon)
+			if err != nil {
+				return fmt.Errorf("load OSM graph: way %d segment %d->%d: %w", way.ID, edge.From, edge.To, err)
+			}
+			// The reverse edge reuses this length; both directions follow the same segment.
+			edge.LengthM = lengthM
 			graph.addEdge(edge)
 
 			// addEdge stores a value copy, so reversing this value preserves the forward edge.
@@ -103,7 +112,7 @@ func (g *Graph) addEdge(edge OSMEdge) {
 func (g *Graph) PrintInfo(nodeID int) {
 	fmt.Printf("nodeID %d\n", nodeID)
 	for _, edge := range g.adjList[nodeID] {
-		fmt.Printf("\t%d->%d, %d, %s, %s, %s, %.8f\n",
-			edge.From, edge.To, edge.Key, edge.Name, edge.Highway, edge.Surface, edge.Width)
+		fmt.Printf("\t%d->%d, %d, %s, %s, %s, %.8f, length_m=%.6f\n",
+			edge.From, edge.To, edge.Key, edge.Name, edge.Highway, edge.Surface, edge.Width, edge.LengthM)
 	}
 }
