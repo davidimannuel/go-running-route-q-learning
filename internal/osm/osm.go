@@ -1,6 +1,9 @@
 package osm
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 type OSMData struct {
 	Version   float64   `json:"version"`
@@ -15,11 +18,34 @@ type Osm3S struct {
 	Copyright        string    `json:"copyright"`
 }
 
+const (
+	TypeNode = "node"
+	TypeWay  = "way"
+)
+
 type Element struct {
-	Type  string            `json:"type"`
-	ID    int               `json:"id"`
-	Lat   float64           `json:"lat,omitempty"`
-	Lon   float64           `json:"lon,omitempty"`
-	Tags  map[string]string `json:"tags,omitempty"`
-	Nodes []int             `json:"nodes,omitempty"`
+	ID    int     `json:"id"`
+	Type  string  `json:"type"` // node, way
+	Tags  Tags    `json:"tags,omitempty"`
+	Lat   float64 `json:"lat,omitempty"`
+	Lon   float64 `json:"lon,omitempty"`
+	Nodes []int   `json:"nodes,omitempty"`
+}
+
+// Tags stores the original OSM key/value attributes without normalization.
+type Tags map[string]string
+
+// Get returns an empty string for missing tags; reads from a nil map are valid in Go.
+func (t Tags) Get(k string) string {
+	return t[k]
+}
+
+// GetFloat64 parses a plain numeric tag, returning zero for missing or invalid values.
+// Units and combined values such as "3 m" or "3;4" are not parsed by this helper.
+func (t Tags) GetFloat64(k string) float64 {
+	val, err := strconv.ParseFloat(t.Get(k), 64)
+	if err == nil {
+		return val
+	}
+	return 0
 }
