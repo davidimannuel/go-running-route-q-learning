@@ -43,17 +43,18 @@ func TestLoadOSM(t *testing.T) {
 			if len(graph.Nodes) != 4 {
 				t.Fatalf("nodes=%d; want 4", len(graph.Nodes))
 			}
+			tags := Tags{"name": "Main Street", "highway": "residential", "surface": "asphalt", "width": "4", "access": "permissive"}
 			want := map[int][]OSMEdge{
 				1: {
-					{From: 1, To: 2, Key: 0, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
-					{From: 1, To: 2, Key: 1},
+					{From: 1, To: 2, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
+					{From: 1, To: 2, Key: 1, WayID: 101},
 				},
 				2: {
-					{From: 2, To: 1, Key: 0, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
-					{From: 2, To: 3, Key: 1, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
-					{From: 2, To: 1, Key: 2},
+					{From: 2, To: 1, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
+					{From: 2, To: 3, Key: 1, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
+					{From: 2, To: 1, Key: 2, WayID: 101},
 				},
-				3: {{From: 3, To: 2, Key: 0, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"}},
+				3: {{From: 3, To: 2, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"}},
 				4: nil,
 			}
 			if !reflect.DeepEqual(graph.adjList, want) {

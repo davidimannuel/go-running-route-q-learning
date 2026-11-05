@@ -67,6 +67,7 @@ func TestLoadRejectsInvalidConfig(t *testing.T) {
 		{"missing timeout", strings.ReplaceAll(validYAML, "  timeout_sec: 90\n", "")},
 		{"unknown map field", validYAML + "  radius: 300\n"},
 		{"unknown root field", validYAML + "ouput_dir: results\n"},
+		{"removed export setting", validYAML + "export:\n  csv: true\n"},
 		{"duplicate field", validYAML + "schema_version: 1\n"},
 		{"multiple documents", validYAML + "---\n" + validYAML},
 		{"invalid YAML", "schema_version: [\n"},

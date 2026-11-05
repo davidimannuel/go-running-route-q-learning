@@ -1,2 +1,13 @@
 /workdirs/**/cache/
 /workdirs/**/output/
+
+# Local Python environments and generated notebook/cache files.
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Compiled Go CLI binaries.
+/bin/
+
+/playground

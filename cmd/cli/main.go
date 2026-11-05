@@ -27,6 +27,8 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 	switch args[0] {
 	case "download":
 		return runDownload(ctx, args[1:], out, logOut, fetcher)
+	case "analyze":
+		return runAnalyze(ctx, args[1:], out, logOut)
 	case "help", "--help", "-h":
 		printUsage(out)
 		return nil
@@ -37,7 +39,9 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 
 func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage: cli download --workdir <directory> [--force] [--debug]")
+	fmt.Fprintln(out, "       cli analyze --workdir <directory> [--debug]")
 	fmt.Fprintln(out, "Read <workdir>/config.yaml and save OSM data to <workdir>/<output_dir>/osm.json.")
 	fmt.Fprintln(out, "Cache entries are stored in <workdir>/<cache_dir>; --force refreshes the selected entry.")
+	fmt.Fprintln(out, "Analyze reads the saved osm.json and always writes nodes.csv and edges.csv in output_dir.")
 	fmt.Fprintln(out, "Logs go to stderr at info level by default; --debug includes request and cache details.")
 }

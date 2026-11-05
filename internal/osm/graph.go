@@ -1,6 +1,9 @@
 package osm
 
-import "fmt"
+import (
+	"fmt"
+	"maps"
+)
 
 // Graph stores a directed multigraph as a list of outgoing edges for each node.
 // Parallel edges are retained so each road segment remains a separate choice.
@@ -28,6 +31,8 @@ type OSMEdge struct {
 	From int
 	To   int
 	Key  int
+	// WayID links each raw segment back to its source OSM way.
+	WayID int
 	// LengthM is the great-circle distance of this raw segment, in meters.
 	LengthM float64
 	Name    string
@@ -35,6 +40,9 @@ type OSMEdge struct {
 	Surface string
 	Width   float64
 	Access  string
+	// Tags preserves original values, including missing and non-numeric width tags.
+	// Edges from the same way share this cloned map; treat it as read-only.
+	Tags Tags
 }
 
 // LoadOSM replaces the graph with bidirectional segments between consecutive way nodes.
@@ -72,6 +80,8 @@ func (g *Graph) LoadOSM(data OSMData) error {
 
 		// All segments from this way inherit its tags; parse numeric width once.
 		edge := OSMEdge{
+			WayID:   way.ID,
+			Tags:    maps.Clone(way.Tags),
 			Name:    way.Tags.Get("name"),
 			Highway: way.Tags.Get("highway"),
 			Surface: way.Tags.Get("surface"),
@@ -115,4 +125,13 @@ func (g *Graph) PrintInfo(nodeID int) {
 		fmt.Printf("\t%d->%d, %d, %s, %s, %s, %.8f, length_m=%.6f\n",
 			edge.From, edge.To, edge.Key, edge.Name, edge.Highway, edge.Surface, edge.Width, edge.LengthM)
 	}
+}
+
+// EdgeCount counts directed edges, including reverse and parallel segments.
+func (g *Graph) EdgeCount() int {
+	count := 0
+	for _, edges := range g.adjList {
+		count += len(edges)
+	}
+	return count
 }

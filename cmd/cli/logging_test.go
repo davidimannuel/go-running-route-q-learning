@@ -66,7 +66,7 @@ func TestDownloadLogging(t *testing.T) {
 }
 
 func TestHelpDoesNotWriteLogs(t *testing.T) {
-	for _, args := range [][]string{{"--help"}, {"download", "--help"}, {"download", "--debug", "--help"}} {
+	for _, args := range [][]string{{"--help"}, {"download", "--help"}, {"download", "--debug", "--help"}, {"analyze", "--help"}, {"analyze", "--debug", "--help"}} {
 		var stdout, logs bytes.Buffer
 		if err := run(context.Background(), args, &stdout, &logs, &fakeFetcher{}); err != nil {
 			t.Fatal(err)

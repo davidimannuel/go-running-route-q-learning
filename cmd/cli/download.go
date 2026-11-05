@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -98,38 +97,9 @@ func runDownload(ctx context.Context, args []string, out, logOut io.Writer, fetc
 
 // writeMap replaces the previous result only after the new file is complete.
 func writeMap(ctx context.Context, path string, data osm.OSMData) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("save map: %w", err)
-	}
-	directory := filepath.Dir(path)
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		return fmt.Errorf("create output directory: %w", err)
-	}
-	file, err := os.CreateTemp(directory, ".osm-*.json")
-	if err != nil {
-		return fmt.Errorf("create temporary output: %w", err)
-	}
-	defer func() {
-		file.Close()
-		os.Remove(file.Name())
-	}()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(data); err != nil {
-		return fmt.Errorf("encode map: %w", err)
-	}
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("flush map: %w", err)
-	}
-	if err := file.Close(); err != nil {
-		return fmt.Errorf("close map: %w", err)
-	}
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("save map: %w", err)
-	}
-	if err := os.Rename(file.Name(), path); err != nil {
-		return fmt.Errorf("replace map: %w", err)
-	}
-	return nil
+	return writeOutput(ctx, path, func(w io.Writer) error {
+		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(data)
+	})
 }

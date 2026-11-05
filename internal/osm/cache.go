@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,24 +69,11 @@ func (c *Cache) Get(ctx context.Context, key string) (OSMData, bool, error) {
 	if err := json.Unmarshal(body, &data); err != nil {
 		return OSMData{}, false, fmt.Errorf("%w: decode %s: %v", ErrInvalidCache, path, err)
 	}
-	if err := validateCacheData(data); err != nil {
+	if err := validateOSMData(data); err != nil {
 		return OSMData{}, false, fmt.Errorf("%w: %s: %v", ErrInvalidCache, path, err)
 	}
 	logger.Debug(ctx, "OSM cache hit", logger.String("path", path), logger.Int("elements", len(data.Elements)))
 	return data, true, nil
-}
-
-func validateCacheData(data OSMData) error {
-	if data.Version <= 0 || math.IsNaN(data.Version) || math.IsInf(data.Version, 0) {
-		return fmt.Errorf("missing or invalid OSM version")
-	}
-	if data.Elements == nil {
-		return fmt.Errorf("elements must be a JSON array")
-	}
-	if strings.TrimSpace(data.Remark) != "" {
-		return fmt.Errorf("server remark: %s", data.Remark)
-	}
-	return nil
 }
 
 // Set replaces a cache entry only after its new contents are fully written.
@@ -99,7 +85,7 @@ func (c *Cache) Set(ctx context.Context, key string, data OSMData) error {
 	if err != nil {
 		return err
 	}
-	if err := validateCacheData(data); err != nil {
+	if err := validateOSMData(data); err != nil {
 		return fmt.Errorf("cache: refuse invalid response: %w", err)
 	}
 	if err := os.MkdirAll(c.cacheDir, 0o755); err != nil {
