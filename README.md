@@ -9,23 +9,27 @@ Go menangani pengambilan data dan pembentukan graf. Python membaca CSV keluaran 
 | Komponen | Status |
 |---|---|
 | CLI `download` | Pengambilan OSM melalui Overpass, cache, dan penyimpanan JSON |
-| CLI `analyze` | Membaca snapshot lokal, membentuk graf mentah, dan mengekspor CSV |
+| CLI `analyze` | Membentuk graf mentah, mengekspor CSV berskor, dan membuat `road-analysis.html` |
+| CLI `serve` | Server lokal dan index otomatis untuk file HTML |
 | Graf | Edge terarah dua arah, edge paralel, asal way, tag asli, dan panjang Haversine |
 | Python | Environment analisis dengan uv, pandas, matplotlib, PyYAML, dan JupyterLab |
 | Notebook analisis | `analisa.ipynb`: konsistensi CSV, ringkasan graf, panjang segmen, kelengkapan/distribusi empat atribut, dan kualitas width |
 | Q-learning dan training Go | Belum diimplementasikan |
-| Peta interaktif | Ditunda sampai tahap visualisasi peta |
+| Comfort score | Pemetaan highway/surface/width mengikuti core Python acuan; digunakan bersama oleh CSV dan peta |
+| Peta interaktif | Satu `road-analysis.html`: Netral, Highway, Surface, Access, Comfort score, dan inspeksi node/edge |
 
 Graf saat ini belum melalui simplifikasi, pemilihan komponen terhubung, atau pemotongan batas wilayah seperti alur akhir OSMnx. Setiap pasangan node berurutan pada way menghasilkan edge maju dan balik. CSV mencatat **edge terarah**, sehingga jumlah edge bukan jumlah ruas fisik unik.
 
 ## Struktur repository
 
 ```text
-cmd/cli/             Entry point, command download/analyze, dan penulisan hasil
+cmd/cli/             Entry point, command download/analyze/serve, dan penulisan hasil
 internal/config/     Pembacaan dan validasi konfigurasi YAML
 internal/logger/     Structured logging berbasis log/slog
-internal/osm/        Overpass, cache, graf, jarak, pembacaan JSON, dan ekspor CSV
+internal/htmlserver/ Server khusus HTML dan template index otomatis
+internal/osm/        Overpass, cache, graf, jarak, scoring, ekspor CSV, dan template peta
 workdirs/            Konfigurasi dan artefak masing-masing percobaan
+playground/          Percobaan lokal, diabaikan Git
 analisa.ipynb        Analisis CSV dan diagram untuk graf mentah
 pyproject.toml       Dependensi analisis Python dan batas versi interpreter
 uv.lock              Versi pasti dependensi Python
@@ -89,7 +93,8 @@ workdirs/dukuh-kupang/
   output/
     osm.json             Snapshot hasil download
     nodes.csv            Tabel node hasil analyze
-    edges.csv            Tabel edge hasil analyze
+    edges.csv            Tabel edge dan skor hasil analyze
+    road-analysis.html   Peta interaktif seluruh graf
 ```
 
 Tidak ada subfolder `input`. Contoh `config.yaml`:
@@ -116,7 +121,7 @@ cache_dir: cache
 | `output_dir` | Direktori hasil relatif terhadap workdir; default `output` |
 | `cache_dir` | Direktori cache relatif terhadap workdir; default `cache` |
 
-Parameter `map` wajib diisi. Path direktori harus relatif dan tetap berada di dalam workdir. Field YAML yang tidak dikenal ditolak. Konfigurasi tidak memerlukan opsi ekspor: `analyze` selalu menulis kedua CSV.
+Parameter `map` wajib diisi. Path direktori harus relatif dan tetap berada di dalam workdir. Field YAML yang tidak dikenal ditolak. Konfigurasi tidak memerlukan opsi ekspor: `analyze` selalu menulis kedua CSV dan satu HTML peta.
 
 ## Menjalankan CLI Go
 
@@ -138,24 +143,83 @@ go run ./cmd/cli download --workdir workdirs/dukuh-kupang --force
 
 `--force` melewati pembacaan cache dan memperbaruinya setelah pengambilan berhasil. Mengulang `download` menimpa `osm.json`; jalankan `analyze` sesudahnya agar CSV sesuai snapshot terbaru. Data OSM dapat berubah antarunduhan, sehingga simpan salinan snapshot untuk perbandingan penelitian yang memerlukan data identik.
 
-### Membentuk graf dan mengekspor CSV
+### Membentuk graf dan mengekspor hasil analisis
 
 ```bash
 go run ./cmd/cli analyze --workdir workdirs/dukuh-kupang
 ```
 
-Command membaca `output_dir/osm.json` tanpa menghubungi Overpass, membentuk graf mentah, lalu selalu menulis atau menimpa `nodes.csv` dan `edges.csv` di direktori yang sama. Snapshot sumber tetap dipertahankan. Jika JSON belum tersedia, jalankan `download` terlebih dahulu.
+Command membaca `output_dir/osm.json` tanpa menghubungi Overpass, membentuk graf mentah, lalu selalu menulis atau menimpa `nodes.csv`, `edges.csv`, dan `road-analysis.html` di direktori yang sama. Snapshot sumber tetap dipertahankan. Jika JSON belum tersedia, jalankan `download` terlebih dahulu.
 
 | File | Kolom |
 |---|---|
 | `nodes.csv` | `node_id`, `latitude`, `longitude` |
-| `edges.csv` | `from`, `to`, `key`, `way_id`, `length_m`, `name`, `highway`, `surface`, `width`, `access` |
+| `edges.csv` | `from`, `to`, `key`, `way_id`, `length_m`, `name`, `highway`, `surface`, `width`, `access`, `highway_score`, `surface_score`, `width_score`, `comfort_score` |
 
-Node diurutkan berdasarkan ID dan edge berdasarkan `(from, to, key)`. `way_id` menghubungkan segmen ke way asal. Key saat ini merupakan indeks edge keluar per node sumber. Edge arah balik dan paralel tetap menjadi baris terpisah.
+Node diurutkan berdasarkan ID dan edge berdasarkan `(from, to, key)`. `way_id` menghubungkan segmen ke way asal. Key dimulai dari `0` untuk setiap pasangan terarah `(from, to)` dan bertambah hanya pada edge paralel dengan pasangan yang sama. Contoh: `1→2` dan `1→3` masing-masing mendapat key `0`; edge kedua `1→2` mendapat key `1`. Edge arah balik dan paralel tetap menjadi baris terpisah.
 
 `length_m` dihitung per segmen dengan Haversine menggunakan radius bumi 6.371.009 meter dan disimpan tanpa pembulatan. Tag `width` diekspor sebagai teks asli, sehingga kosong, `3`, `3 m`, dan `3;4` tetap dapat dibedakan. Empat atribut analisis adalah **highway, surface, width, dan access**.
 
-Setiap file ditulis melalui file sementara sebelum mengganti hasil lama. Penggantian berlaku per file, bukan satu transaksi untuk seluruh CSV. Gunakan hasil setelah command selesai dengan sukses.
+Setiap file ditulis melalui file sementara sebelum mengganti hasil lama. Penggantian berlaku per file, bukan satu transaksi untuk seluruh CSV dan HTML. Gunakan hasil setelah command selesai dengan sukses.
+
+### Comfort score dan peta analisis
+
+Scoring berada di `internal/osm/scoring.go`, mengikuti aturan aktif pada `rute_lari_core.py` proyek acuan. CSV dan HTML memakai fungsi Go yang sama; JavaScript hanya memilih warna berdasarkan nilai yang sudah dihitung.
+
+```text
+comfort_score = 0.55 × highway_score + 0.30 × surface_score + 0.15 × width_score
+```
+
+| Komponen | Aturan |
+|---|---|
+| Highway | footway/pedestrian/living_street/residential/tertiary: +1; kategori lain: −1; kosong: −0,5 |
+| Surface | asphalt/concrete/paving_stones/paved: +1; kategori lain: −1; kosong: −0,5 |
+| Width | Satu lebar positif ≥3 m: +1; positif <3 m: −1; kosong/invalid/gabungan: −0,5 |
+
+Gabungan highway/surface menggunakan skor minimum. Width diparse sekali per way ketika `LoadOSM` membentuk edge, lalu disimpan sebagai `OSMEdge.Width` (meter) dan `WidthValid`. Nilai kosong/invalid/gabungan disimpan sebagai `0` dengan `WidthValid=false`; scoring memakai kedua field tersebut tanpa parsing ulang. Tag asli tetap berada di `Tags["width"]`. Parser `ParseWidthM` terpusat di `internal/osm/width.go`. Width menerima angka tunggal, koma desimal, serta satuan m/meter/metre/meters/metres; tidak merata-ratakan nilai gabungan. Tag asli tetap tersedia di CSV dan popup. Nilai gabungan disimpan tanpa clipping. Access tidak masuk comfort score; aturan mask dan penalti perjalanan belum diimplementasikan. Skor adalah preferensi penelitian, bukan hasil survei kenyamanan atau pengukuran keamanan.
+
+Setelah `analyze` selesai, jalankan server dari root proyek:
+
+```bash
+go run ./cmd/cli serve
+```
+
+Buka index yang dicetak CLI, lalu pilih `workdirs/dukuh-kupang/output/road-analysis.html`. Dengan port default, URL-nya adalah [peta analisis](http://127.0.0.1:8080/files/workdirs/dukuh-kupang/output/road-analysis.html). Jika `output_dir` berbeda, pilih path yang sesuai di index.
+
+- Pilihan warna **Netral, Highway (default), Surface, Access, Comfort score** memakai satu dataset dan legenda dinamis.
+- Arahkan pointer ke ruas untuk tooltip; klik untuk tag asli, panjang, identitas edge, tiga skor komponen, dan skor gabungan.
+- Garis raw dengan pasangan endpoint yang sama digambar sekali. Popup menyediakan pilihan seluruh edge maju/balik dan paralel yang diwakili; identitas `(from,to,key)` dan data graf tetap utuh. Ini pengelompokan tampilan, bukan simplifikasi graf atau hitungan ruas fisik unik.
+- Jika kategori edge yang bertumpuk berbeda pada tema aktif, garis diberi warna **Different overlapping categories**; pilih edge pada popup untuk memeriksa masing-masing nilai.
+- Comfort memakai interval acuan: <−0,5; −0,5 hingga <0; netral (toleransi numerik 1e−12); >0 hingga 0,5; dan >0,5. Warna tidak mengubah skor.
+- **Show nodes** awalnya mati. Pada zoom ≥17, node dalam viewport ditampilkan, maksimum 2.000; jika batas tercapai, zoom lebih dekat. Tombol **Show entire graph** mengembalikan cakupan seluruh node.
+- Marker **START (input)** memakai pin hijau dengan simbol ▶ putih mengikuti proyek acuan. Klik pin untuk popup berisi judul START dan koordinat latitude/longitude dalam dua kolom. Ujung pin menunjukkan koordinat config, bukan node START hasil snapping. Basemap dapat memuat edit OSM yang lebih baru daripada snapshot graf.
+
+HTML menyematkan seluruh data dan tidak membaca CSV/JSON melalui browser. Internet masih diperlukan untuk Leaflet dan tile OSM. Ulangi `analyze` setelah snapshot berubah, lalu reload halaman peta. Ekspor peta tidak menjalankan training atau melakukan unduhan OSM.
+
+### Membuka peta HTML melalui server lokal
+
+```bash
+go run ./cmd/cli serve
+```
+
+Default server adalah `http://127.0.0.1:8080/index.html`. CLI mencetak URL aktif ke stdout dan log ke stderr. Buka URL tersebut di browser; index menampilkan file `.html` secara rekursif dari direktori saat command dijalankan. File di `playground/` dan hasil dalam `workdirs/` ikut ditemukan meskipun diabaikan Git. Nama berekstensi `.HTML` juga diterima.
+
+Untuk membatasi pencarian atau mengganti port:
+
+```bash
+go run ./cmd/cli serve --dir playground --port 8081
+go run ./cmd/cli serve --dir workdirs/dukuh-kupang/output
+```
+
+`--dir` adalah direktori yang disajikan, bukan pembacaan konfigurasi workdir; default `.`. Command ini tidak memerlukan `config.yaml` atau snapshot OSM. `--port 0` memilih port kosong secara otomatis dan mencetak URL yang dipilih. Tekan **Ctrl+C** untuk menghentikan server. Tidak ada server yang dibuka ke jaringan luar; alamat selalu `127.0.0.1`.
+
+Index dibuat di memori pada `/` dan `/index.html`, tanpa menulis file ke disk. Refresh index untuk melihat HTML yang baru dibuat. Link berkas memakai `/files/<path-relatif>`, misalnya `/files/playground/map.html` pada direktori default. HTML asli bernama `index.html` tetap dapat dibuka melalui `/files/index.html`.
+
+Whitelist berlaku pada daftar dan akses HTTP: hanya file HTML reguler di dalam direktori terpilih yang disajikan. File CSV, YAML, JSON, gambar, JavaScript, CSS, direktori tersembunyi, dan symlink tidak disajikan. Peta harus menyematkan data dan kode lokal ke dalam HTML, atau memakai aset eksternal seperti Leaflet melalui HTTPS. HTML yang meminta file JSON/CSV lokal terpisah akan mendapat 404.
+
+Contoh Leaflet memerlukan internet untuk library dan tile peta OpenStreetMap. Membukanya melalui HTTP lokal menyediakan origin halaman untuk request tile; server ini tidak mengunduh atau mem-proxy tile dan tidak menghubungi Overpass. Koneksi internet, header browser, dan kebijakan penyedia tetap memengaruhi akses tile. Lihat [kebijakan tile OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/).
+
+Tambahkan `--debug` untuk mencatat method dan path request HTTP. Log startup/shutdown tetap tampil pada level INFO.
 
 ### Log, bantuan, dan binary
 
@@ -281,13 +345,23 @@ uv lock --check
 uv run --locked python -c "import pandas, matplotlib, yaml, ipykernel, jupyterlab"
 ```
 
-Tes Go memakai data kecil, filesystem sementara, dan respons HTTP simulasi. Menjalankan tes tidak mengunduh OSM atau menjalankan training penelitian.
+Tes Go memakai data kecil, filesystem sementara, dan respons HTTP simulasi. Scoring diperiksa dengan hitungan manual serta 112 kasus beku dari fungsi Python acuan; hash sumber tercatat di `internal/osm/testdata/scoring_reference.json`. Ekspor HTML diuji untuk identitas edge paralel, skor, escaping tag, ID besar, overwrite, dan error penulisan. Menjalankan tes tidak mengunduh OSM atau menjalankan training penelitian.
+
+### Memeriksa graf secara manual
+
+Contoh [playground/graph_test.go](playground/graph_test.go) membaca snapshot pada workdir `dukuh-kupang`, membentuk graf dengan `LoadOSM`, lalu memanggil `Graph.PrintInfo(nodeID)`:
+
+```bash
+go test -v ./playground -count=1
+```
+
+Lokasi snapshot mengikuti `output_dir` pada `workdirs/dukuh-kupang/config.yaml`. Default node yang diperiksa adalah `9620836306`; ubah `nodeID` di fungsi `TestGraphPrintInfo` untuk memilih node lain dari `nodes.csv`. Tidak ada data sintetis atau unduhan jaringan pada contoh ini. Jika snapshot belum ada, pemeriksaan dilewati. Kolom output dijelaskan sebelum daftar edge. `-count=1` menjalankan ulang agar hasil pemeriksaan tidak berasal dari cache tes.
 
 ## Git dan artefak lokal
 
 Commit kode, notebook, `README.md`, `config.yaml`, `go.mod`, `go.sum`, `pyproject.toml`, `uv.lock`, dan `.python-version` sesuai perubahan yang dikerjakan.
 
-`.venv/`, cache bytecode Python, checkpoint notebook, `bin/`, serta direktori `cache/` dan `output/` di dalam `workdirs/` diabaikan Git. `.venv` dapat dibuat ulang melalui `uv sync --locked`. Snapshot OSM dan CSV yang diperlukan untuk reproduksi penelitian perlu dicadangkan terpisah karena tidak ikut commit.
+`.venv/`, cache bytecode Python, checkpoint notebook, `bin/`, `playground/`, serta direktori `cache/` dan `output/` di dalam `workdirs/` diabaikan Git. `.venv` dapat dibuat ulang melalui `uv sync --locked`. Snapshot OSM dan CSV yang diperlukan untuk reproduksi penelitian perlu dicadangkan terpisah karena tidak ikut commit.
 
 Perbarui README bersama perubahan command, konfigurasi, dependensi, atau alur kerja agar contoh penggunaan tetap sesuai implementasi.
 
@@ -301,6 +375,9 @@ Perbarui README bersama perubahan command, konfigurasi, dependensi, atau alur ke
 | Kernel proyek belum tampil | Daftarkan kernel dengan perintah `ipykernel install --sys-prefix`, lalu muat ulang JupyterLab |
 | Snapshot/CSV tidak ditemukan | Periksa `--workdir`, `output_dir`, dan urutan `download` lalu `analyze` |
 | Hasil notebook masih lama | Jalankan ulang pembacaan CSV atau restart kernel dan Run All |
+| Port server sudah dipakai | Pilih `serve --port 8081` atau `--port 0` |
+| HTML tidak muncul di index | Periksa `--dir`, ekstensi `.html`, dan apakah path tersembunyi atau symlink; refresh index |
+| Peta menampilkan tile diblokir | Buka melalui URL HTTP dari `serve`; periksa Console/Network browser dan kebijakan penyedia tile |
 | Overpass menolak atau membatasi request | Periksa log; client melakukan retry untuk HTTP 429/502/503/504. Hindari pengulangan `--force` tanpa kebutuhan |
 
 ## Referensi

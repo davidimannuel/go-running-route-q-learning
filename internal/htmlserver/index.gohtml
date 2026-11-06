@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HTML Previews</title>
+  <style>
+    body { max-width: 960px; margin: 48px auto; padding: 0 24px; font-family: system-ui, sans-serif; color: #172033; background: #f8fafc; }
+    h1 { margin-bottom: 8px; }
+    p { color: #475569; line-height: 1.6; }
+    ul { padding: 0; list-style: none; }
+    li { margin: 10px 0; }
+    a { display: block; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; color: #075985; background: white; overflow-wrap: anywhere; text-decoration: none; }
+    a:hover { background: #e0f2fe; }
+    a:focus-visible { outline: 3px solid #0284c7; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <h1>HTML Previews</h1>
+  <p>{{len .}} HTML file(s). Refresh this page to find newly generated maps.</p>
+  <ul>
+    {{range .}}<li><a href="{{.URL}}">{{.Name}}</a></li>
+    {{else}}<li>No HTML files found in this directory.</li>{{end}}
+  </ul>
+</body>
+</html>

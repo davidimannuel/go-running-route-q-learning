@@ -67,7 +67,7 @@ func TestAnalyze(t *testing.T) {
 			if stdout.Len() != 0 || fetcher.calls != 0 {
 				t.Fatalf("stdout=%s; requests=%d", stdout.String(), fetcher.calls)
 			}
-			for _, message := range []string{"Analyzing OSM snapshot", "Graph built", "Saved graph CSV", "Analysis completed", `"nodes":2`, `"directed_edges":4`} {
+			for _, message := range []string{"Analyzing OSM snapshot", "Graph built", "Saved graph CSV", "Saved road analysis map", "Analysis completed", `"nodes":2`, `"directed_edges":4`} {
 				if !strings.Contains(logs.String(), message) {
 					t.Fatalf("missing %q in logs: %s", message, logs.String())
 				}
@@ -82,6 +82,10 @@ func TestAnalyze(t *testing.T) {
 			edges, err := csv.NewReader(bytes.NewReader(readFile(t, filepath.Join(output, "edges.csv")))).ReadAll()
 			if err != nil || len(edges) != 5 || edges[1][3] != "100" || edges[1][8] != "3;4" || edges[1][9] != "permissive" || edges[2][8] != "" {
 				t.Fatalf("edges=%v, error=%v", edges, err)
+			}
+			mapHTML := string(readFile(t, filepath.Join(output, "road-analysis.html")))
+			if !strings.Contains(mapHTML, `"center":[-7.282187,112.709282]`) || !strings.Contains(mapHTML, `"comfort_score":-0.5`) || !strings.Contains(mapHTML, `"key":1`) {
+				t.Fatal("map is missing input location, scores, or parallel edge identity")
 			}
 			if !bytes.Equal(original, readFile(t, filepath.Join(output, "osm.json"))) {
 				t.Fatal("analysis modified the snapshot")
@@ -99,8 +103,12 @@ func TestAnalyze(t *testing.T) {
 			if err != nil || len(edges) != 1 || string(readFile(t, other)) != "keep" {
 				t.Fatalf("edges=%v, error=%v", edges, err)
 			}
+			mapHTML = string(readFile(t, filepath.Join(output, "road-analysis.html")))
+			if !strings.Contains(mapHTML, `"id":"99"`) || !strings.Contains(mapHTML, `"edges":[]`) || strings.Contains(mapHTML, `"way_id":"100"`) {
+				t.Fatal("map was not replaced with the current graph")
+			}
 			entries, err := os.ReadDir(output)
-			if err != nil || len(entries) != 4 {
+			if err != nil || len(entries) != 5 {
 				t.Fatalf("temporary output was not cleaned up: %v, error=%v", entries, err)
 			}
 		})
@@ -124,7 +132,7 @@ func TestAnalyzeRejectsInvalidSnapshots(t *testing.T) {
 			if err := os.MkdirAll(output, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			for _, name := range []string{"nodes.csv", "edges.csv"} {
+			for _, name := range []string{"nodes.csv", "edges.csv", "road-analysis.html"} {
 				if err := os.WriteFile(filepath.Join(output, name), []byte("previous export"), 0o600); err != nil {
 					t.Fatal(err)
 				}
@@ -139,7 +147,7 @@ func TestAnalyzeRejectsInvalidSnapshots(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tc.want) || fetcher.calls != 0 {
 				t.Fatalf("requests=%d, error=%v", fetcher.calls, err)
 			}
-			for _, name := range []string{"nodes.csv", "edges.csv"} {
+			for _, name := range []string{"nodes.csv", "edges.csv", "road-analysis.html"} {
 				if string(readFile(t, filepath.Join(output, name))) != "previous export" {
 					t.Fatalf("invalid snapshot changed %s", name)
 				}

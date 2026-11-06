@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -49,7 +50,7 @@ func TestEdgeToCSV(t *testing.T) {
 		2: {{From: 2, To: 1, Key: 0, WayID: 9, LengthM: 12.345678901234567}},
 		1: {
 			{From: 1, To: 3, Key: 0, WayID: 8, LengthM: 20.5, Name: "Road, \"A\"\nNorth", Highway: "residential", Surface: "asphalt", Tags: tags, Access: "permissive"},
-			{From: 1, To: 2, Key: 2, WayID: 10, LengthM: 15, Tags: Tags{"width": "3 m"}},
+			{From: 1, To: 2, Key: 2, WayID: 10, LengthM: 15, Width: 3, WidthValid: true, Tags: Tags{"width": "3 m"}},
 			{From: 1, To: 2, Key: 1, WayID: 9, LengthM: 12.345678901234567},
 		},
 	}}
@@ -65,8 +66,26 @@ func TestEdgeToCSV(t *testing.T) {
 		if err := graph.EdgeToCSV(&out); err != nil {
 			t.Fatal(err)
 		}
-		if got := readCSV(t, out.String()); !reflect.DeepEqual(got, want) {
+		got := readCSV(t, out.String())
+		if len(got) != len(want) {
 			t.Fatalf("rows=%v; want %v", got, want)
+		}
+		for i := range want {
+			if len(got[i]) != 14 || !reflect.DeepEqual(got[i][:10], want[i]) {
+				t.Fatalf("row=%v; want prefix %v", got[i], want[i])
+			}
+		}
+		if !reflect.DeepEqual(got[0][10:], []string{"highway_score", "surface_score", "width_score", "comfort_score"}) {
+			t.Fatal("missing score columns")
+		}
+		// Expected signed scores are independent of the export implementation.
+		for i, scores := range [][4]float64{{-0.5, -0.5, -0.5, -0.5}, {-0.5, -0.5, 1, -0.275}, {1, 1, -0.5, 0.775}, {-0.5, -0.5, -0.5, -0.5}} {
+			for j, wantScore := range scores {
+				value, err := strconv.ParseFloat(got[i+1][10+j], 64)
+				if err != nil || math.Abs(value-wantScore) > 1e-12 {
+					t.Fatalf("score=%v; want %v", got[i+1], scores)
+				}
+			}
 		}
 	}
 	if graph.adjList[1][0].To != 3 || graph.adjList[1][1].Key != 2 {

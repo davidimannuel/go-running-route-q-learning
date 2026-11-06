@@ -29,6 +29,8 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 		return runDownload(ctx, args[1:], out, logOut, fetcher)
 	case "analyze":
 		return runAnalyze(ctx, args[1:], out, logOut)
+	case "serve":
+		return runServe(ctx, args[1:], out, logOut)
 	case "help", "--help", "-h":
 		printUsage(out)
 		return nil
@@ -40,8 +42,11 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage: cli download --workdir <directory> [--force] [--debug]")
 	fmt.Fprintln(out, "       cli analyze --workdir <directory> [--debug]")
-	fmt.Fprintln(out, "Read <workdir>/config.yaml and save OSM data to <workdir>/<output_dir>/osm.json.")
+	fmt.Fprintln(out, "       cli serve [--dir <directory>] [--port <port>] [--debug]")
+	fmt.Fprintln(out, "Download reads <workdir>/config.yaml and saves OSM data to <workdir>/<output_dir>/osm.json.")
 	fmt.Fprintln(out, "Cache entries are stored in <workdir>/<cache_dir>; --force refreshes the selected entry.")
-	fmt.Fprintln(out, "Analyze reads the saved osm.json and always writes nodes.csv and edges.csv in output_dir.")
-	fmt.Fprintln(out, "Logs go to stderr at info level by default; --debug includes request and cache details.")
+	fmt.Fprintln(out, "Analyze reads the saved osm.json and always writes nodes.csv, edges.csv, and road-analysis.html in output_dir.")
+	fmt.Fprintln(out, "Serve lists HTML files recursively on 127.0.0.1; defaults: --dir . --port 8080.")
+	fmt.Fprintln(out, "Only HTML files are accessible; hidden entries and symlinks are excluded. Ctrl+C stops the server.")
+	fmt.Fprintln(out, "Logs go to stderr at info level by default; --debug includes HTTP, request, and cache details.")
 }

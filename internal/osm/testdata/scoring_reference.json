@@ -1,0 +1,1238 @@
+{
+  "source": "Active reference rute_lari_core.py scoring functions, extracted without graph loading or training",
+  "source_sha256": "a1d439272521eb9972d11f4096a249ae1721295db638f3e4d4aebc86b423e290",
+  "cases": [
+    {
+      "highway": "footway",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "pedestrian",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "tertiary",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "path",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "unclassified",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "tertiary_link",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "secondary",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -0.5,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.17499999999999996
+      }
+    },
+    {
+      "highway": "  ",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -0.5,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.17499999999999996
+      }
+    },
+    {
+      "highway": "unknown",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "RESIDENTIAL",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": " Residential ; tertiary ",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential;service",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "; ;",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -0.5,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.17499999999999996
+      }
+    },
+    {
+      "highway": "[]",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -0.5,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.17499999999999996
+      }
+    },
+    {
+      "highway": "['residential', 'tertiary']",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "[\"residential\",\"service\"]",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "[\"\\u0052esidential\"]",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "['residential',]",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "[1]",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "['residential', None]",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "['residential';'tertiary']",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "concrete",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paving_stones",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paved",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "ground",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.4
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "gravel",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.4
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "unknown",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.4
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": 1.0,
+        "comfort_score": 0.55
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "PAVED",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": " paved ; asphalt ",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paved;ground",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.4
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "['paved','asphalt']",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "[\"paved\", \"gravel\"]",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -1.0,
+        "width_score": 1.0,
+        "comfort_score": 0.4
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "[]",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": 1.0,
+        "comfort_score": 0.55
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "2.99",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3.0",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3 m",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3 meter",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3 meters",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3 metre",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3 metres",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": " 3 M ",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3,5",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "2,5 metres",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "0",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "-3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "+3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": ".5",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3.",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3;4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "['3']",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "[3]",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "NaN",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "Inf",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3e0",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3 ft",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "1,2,3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -0.5,
+        "comfort_score": 0.7750000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "0.01",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "003",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "4meter",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -0.5,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.5
+      }
+    },
+    {
+      "highway": "residential;service",
+      "surface": "paved",
+      "width": "3,5",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "tertiary",
+      "surface": "unknown",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.10000000000000006
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -1.0,
+        "comfort_score": 0.25
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "paving_stones",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "5",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "secondary_link",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paving_stones",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paving_stones",
+      "width": "4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "tertiary",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -1.0,
+        "comfort_score": 0.25
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": 1.0,
+        "comfort_score": 0.55
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "paving_stones",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "paving_stones",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "primary",
+      "surface": "asphalt",
+      "width": "7",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": -0.10000000000000006
+      }
+    },
+    {
+      "highway": "tertiary",
+      "surface": "asphalt",
+      "width": "4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "tertiary",
+      "surface": "asphalt",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "paving_stones",
+      "width": "1",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paving_stones",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "6",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "living_street",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": 0.325
+      }
+    },
+    {
+      "highway": "service",
+      "surface": "",
+      "width": "",
+      "expected": {
+        "highway_score": -1.0,
+        "surface_score": -0.5,
+        "width_score": -0.5,
+        "comfort_score": -0.775
+      }
+    },
+    {
+      "highway": "tertiary",
+      "surface": "asphalt",
+      "width": "4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "paving_stones",
+      "width": "2",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": -1.0,
+        "comfort_score": 0.7000000000000001
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "3",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    },
+    {
+      "highway": "residential",
+      "surface": "asphalt",
+      "width": "4",
+      "expected": {
+        "highway_score": 1.0,
+        "surface_score": 1.0,
+        "width_score": 1.0,
+        "comfort_score": 1.0
+      }
+    }
+  ]
+}

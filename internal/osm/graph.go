@@ -26,7 +26,8 @@ func NewGraph() *Graph {
 }
 
 // OSMEdge describes one directed road segment and its OSM attributes.
-// Parallel segments have separate keys even when their endpoints are identical.
+// Key starts at zero for each ordered (From, To) pair and distinguishes parallel edges.
+// Different destinations and the reverse direction have independent key sequences.
 type OSMEdge struct {
 	From int
 	To   int
@@ -38,8 +39,11 @@ type OSMEdge struct {
 	Name    string
 	Highway string
 	Surface string
-	Width   float64
-	Access  string
+	// Width is the parsed width in meters. WidthValid is false for missing,
+	// invalid, or combined tags; Width is then zero. Original text stays in Tags.
+	Width      float64
+	WidthValid bool
+	Access     string
 	// Tags preserves original values, including missing and non-numeric width tags.
 	// Edges from the same way share this cloned map; treat it as read-only.
 	Tags Tags
@@ -78,15 +82,18 @@ func (g *Graph) LoadOSM(data OSMData) error {
 			}
 		}
 
-		// All segments from this way inherit its tags; parse numeric width once.
+		// Parse once per way, then reuse the value and validity for every segment
+		// and its reverse. CSV and map exports retain the original width text.
+		widthM, widthValid := ParseWidthM(way.Tags.Get("width"))
 		edge := OSMEdge{
-			WayID:   way.ID,
-			Tags:    maps.Clone(way.Tags),
-			Name:    way.Tags.Get("name"),
-			Highway: way.Tags.Get("highway"),
-			Surface: way.Tags.Get("surface"),
-			Width:   way.Tags.GetFloat64("width"),
-			Access:  way.Tags.Get("access"),
+			WayID:      way.ID,
+			Tags:       maps.Clone(way.Tags),
+			Name:       way.Tags.Get("name"),
+			Highway:    way.Tags.Get("highway"),
+			Surface:    way.Tags.Get("surface"),
+			Width:      widthM,
+			WidthValid: widthValid,
+			Access:     way.Tags.Get("access"),
 		}
 		// [A, B, C] becomes A->B and B->C, each with its reverse direction.
 		for i := 1; i < len(way.Nodes); i++ {
@@ -112,9 +119,14 @@ func (g *Graph) LoadOSM(data OSMData) error {
 }
 
 func (g *Graph) addEdge(edge OSMEdge) {
-	// Keys use the outgoing index per source node in this implementation.
-	// They are distinct from OSM way IDs and remain unique while edges are only appended.
-	edge.Key = len(g.adjList[edge.From])
+	// Edges are only appended, so counting existing edges to this destination
+	// gives the next key for the ordered pair. Other destinations do not affect it.
+	edge.Key = 0
+	for _, existing := range g.adjList[edge.From] {
+		if existing.To == edge.To {
+			edge.Key++
+		}
+	}
 	g.adjList[edge.From] = append(g.adjList[edge.From], edge)
 }
 

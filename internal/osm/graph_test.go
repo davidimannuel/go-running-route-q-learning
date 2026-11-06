@@ -46,21 +46,52 @@ func TestLoadOSM(t *testing.T) {
 			tags := Tags{"name": "Main Street", "highway": "residential", "surface": "asphalt", "width": "4", "access": "permissive"}
 			want := map[int][]OSMEdge{
 				1: {
-					{From: 1, To: 2, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
+					{From: 1, To: 2, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, WidthValid: true, Access: "permissive"},
 					{From: 1, To: 2, Key: 1, WayID: 101},
 				},
 				2: {
-					{From: 2, To: 1, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
-					{From: 2, To: 3, Key: 1, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"},
-					{From: 2, To: 1, Key: 2, WayID: 101},
+					{From: 2, To: 1, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, WidthValid: true, Access: "permissive"},
+					{From: 2, To: 3, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, WidthValid: true, Access: "permissive"},
+					{From: 2, To: 1, Key: 1, WayID: 101},
 				},
-				3: {{From: 3, To: 2, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, Access: "permissive"}},
+				3: {{From: 3, To: 2, Key: 0, WayID: 100, Tags: tags, Name: "Main Street", Highway: "residential", Surface: "asphalt", Width: 4, WidthValid: true, Access: "permissive"}},
 				4: nil,
 			}
 			if !reflect.DeepEqual(graph.adjList, want) {
 				t.Fatalf("adjacency list=%+v; want %+v", graph.adjList, want)
 			}
 		})
+	}
+}
+
+// Interleaved destinations must not consume keys from another ordered pair.
+func TestLoadOSMKeysPerDirectedPair(t *testing.T) {
+	graph := NewGraph()
+	data := OSMData{Elements: []Element{
+		{Type: TypeNode, ID: 1}, {Type: TypeNode, ID: 2}, {Type: TypeNode, ID: 3},
+		{Type: TypeWay, ID: 100, Nodes: []int{1, 2}},
+		{Type: TypeWay, ID: 101, Nodes: []int{1, 3}},
+		{Type: TypeWay, ID: 102, Nodes: []int{1, 2}},
+		{Type: TypeWay, ID: 103, Nodes: []int{2, 3}},
+		{Type: TypeWay, ID: 104, Nodes: []int{1, 2}},
+	}}
+	if err := graph.LoadOSM(data); err != nil {
+		t.Fatal(err)
+	}
+	want := map[[2]int][]int{
+		{1, 2}: {0, 1, 2}, {2, 1}: {0, 1, 2},
+		{1, 3}: {0}, {3, 1}: {0},
+		{2, 3}: {0}, {3, 2}: {0},
+	}
+	got := make(map[[2]int][]int)
+	for _, edges := range graph.adjList {
+		for _, edge := range edges {
+			pair := [2]int{edge.From, edge.To}
+			got[pair] = append(got[pair], edge.Key)
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("keys per directed pair=%v; want %v", got, want)
 	}
 }
 
@@ -142,10 +173,10 @@ func TestLoadOSMCalculatesSegmentLengths(t *testing.T) {
 	wantM := map[[3]int]float64{
 		{1, 2, 0}: 111.19508372419142,
 		{2, 1, 0}: 111.19508372419142,
-		{2, 3, 1}: 222.39016744838284,
+		{2, 3, 0}: 222.39016744838284,
 		{3, 2, 0}: 222.39016744838284,
 		{1, 2, 1}: 111.19508372419142,
-		{2, 1, 2}: 111.19508372419142,
+		{2, 1, 1}: 111.19508372419142,
 	}
 	for _, edges := range graph.adjList {
 		for _, edge := range edges {
@@ -197,6 +228,41 @@ func TestLoadOSMRejectsInvalidSegmentCoordinates(t *testing.T) {
 			}
 			if len(graph.Nodes) != 1 || graph.Nodes[99].ID != 99 || len(graph.adjList) != 1 || len(graph.adjList[99]) != 0 {
 				t.Fatalf("failed load modified the previous graph: nodes=%v, edges=%v", graph.Nodes, graph.adjList)
+			}
+		})
+	}
+}
+
+func TestLoadOSMStoresParsedWidth(t *testing.T) {
+	for _, tc := range []struct {
+		name, raw string
+		meters    float64
+		valid     bool
+	}{
+		{"plain", "2", 2, true},
+		{"meter unit", "3 m", 3, true},
+		{"decimal comma", "3,5 metres", 3.5, true},
+		{"missing", "", 0, false},
+		{"combined", "3;4", 0, false},
+		{"invalid", "unknown", 0, false},
+		{"zero", "0", 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			graph := NewGraph()
+			data := OSMData{Elements: []Element{
+				{Type: TypeNode, ID: 1}, {Type: TypeNode, ID: 2}, {Type: TypeNode, ID: 3},
+				{Type: TypeWay, ID: 100, Nodes: []int{1, 2, 3}, Tags: Tags{"width": tc.raw}},
+			}}
+			if err := graph.LoadOSM(data); err != nil {
+				t.Fatal(err)
+			}
+			if graph.EdgeCount() != 4 {
+				t.Fatal("expected two segments and their reverses")
+			}
+			for _, edge := range graph.sortedEdges() {
+				if edge.Width != tc.meters || edge.WidthValid != tc.valid || edge.Tags.Get("width") != tc.raw {
+					t.Fatalf("width=%v, valid=%v, raw=%q; want %v, %v, %q", edge.Width, edge.WidthValid, edge.Tags.Get("width"), tc.meters, tc.valid, tc.raw)
+				}
 			}
 		})
 	}

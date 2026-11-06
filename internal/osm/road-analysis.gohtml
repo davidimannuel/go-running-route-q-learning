@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Road Analysis</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    body { font: 14px/1.45 system-ui, sans-serif; color: #172033; }
+    .panel { position: absolute; z-index: 1000; top: 12px; left: 60px; width: 290px; max-width: calc(100vw - 100px); max-height: calc(100vh - 60px); overflow: auto; padding: 14px; box-sizing: border-box; border-radius: 8px; background: white; box-shadow: 0 1px 8px #0003; }
+    h1 { font-size: 18px; margin: 0 0 8px; }
+    p { margin: 8px 0; }
+    select, button { font: inherit; max-width: 100%; padding: 6px; }
+    #theme { width: 100%; margin: 4px 0 8px; }
+    button { margin: 8px 0; cursor: pointer; }
+    .muted, small { color: #475569; }
+    small { display: block; margin: 6px 0; }
+    #legend-title { display: block; margin-top: 8px; }
+    #legend { list-style: none; padding: 0; margin: 8px 0; }
+    #legend li { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .swatch { width: 22px; height: 4px; flex: 0 0 22px; }
+    .details { white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.5 monospace; }
+    .edge-select { display: block; width: 100%; margin: 6px 0; }
+    .leaflet-popup-content { max-height: 55vh; overflow: auto; }
+    .start-popup .leaflet-popup-content { margin: 16px 20px; font: 14px/1.5 system-ui, sans-serif; }
+    .start-popup-heading { display: flex; align-items: center; gap: 10px; padding-right: 12px; }
+    .start-popup-heading strong { color: #14532d; font-size: 18px; }
+    .start-popup-badge { border-radius: 999px; padding: 3px 9px; color: #166534; background: #dcfce7; font-size: 12px; }
+    .start-coordinates { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 16px 0 12px; }
+    .start-coordinates dt { color: #64748b; }
+    .start-coordinates dd { margin: 0; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .start-popup-note { border-top: 1px solid #e2e8f0; padding-top: 10px; color: #64748b; font-size: 12px; }
+    .start-marker { background: transparent; border: 0; }
+    .start-marker svg { display: block; filter: drop-shadow(0 2px 3px #0005); }
+    .start-label { color: #14532d; font-weight: 700; border-color: #bbf7d0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <aside class="panel" aria-label="Road analysis controls">
+    <h1>Road Analysis</h1>
+    <p id="summary">Loading graph…</p>
+    <label for="theme">Road colors</label>
+    <select id="theme">
+      <option value="neutral">Neutral</option>
+      <option value="highway" selected>Highway</option>
+      <option value="surface">Surface</option>
+      <option value="access">Access</option>
+      <option value="comfort">Comfort score</option>
+    </select>
+    <label><input id="show-nodes" type="checkbox"> Show nodes</label>
+    <small id="node-status">Nodes are hidden.</small>
+    <button id="fit" type="button">Show entire graph</button>
+    <strong id="legend-title">Highway</strong>
+    <ul id="legend"></ul>
+    <small>Legend counts refer to displayed line groups. Click a road to inspect every directed edge it represents.</small>
+    <small>Colors and comfort scores express research preferences, not measured safety or runner comfort. Access colors show source tags, not an action mask decision.</small>
+    <small>The green START (input) marker shows the configured coordinate. The agent start node has not been selected. Background tiles may contain newer edits than this snapshot.</small>
+  </aside>
+
+  <!-- Go serializes and escapes this typed payload. No local JSON fetch is needed. -->
+  <script id="road-data" type="application/json">{{.}}</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const data = JSON.parse(document.getElementById("road-data").textContent);
+    if (typeof L === "undefined") {
+      document.getElementById("summary").textContent = "Could not load Leaflet. Check your internet connection.";
+      throw new Error("Leaflet did not load.");
+    }
+
+    // Initialize the view before any vector layers; their renderer needs pixel bounds.
+    const map = L.map("map", { preferCanvas: true }).setView(data.center, 15);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    const renderer = L.canvas({ padding: 0.3 });
+    const coordinates = new Map(data.nodes.map(node => [node.id, [node.latitude, node.longitude]]));
+    const roads = L.featureGroup().addTo(map);
+    const nodeLayer = L.layerGroup().addTo(map);
+    const themeSelect = document.getElementById("theme");
+    const nodeToggle = document.getElementById("show-nodes");
+    const roadLayers = [];
+
+    const extraStyles = {
+      missing: ["Missing", "#9ca3af"],
+      other: ["Other value (see popup)", "#475569"],
+      combined: ["Combined tag values", "#a855f7"],
+      overlap: ["Different overlapping categories", "#db2777"]
+    };
+    const themes = {
+      neutral: { title: "All roads", values: { road: ["Road", "#64748b"] } },
+      highway: { title: "Highway", values: {
+        residential: ["residential", "#2563eb"], living_street: ["living_street", "#16a34a"],
+        footway: ["footway", "#9333ea"], pedestrian: ["pedestrian", "#db2777"],
+        tertiary: ["tertiary", "#d97706"], service: ["service", "#64748b"],
+        path: ["path", "#92400e"], unclassified: ["unclassified", "#0891b2"],
+        secondary: ["secondary", "#ea580c"], primary: ["primary", "#dc2626"],
+        trunk: ["trunk", "#991b1b"], steps: ["steps", "#7c3aed"]
+      } },
+      surface: { title: "Surface", values: {
+        asphalt: ["asphalt", "#334155"], concrete: ["concrete", "#0284c7"],
+        paving_stones: ["paving_stones", "#d97706"], paved: ["paved", "#0d9488"],
+        gravel: ["gravel", "#a16207"], ground: ["ground", "#92400e"],
+        dirt: ["dirt", "#854d0e"], unpaved: ["unpaved", "#b45309"],
+        grass: ["grass", "#16a34a"], sand: ["sand", "#ca8a04"],
+        concrete_plates: ["concrete:plates", "#0369a1"]
+      } },
+      access: { title: "Access", values: {
+        yes: ["yes", "#15803d"], permissive: ["permissive", "#2563eb"],
+        no: ["no", "#dc2626"], private: ["private", "#991b1b"],
+        destination: ["destination", "#d97706"]
+      } },
+      comfort: { title: "Comfort score", values: {
+        negative_low: ["Score < −0.5", "#b91c1c"], negative: ["−0.5 ≤ score < 0", "#f87171"],
+        zero: ["Score = 0", "#9ca3af"], positive: ["0 < score ≤ 0.5", "#86efac"],
+        positive_high: ["Score > 0.5", "#15803d"]
+      } }
+    };
+
+    // This classifies colors only. Scoring is performed by Go and embedded above.
+    // Comfort bins match the reference notebook; values are never clipped.
+    function edgeCategory(edge, theme) {
+      if (theme === "neutral") return "road";
+      if (theme === "comfort") {
+        const score = edge.comfort_score;
+        if (Math.abs(score) < 1e-12) return "zero";
+        if (score < -0.5) return "negative_low";
+        if (score < 0) return "negative";
+        return score <= 0.5 ? "positive" : "positive_high";
+      }
+      const value = edge[theme].trim().toLowerCase();
+      if (!value) return "missing";
+      if (value.includes(";") || value.startsWith("[")) return "combined";
+      const key = value === "concrete:plates" ? "concrete_plates" : value;
+      return Object.hasOwn(themes[theme].values, key) ? key : "other";
+    }
+
+    function segmentCategory(segment, theme) {
+      const values = new Set(segment.edges.map(index => edgeCategory(data.edges[index], theme)));
+      return values.size === 1 ? values.values().next().value : "overlap";
+    }
+
+    function styleFor(category, theme) {
+      return themes[theme].values[category] ?? extraStyles[category];
+    }
+
+    // Treat all OSM values as literal text, never interpolated HTML.
+    function textElement(tag, text, className) {
+      const element = document.createElement(tag);
+      element.textContent = text;
+      if (className) element.className = className;
+      return element;
+    }
+
+    function roadTooltip(segment) {
+      const edge = data.edges[segment.edges[0]];
+      const category = segmentCategory(segment, themeSelect.value);
+      return textElement("span", (edge.name || "Unnamed road") + " · " + styleFor(category, themeSelect.value)[0] + " · " + segment.edges.length + " directed edge(s)");
+    }
+
+    function roadPopup(segment) {
+      const container = document.createElement("div");
+      container.append(textElement("strong", segment.edges.length + " coincident directed edge(s)"));
+      container.append(textElement("small", "Select an edge to inspect its own attributes and scores."));
+      const select = document.createElement("select");
+      select.className = "edge-select";
+      select.setAttribute("aria-label", "Directed edge");
+      for (const index of segment.edges) {
+        const edge = data.edges[index];
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = edge.from + " → " + edge.to + " / key=" + edge.key + " / way=" + edge.way_id;
+        select.append(option);
+      }
+      const details = textElement("pre", "", "details");
+      function update() {
+        const edge = data.edges[Number(select.value)];
+        const tags = ["highway", "surface", "width", "access"].map(tag => tag + "=" + (edge[tag] || "(missing)"));
+        details.textContent = [
+          edge.name || "Unnamed road", "Length: " + edge.length_m.toFixed(2) + " m", ...tags, "",
+          "highway_score: " + edge.highway_score.toFixed(3),
+          "surface_score: " + edge.surface_score.toFixed(3),
+          "width_score: " + edge.width_score.toFixed(3),
+          "comfort_score: " + edge.comfort_score.toFixed(3),
+          "", "C = " + data.weights[0] + " × H + " + data.weights[1] + " × S + " + data.weights[2] + " × W"
+        ].join("\n");
+      }
+      select.addEventListener("change", update);
+      container.append(select, details);
+      update();
+      L.DomEvent.disableClickPropagation(container);
+      return container;
+    }
+
+    for (const segment of data.segments) {
+      const line = L.polyline([coordinates.get(segment.from), coordinates.get(segment.to)], {
+        renderer, weight: 3, opacity: 0.9
+      }).addTo(roads);
+      // Content is created on demand rather than allocating a popup per edge.
+      line.bindTooltip(() => roadTooltip(segment), { sticky: true });
+      line.bindPopup(() => roadPopup(segment), { minWidth: 280, maxWidth: 440 });
+      roadLayers.push({ segment, line });
+    }
+
+    function applyTheme() {
+      const theme = themeSelect.value;
+      const counts = new Map();
+      for (const { segment, line } of roadLayers) {
+        const category = segmentCategory(segment, theme);
+        line.setStyle({ color: styleFor(category, theme)[1] });
+        counts.set(category, (counts.get(category) || 0) + 1);
+      }
+      document.getElementById("legend-title").textContent = themes[theme].title;
+      const legend = document.getElementById("legend");
+      legend.replaceChildren();
+      for (const [category, count] of [...counts].sort((a, b) => b[1] - a[1])) {
+        const [label, color] = styleFor(category, theme);
+        const row = document.createElement("li");
+        const swatch = textElement("span", "", "swatch");
+        swatch.style.backgroundColor = color;
+        row.append(swatch, textElement("span", label + " (" + count.toLocaleString() + ")"));
+        legend.append(row);
+      }
+    }
+
+    // Draw nodes only at close zoom and inside the viewport. This keeps tens of
+    // thousands of raw geometry nodes from obscuring the road overlay.
+    function updateNodes() {
+      nodeLayer.clearLayers();
+      const status = document.getElementById("node-status");
+      if (!nodeToggle.checked) { status.textContent = "Nodes are hidden."; return; }
+      if (map.getZoom() < 17) { status.textContent = "Zoom to level 17 or closer to show nodes."; return; }
+      const bounds = map.getBounds();
+      let count = 0;
+      let limited = false;
+      for (const node of data.nodes) {
+        const point = coordinates.get(node.id);
+        if (!bounds.contains(point)) continue;
+        if (count === 2000) { limited = true; break; }
+        L.circleMarker(point, { renderer, radius: 4, color: "#172033", fillColor: "white", fillOpacity: 1, weight: 1.5 })
+          .addTo(nodeLayer)
+          .bindTooltip(() => textElement("span", "Node " + node.id))
+          .bindPopup(() => textElement("pre", "Node: " + node.id + "\nLatitude: " + node.latitude + "\nLongitude: " + node.longitude, "details"));
+        count++;
+      }
+      status.textContent = count.toLocaleString() + " visible nodes" + (limited ? " (limit reached; zoom in)." : ".");
+    }
+
+    function startPopup() {
+      const container = document.createElement("div");
+      const heading = textElement("div", "", "start-popup-heading");
+      heading.append(textElement("strong", "START"), textElement("span", "Input location", "start-popup-badge"));
+      const coordinates = textElement("dl", "", "start-coordinates");
+      for (const [label, value] of [["Latitude", data.center[0]], ["Longitude", data.center[1]]]) {
+        coordinates.append(textElement("dt", label), textElement("dd", String(value)));
+      }
+      container.append(heading, coordinates, textElement("div", "Start node has not been selected.", "start-popup-note"));
+      return container;
+    }
+
+    // Match the reference's green START pin and white play symbol. Inline SVG
+    // avoids another icon library; the pin tip stays on the configured coordinate.
+    const startIcon = L.divIcon({
+      className: "start-marker",
+      html: '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="46" viewBox="0 0 36 46" aria-hidden="true"><path d="M18 44C15 40 2 28 2 18a16 16 0 1 1 32 0c0 10-13 22-16 26Z" fill="#15803d" stroke="white" stroke-width="2" stroke-linejoin="round"/><path d="m15 11 11 7-11 7Z" fill="white"/></svg>',
+      iconSize: [36, 46],
+      iconAnchor: [18, 44],
+      popupAnchor: [0, -42],
+      tooltipAnchor: [0, -46]
+    });
+    L.marker(data.center, {
+      icon: startIcon,
+      title: "Start location (configured coordinate)",
+      alt: "Green start pin with a white play symbol",
+      zIndexOffset: 1000,
+      riseOnHover: true
+    })
+      .addTo(map)
+      .bindTooltip("START (input)", { permanent: true, direction: "top", className: "start-label" })
+      // Leaflet otherwise measures wrapped text too narrowly, splitting coordinates.
+      .bindPopup(startPopup, { className: "start-popup", minWidth: 260, maxWidth: 300 });
+    function fitGraph() {
+      if (data.nodes.length) map.fitBounds(L.latLngBounds([...coordinates.values()]), { padding: [40, 40], maxZoom: 17 });
+      else map.setView(data.center, 15);
+    }
+    document.getElementById("summary").textContent = data.nodes.length.toLocaleString() + " nodes · " + data.edges.length.toLocaleString() + " directed edges · " + data.segments.length.toLocaleString() + " displayed line groups";
+    themeSelect.addEventListener("change", applyTheme);
+    nodeToggle.addEventListener("change", updateNodes);
+    document.getElementById("fit").addEventListener("click", fitGraph);
+    map.on("moveend", updateNodes);
+    applyTheme();
+    fitGraph();
+    // References: https://leafletjs.com/reference-1.9.4.html
+    // Tile usage: https://operations.osmfoundation.org/policies/tiles/
+  </script>
+</body>
+</html>

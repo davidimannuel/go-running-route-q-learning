@@ -17,7 +17,7 @@ import (
 )
 
 // runAnalyze builds the saved snapshot into a raw graph and always exports both
-// node and edge CSV tables for notebook analysis. Downloading is a separate command.
+// node/edge CSV tables and a scored interactive map. Downloading is separate.
 func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error {
 	flags := flag.NewFlagSet("analyze", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -77,12 +77,19 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 	}{
 		{filename: "nodes.csv", write: graph.NodeToCSV},
 		{filename: "edges.csv", write: graph.EdgeToCSV},
+		{filename: "road-analysis.html", write: func(w io.Writer) error {
+			return graph.MapToHTML(w, cfg.Map.Latitude, cfg.Map.Longitude)
+		}},
 	} {
 		path := filepath.Join(outputDir, export.filename)
 		if err := writeOutput(ctx, path, export.write); err != nil {
 			return fmt.Errorf("analyze: export %s: %w", export.filename, err)
 		}
-		logger.Info(ctx, "Saved graph CSV", logger.String("path", path))
+		message := "Saved graph CSV"
+		if export.filename == "road-analysis.html" {
+			message = "Saved road analysis map"
+		}
+		logger.Info(ctx, message, logger.String("path", path))
 	}
 	logger.Info(ctx, "Analysis completed", logger.Duration("duration", time.Since(started)))
 	return nil
