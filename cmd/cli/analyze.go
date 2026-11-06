@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davidimannuel/go-running-route-q-learning/internal/analysis"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/config"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/logger"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
@@ -75,10 +76,14 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 		filename string
 		write    func(io.Writer) error
 	}{
-		{filename: "nodes.csv", write: graph.NodeToCSV},
-		{filename: "edges.csv", write: graph.EdgeToCSV},
+		{filename: "nodes.csv", write: func(w io.Writer) error {
+			return analysis.NodeToCSV(w, graph)
+		}},
+		{filename: "edges.csv", write: func(w io.Writer) error {
+			return analysis.EdgeToCSV(w, graph)
+		}},
 		{filename: "road-analysis.html", write: func(w io.Writer) error {
-			return graph.MapToHTML(w, cfg.Map.Latitude, cfg.Map.Longitude)
+			return analysis.MapToHTML(w, graph, cfg.Map.Latitude, cfg.Map.Longitude)
 		}},
 	} {
 		path := filepath.Join(outputDir, export.filename)

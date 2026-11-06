@@ -1,9 +1,11 @@
-package osm
+package qlearning
 
 import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
 )
 
 // These weights and mappings match the active reference rute_lari_core.py,
@@ -23,14 +25,14 @@ type RoadScores struct {
 	ComfortScore float64 `json:"comfort_score"`
 }
 
-// Scores uses width already parsed during graph loading. No export reparses tags.
+// ScoreEdge uses width already parsed during graph loading. No export reparses tags.
 // Keeping one mapping function prevents CSV and HTML exports from diverging.
-func (e OSMEdge) Scores() RoadScores {
+func ScoreEdge(e osm.OSMEdge) RoadScores {
 	return ScoreRoad(e.Highway, e.Surface, e.Width, e.WidthValid)
 }
 
 // ScoreRoad matches calculate_highway_score, calculate_surface_score, and
-// width_score in the reference. Width must come from ParseWidthM at graph loading;
+// width_score in the reference. Width must come from osm.ParseWidthM at graph loading;
 // its validity flag distinguishes unavailable data from a usable measurement.
 // Access is a separate journey reward component.
 func ScoreRoad(highway, surface string, widthM float64, widthValid bool) RoadScores {

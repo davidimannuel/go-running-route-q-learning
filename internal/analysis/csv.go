@@ -1,4 +1,4 @@
-package osm
+package analysis
 
 import (
 	"cmp"
@@ -7,13 +7,16 @@ import (
 	"io"
 	"slices"
 	"strconv"
+
+	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
+	"github.com/davidimannuel/go-running-route-q-learning/internal/qlearning"
 )
 
 // NodeToCSV writes a header and one row per node, ordered by node ID.
-// The caller owns the writer; this method flushes CSV buffering and returns both
+// The caller owns the writer; this function flushes CSV buffering and returns both
 // immediate and buffered write failures. Coordinates retain float64 precision.
 // Reference: https://pkg.go.dev/encoding/csv#Writer
-func (g *Graph) NodeToCSV(w io.Writer) error {
+func NodeToCSV(w io.Writer, g *osm.Graph) error {
 	writer := csv.NewWriter(w)
 	if err := writer.Write([]string{"node_id", "latitude", "longitude"}); err != nil {
 		return fmt.Errorf("export nodes CSV: write header: %w", err)
@@ -46,7 +49,7 @@ func (g *Graph) NodeToCSV(w io.Writer) error {
 // width, and access, matching the inputs used by the route model.
 // Scores use the same Go mapping as the map export.
 // Sorting a copy preserves adjacency order and the existing action keys.
-func (g *Graph) EdgeToCSV(w io.Writer) error {
+func EdgeToCSV(w io.Writer, g *osm.Graph) error {
 	writer := csv.NewWriter(w)
 	if err := writer.Write([]string{
 		"from", "to", "key", "way_id", "length_m", "name", "highway", "surface", "width", "access",
@@ -54,9 +57,9 @@ func (g *Graph) EdgeToCSV(w io.Writer) error {
 	}); err != nil {
 		return fmt.Errorf("export edges CSV: write header: %w", err)
 	}
-	edges := g.sortedEdges()
+	edges := sortedEdges(g)
 	for _, edge := range edges {
-		scores := edge.Scores()
+		scores := qlearning.ScoreEdge(edge)
 		if err := writer.Write([]string{
 			strconv.Itoa(edge.From), strconv.Itoa(edge.To), strconv.Itoa(edge.Key),
 			strconv.Itoa(edge.WayID), strconv.FormatFloat(edge.LengthM, 'f', -1, 64),
@@ -78,12 +81,9 @@ func (g *Graph) EdgeToCSV(w io.Writer) error {
 }
 
 // sortedEdges returns a deterministic copy without reordering action adjacency.
-func (g *Graph) sortedEdges() []OSMEdge {
-	edges := make([]OSMEdge, 0, g.EdgeCount())
-	for _, outgoing := range g.adjList {
-		edges = append(edges, outgoing...)
-	}
-	slices.SortFunc(edges, func(a, b OSMEdge) int {
+func sortedEdges(g *osm.Graph) []osm.OSMEdge {
+	edges := g.Edges()
+	slices.SortFunc(edges, func(a, b osm.OSMEdge) int {
 		if order := cmp.Compare(a.From, b.From); order != 0 {
 			return order
 		}

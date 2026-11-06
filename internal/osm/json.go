@@ -16,12 +16,22 @@ func Load(path string) (OSMData, error) {
 	if err != nil {
 		return OSMData{}, fmt.Errorf("load OSM: read %s: %w", path, err)
 	}
+	data, err := Parse(body)
+	if err != nil {
+		return OSMData{}, fmt.Errorf("load OSM: %s: %w", path, err)
+	}
+	return data, nil
+}
+
+// Parse validates the exact Overpass response bytes used for a reproducible
+// snapshot hash. It shares validation with disk loading and cache handling.
+func Parse(body []byte) (OSMData, error) {
 	var data OSMData
 	if err := json.Unmarshal(body, &data); err != nil {
-		return OSMData{}, fmt.Errorf("load OSM: decode %s: %w", path, err)
+		return OSMData{}, fmt.Errorf("decode OSM: %w", err)
 	}
 	if err := validateOSMData(data); err != nil {
-		return OSMData{}, fmt.Errorf("load OSM: invalid snapshot %s: %w", path, err)
+		return OSMData{}, fmt.Errorf("invalid OSM snapshot: %w", err)
 	}
 	return data, nil
 }

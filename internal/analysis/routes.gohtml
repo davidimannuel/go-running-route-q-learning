@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Running routes — Scenario {{.Scenario}}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}@media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}.leaflet-control-zoom{display:none}}
+</style>
+</head>
+<body><div id="map"></div>
+<aside class="panel"><h1>Running routes · {{.Scenario}}</h1><div class="muted">Final greedy evaluation · epsilon = 0</div>
+<label for="seed">Training seed</label><select id="seed"></select><div id="status" class="status"></div><dl id="metrics"></dl>
+<button id="fit">Fit selected route</button><div class="legend" id="legend"></div>
+<div class="muted">Each color follows the kilometer at the start of a segment. Click a road for its attributes and reward.</div>
+<div class="muted foot">Comfort is a research preference, not a safety assessment. Overlap counts repeated physical-road traversals. A failed route is shown for inspection.</div>
+<div class="muted foot" id="snap"></div><div id="error" role="alert"></div></aside>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const routeData = {{.}};
+(() => {
+const error = document.getElementById('error');
+if (!window.L) { error.textContent='Leaflet could not load. Check your internet connection and reload.'; return; }
+const colors=['#2457F5','#00A884','#F59E0B','#8B3DFF','#EF4444'];
+const map=L.map('map',{preferCanvas:true,zoomControl:false}).setView(routeData.Start,15);
+L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+L.control.scale().addTo(map);
+const layer=L.featureGroup().addTo(map), select=document.getElementById('seed');
+const fmt=(value,digits=2)=>Number.isFinite(Number(value))?Number(value).toLocaleString('en-US',{maximumFractionDigits:digits}):'—';
+const popup=(title,rows)=>{const box=document.createElement('div'),heading=document.createElement('div'),list=document.createElement('dl');heading.className='popup-title';heading.textContent=title;list.className='popup-table';for(const [key,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=key;dd.textContent=value===''?'Not tagged':String(value);list.append(dt,dd);}box.append(heading,list);return box;};
+const pin=(color,finish=false)=>L.divIcon({className:'route-pin',html:`<div class="pin" style="background:${color}"><svg viewBox="0 0 24 24">${finish?'<path d="M5 2h2v2h12l-3 5 3 5H7v8H5z"/>':'<path d="M8 4v16l13-8z"/>'}</svg></div>`,iconSize:[34,42],iconAnchor:[17,42]});
+const bounds=()=>{const trial=routeData.Trials[Number(select.value)],points=[routeData.Start,...trial.Segments.flatMap(s=>s.Coordinates)];map.fitBounds(L.latLngBounds(points),{paddingTopLeft:window.innerWidth>600?[340,30]:[25,Math.min(window.innerHeight*.43+24,320)],paddingBottomRight:[30,35],maxZoom:17});};
+routeData.Trials.forEach((trial,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=`Seed ${trial.Seed}${i===routeData.Selected?' · representative':''}`;select.append(option);});
+select.value=String(routeData.Selected);
+const legend=document.getElementById('legend');colors.forEach((color,i)=>{const item=document.createElement('span'),line=document.createElement('i');line.style.background=color;item.append(line,document.createTextNode(`${i}–${i+1} km`));legend.append(item);});
+document.getElementById('snap').textContent=`Start node ${routeData.StartNode} · ${fmt(routeData.SnapM,1)} m from input. Distances use Haversine; the graph is not simplified.`;
+function render(){
+ layer.clearLayers();const trial=routeData.Trials[Number(select.value)],status=document.getElementById('status');
+ status.className='status'+(trial.IsLoop?'':' failed');status.textContent=trial.IsLoop?'Valid loop':`Failed · ${trial.Termination.replaceAll('_',' ')}`;
+ const metrics=document.getElementById('metrics');metrics.replaceChildren();
+ const rows=[['Distance',`${fmt(trial.DistanceM)} m`],['Absolute target error',`${fmt(trial.ErrorM)} m`],['Total reward',fmt(trial.Reward)],['Mean comfort',fmt(trial.Comfort,4)],['Overlap',Number.isFinite(Number(trial.Overlap))?`${fmt(Number(trial.Overlap)*100)}%`:'—'],['Return progress',Number.isFinite(Number(trial.ReturnProgress))?`${fmt(Number(trial.ReturnProgress)*100)}%`:'—'],['End to start',`${fmt(trial.EndDistance)} m`],['Steps / revisits',`${trial.Steps} / ${trial.Revisits}`],['Closing was available',trial.ClosingAvailable?'Yes':'No']];
+ for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;metrics.append(dt,dd);}
+ let nextKm=1;
+ for(const segment of trial.Segments){
+  const color=colors[Math.min(4,Math.floor(segment.BeforeM/1000))],c=segment.Components;
+  const road=L.polyline(segment.Coordinates,{color,weight:6,opacity:.9}).addTo(layer);
+  road.bindTooltip(`Step ${segment.Step} · ${segment.From} → ${segment.To} · key ${segment.Key}`);
+  road.bindPopup(popup(segment.Name||'Unnamed road',[
+   ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Step total',fmt(segment.Reward,4)]
+  ]),{minWidth:270,maxWidth:340});
+  while(nextKm<=5 && segment.AfterM>=nextKm*1000){
+   if(!(nextKm===5&&trial.IsLoop)){
+    const ratio=Math.max(0,Math.min(1,(nextKm*1000-segment.BeforeM)/segment.LengthM)),a=segment.Coordinates[0],b=segment.Coordinates[1],location=[a[0]+(b[0]-a[0])*ratio,a[1]+(b[1]-a[1])*ratio];
+    L.marker(location,{icon:L.divIcon({className:'km-marker',html:`<div class="km" style="--color:${colors[nextKm-1]}">${nextKm}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(`KM ${nextKm} · interpolated along this segment`).addTo(layer);
+   }nextKm++;
+  }
+ }
+ L.circleMarker(routeData.Input,{radius:5,color:'#2563eb',fillOpacity:.9}).bindPopup(popup('Input coordinate',[['Latitude',routeData.Input[0]],['Longitude',routeData.Input[1]]]),{minWidth:260}).addTo(layer);
+ if(routeData.SnapM>0)L.polyline([routeData.Input,routeData.Start],{color:'#64748b',weight:2,dashArray:'4 5'}).addTo(layer);
+ L.marker(routeData.Start,{icon:pin('#15803d'),zIndexOffset:500}).bindTooltip('START · KM 0').bindPopup(popup('START',[['Node',routeData.StartNode],['Latitude',routeData.Start[0]],['Longitude',routeData.Start[1]],['Snap distance',`${fmt(routeData.SnapM)} m`]]),{minWidth:260,maxWidth:320}).addTo(layer);
+ const end=trial.Segments.length?trial.Segments.at(-1).Coordinates[1]:routeData.Start;
+ const finishIcon=pin(trial.IsLoop?'#7c3aed':'#dc2626',true);
+ // Offset the icon, not the geographic endpoint, when start and finish coincide.
+ if(end[0]===routeData.Start[0]&&end[1]===routeData.Start[1])finishIcon.options.iconAnchor=[-10,42];
+ L.marker(end,{icon:finishIcon,zIndexOffset:600}).bindTooltip(trial.IsLoop?'FINISH · same node as START':'END · unsuccessful route').bindPopup(popup(trial.IsLoop?'FINISH':'END',[['Result',trial.IsLoop?'Valid loop':trial.Termination],['Distance',`${fmt(trial.DistanceM)} m`],['Latitude',end[0]],['Longitude',end[1]]]),{minWidth:260,maxWidth:320}).addTo(layer);
+ bounds();
+}
+select.addEventListener('change',render);document.getElementById('fit').addEventListener('click',bounds);render();
+})();
+</script></body></html>

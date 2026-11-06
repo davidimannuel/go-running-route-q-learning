@@ -1,0 +1,41 @@
+schema_version: 1
+map:
+  latitude: -7.282187
+  longitude: 112.709282
+  radius_m: 3025
+  timeout_sec: 90
+output_dir: output
+cache_dir: cache
+
+qlearning:
+  # A: current node; B: node + progress; C: node + previous node + progress.
+  scenario: B
+  environment:
+    target_distance_m: 5000
+    distance_tolerance: 0.10
+    progress_bins: 16
+    max_steps: 220
+    allow_revisit: true
+    revisit_after_ratio: 0.50
+    max_node_visits: 2
+    max_snap_distance_m: 100
+  training:
+    alpha: 0.15
+    gamma: 0.95
+    epsilon_start: 1.0
+    epsilon_end: 0.05
+    seeds: [0, 1, 2, 3, 4]
+    max_workers: 3
+    profiles:
+      - name: dynamic-75000
+        episodes: 75000
+        epsilon_decay_episodes: null
+      - name: dynamic-150000
+        episodes: 150000
+        epsilon_decay_episodes: null
+      - name: horizon-50000-total-75000
+        episodes: 75000
+        epsilon_decay_episodes: 50000
+      - name: horizon-50000-total-150000
+        episodes: 150000
+        epsilon_decay_episodes: 50000

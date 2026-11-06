@@ -62,3 +62,9 @@ func greatCircleDistanceM(lat1, lon1, lat2, lon2 float64) (float64, error) {
 	arc := 2 * math.Asin(math.Sqrt(a))
 	return earthRadiusM * arc, nil
 }
+
+// GreatCircleDistanceM exposes the graph loader's validated Haversine calculation
+// for start snapping and direction rewards. Coordinates are degrees, result meters.
+func GreatCircleDistanceM(lat1, lon1, lat2, lon2 float64) (float64, error) {
+	return greatCircleDistanceM(lat1, lon1, lat2, lon2)
+}

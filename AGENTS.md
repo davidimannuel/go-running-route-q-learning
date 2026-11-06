@@ -1,43 +1,32 @@
 # Repository Guidelines
 
-## Tujuan dan Cara Berkolaborasi
+## Collaboration
 
-Repository ini menulis ulang core TA rekomendasi rute lari Dukuh Kupang, Surabaya, dari Python ke Go. Pengguna menulis kode Go; agent membantu perencanaan, penjelasan, review idiomatic Go, pengujian, analisis, dan pembuatan HTML peta. Jangan mengambil alih implementasi tanpa permintaan pengguna. Gunakan bahasa Indonesia dan kerjakan satu komponen kecil sampai dipahami sebelum integrasi.
+Proyek ini menulis ulang core TA rute lari Dukuh Kupang dari Python ke Go. Gunakan bahasa Indonesia di chat; identifier, komentar kode, dan error berbahasa Inggris. Pengguna belajar lewat coding dan review per komponen. Implementasikan saat diminta; diskusikan perubahan desain dahulu.
 
-## Project Structure & Module Organization
+**Always keep it simple:** utamakan kode idiomatic, mudah dibaca, hemat memori, dan standard library. Hindari abstraksi atau penanganan format yang belum dibutuhkan. Pertahankan referensi kode dengan komentar singkat yang menjelaskan tujuan. Dokumentasi penggunaan di README; jangan membuat folder/file docs tambahan tanpa permintaan. Jaga panduan ini tetap ringkas.
 
-- `go.mod`: modul `github.com/davidimannuel/go-running-route-q-learning`; versi Go mengikuti berkas ini.
-- `cmd/`: tempat entry point CLI; saat inisialisasi masih kosong.
-- `internal/`: tempat implementasi internal; saat inisialisasi masih kosong. Tambahkan package sesuai kebutuhan komponen.
-- Belum ada pengujian, notebook, atau aset dalam repository ini. Letakkan pengujian bersama package terkait dan fixture kecil dalam `testdata/` ketika diperlukan.
+## Layout
 
-Core dan training berjalan di Go. Jupyter hanya membaca hasil untuk analisis dan diagram. Utamakan standard library; jelaskan kebutuhan dependensi eksternal sebelum menambahkannya.
+- `cmd/cli`: download, analyze, train, serve, worker, dan penyimpanan hasil.
+- `internal/osm`: Overpass, cache, graf mentah, parsing, Haversine.
+- `internal/qlearning`: scoring, state, mask, environment, reward, training, metrik.
+- `internal/analysis`: ekspor CSV/Q-table dan HTML peta.
+- `analysis/`: modul Python untuk analisis graf/training. Notebook hanya parameter, pemanggilan, penjelasan, dan hasil; jangan menduplikasi core Go.
+- `workdirs/`: config, cache, output; tanpa folder input. Output/cache, `.venv`, dan playground diabaikan Git.
 
-## Referensi dan Kesetaraan Perilaku
+## Research Rules
 
-Proyek acuan berada di `/Users/david/widya_kartika/uwika-ta-31123022-2026`. Baca `rute_lari_core.py`, bagian relevan `IMPLEMENTASI.md`, notebook, serta metadata eksperimen. Catatan historis dapat berbeda dari konfigurasi aktif. Perlakukan proyek acuan sebagai referensi baca saja.
+Acuan baca saja: `/Users/david/widya_kartika/uwika-ta-31123022-2026`; baca bagian relevan `rute_lari_core.py`, `IMPLEMENTASI.md`, dan metadata hasil.
 
-Pertahankan target loop 5.000 m dengan toleransi 10%, action edge paralel, state A/B/C, action mask, reward, dan metrik sesuai baseline yang disepakati. Lima seed penelitian adalah `0,1,2,3,4`. Catat perubahan desain; jangan menganggap seed sama menjamin urutan acak identik antara Python dan Go. Bahas simplifikasi graf, proyeksi koordinat, dan format artefak sebelum menetapkannya.
+Pertahankan loop 5.000 m ±10%, state A/B/C, action `(next_node,key)`, mask, dan reward yang disepakati. Konstanta reward ada di `reward.go`; jangan mengubah metode demi mengejar hasil. Access scalar kosong/yes/permissive diperbolehkan; tanpa split/list. Urutan action numerik menurut tujuan lalu key. Jarak ke start memakai Haversine. Overlap berdasarkan hitungan lintasan geometri ruas, menyatukan arah balik/geometri sama.
 
-## Build, Test, and Development Commands
+Graf masih mentah; simplifikasi, pemilihan komponen, dan truncation dibahas di akhir. Hasil Go belum identik dengan OSMnx/NumPy. Jangan mengubah metadata/arsip lama atau menganggap seed sama memberi urutan acak lintas bahasa yang sama.
 
-Setelah package tersedia, jalankan dari root:
+## Workdirs and Validation
 
-- `gofmt -w <berkas.go>`: format berkas Go yang diubah.
-- `go build ./...`: kompilasi seluruh package.
-- `go test ./...`: jalankan pengujian.
-- `go vet ./...`: periksa masalah statis umum.
+Empat workdir utama: scenario-a/b/c (empat profil, seed 0–4) dan testing (B, lima seed acak, 150k episode, horizon 50k). Detail config dan command di README. `dukuh-kupang` menyimpan snapshot bersama penelitian. Setiap seed memiliki Q-table/environment/RNG mandiri; hasil tertimpa sesuai workdir/profil. Jangan menjalankan training panjang tanpa permintaan.
 
-Belum ada perintah CLI yang dapat dijalankan.
+Gunakan `gofmt`, `go test ./...`, `go test -race ./...` untuk konkurensi, `go vet ./...`, dan `go build ./...`. Tes memakai fixture lokal; expected hitungan Q harus independen. Setelah perubahan Python, jalankan notebook terkait dari kernel bersih dan periksa grafik; simpan notebook tanpa output. Commit deskriptif; jangan sertakan artefak lokal.
 
-## Coding Style & Naming Conventions
-
-Ikuti `gofmt`, nama package pendek lowercase, nama exported `MixedCaps`, dan nama internal `mixedCaps`. Sertakan satuan seperti `DistanceM`. Tangani error dengan konteks; gunakan `context.Context` dan timeout untuk HTTP. Komentar berbahasa Indonesia menjelaskan alasan aturan penelitian.
-
-## Testing Guidelines
-
-Gunakan `testing`, table-driven tests, dan `httptest` untuk Overpass. Uji fixture lokal, edge paralel, batas jarak, mask, reward, serta update Q dengan hitungan independen. Nama berkas `*_test.go`, fungsi `TestXxx`. Belum ada target coverage numerik. Pisahkan tes dari unduhan langsung dan training panjang.
-
-## Commit & Pull Request Guidelines
-
-Repository Go belum memiliki riwayat Git. Acuan Python menggunakan pesan deskriptif tanpa konvensi prefix wajib. Buat commit per komponen. PR menjelaskan tujuan, perubahan perilaku, hasil pemeriksaan, dan dampak terhadap kesetaraan eksperimen; sertakan contoh CSV atau tampilan peta bila relevan.
+Review berikutnya: metrik dan orkestrasi CLI. Prioritaskan verifikasi langkah/reward/Q sebelum improvement graf.

@@ -259,11 +259,51 @@ func TestLoadOSMStoresParsedWidth(t *testing.T) {
 			if graph.EdgeCount() != 4 {
 				t.Fatal("expected two segments and their reverses")
 			}
-			for _, edge := range graph.sortedEdges() {
-				if edge.Width != tc.meters || edge.WidthValid != tc.valid || edge.Tags.Get("width") != tc.raw {
-					t.Fatalf("width=%v, valid=%v, raw=%q; want %v, %v, %q", edge.Width, edge.WidthValid, edge.Tags.Get("width"), tc.meters, tc.valid, tc.raw)
+			for _, edges := range graph.adjList {
+				for _, edge := range edges {
+					if edge.Width != tc.meters || edge.WidthValid != tc.valid || edge.Tags.Get("width") != tc.raw {
+						t.Fatalf("width=%v, valid=%v, raw=%q; want %v, %v, %q", edge.Width, edge.WidthValid, edge.Tags.Get("width"), tc.meters, tc.valid, tc.raw)
+					}
 				}
 			}
 		})
+	}
+}
+
+func TestLoadOSMPreservesWayTags(t *testing.T) {
+	tags := Tags{"width": "3;4", "custom": "source value"}
+	data := OSMData{Elements: []Element{
+		{Type: TypeNode, ID: 1}, {Type: TypeNode, ID: 2},
+		{Type: TypeWay, ID: 100, Nodes: []int{1, 2}, Tags: tags},
+	}}
+	graph := NewGraph()
+	if err := graph.LoadOSM(data); err != nil {
+		t.Fatal(err)
+	}
+	tags["width"] = "changed after loading"
+	for _, id := range []int{1, 2} {
+		edge := graph.adjList[id][0]
+		if edge.WayID != 100 || edge.Tags.Get("width") != "3;4" || edge.Tags.Get("custom") != "source value" {
+			t.Fatalf("source identity or original tags were lost: %+v", edge)
+		}
+	}
+}
+
+func TestGraphEdgesReturnsIndependentValues(t *testing.T) {
+	graph := NewGraph()
+	if err := graph.LoadOSM(graphTestData(false)); err != nil {
+		t.Fatal(err)
+	}
+	edges := graph.Edges()
+	if len(edges) != 6 {
+		t.Fatalf("edge count=%d; want 6", len(edges))
+	}
+	edges[0].WayID = -1
+	for nodeID := range graph.Nodes {
+		for _, edge := range graph.OutgoingEdges(nodeID) {
+			if edge.WayID == -1 {
+				t.Fatal("editing copied edges modified graph storage")
+			}
+		}
 	}
 }

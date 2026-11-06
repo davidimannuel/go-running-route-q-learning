@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
+	"github.com/davidimannuel/go-running-route-q-learning/internal/qlearning"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -19,6 +20,7 @@ type Config struct {
 	Map           MapConfig
 	OutputDir     string
 	CacheDir      string
+	QLearning     qlearning.Config
 }
 
 type MapConfig struct {
@@ -34,10 +36,11 @@ func (m MapConfig) FetchParam() osm.FetchParam {
 
 // Pointer fields distinguish omitted coordinates from valid zero values.
 type configFile struct {
-	SchemaVersion *int     `yaml:"schema_version"`
-	Map           *mapFile `yaml:"map"`
-	OutputDir     *string  `yaml:"output_dir"`
-	CacheDir      *string  `yaml:"cache_dir"`
+	SchemaVersion *int              `yaml:"schema_version"`
+	Map           *mapFile          `yaml:"map"`
+	OutputDir     *string           `yaml:"output_dir"`
+	CacheDir      *string           `yaml:"cache_dir"`
+	QLearning     *qlearning.Config `yaml:"qlearning"`
 }
 
 type mapFile struct {
@@ -61,7 +64,8 @@ func Load(workdir string) (Config, error) {
 
 	decoder := yaml.NewDecoder(file)
 	decoder.KnownFields(true)
-	var raw configFile
+	defaults := qlearning.DefaultConfig()
+	raw := configFile{QLearning: &defaults}
 	if err := decoder.Decode(&raw); err != nil {
 		return Config{}, fmt.Errorf("config: decode %s: %w", path, err)
 	}
@@ -103,6 +107,16 @@ func Load(workdir string) (Config, error) {
 		},
 		OutputDir: "output",
 		CacheDir:  "cache",
+	}
+	cfg.QLearning = defaults
+	if raw.QLearning != nil {
+		cfg.QLearning = *raw.QLearning
+	}
+	// Map-only workdirs remain valid. Train explicitly requires scenario A/B/C.
+	if cfg.QLearning.Scenario != "" {
+		if err := cfg.QLearning.Validate(); err != nil {
+			return Config{}, fmt.Errorf("config: %w", err)
+		}
 	}
 	if raw.OutputDir != nil {
 		cfg.OutputDir = strings.TrimSpace(*raw.OutputDir)

@@ -130,6 +130,25 @@ func (g *Graph) addEdge(edge OSMEdge) {
 	g.adjList[edge.From] = append(g.adjList[edge.From], edge)
 }
 
+// OutgoingEdges returns the directed edges leaving nodeID, including parallel
+// edges. Unknown and isolated nodes return nil. The returned slice, edge values,
+// and shared Tags maps are read-only views of graph storage; do not modify,
+// append to, or reorder them. Reading this view does not copy the edges.
+func (g *Graph) OutgoingEdges(nodeID int) []OSMEdge {
+	return g.adjList[nodeID]
+}
+
+// Edges returns a flat copy of all directed edges, including reverse and parallel
+// segments. Callers may sort or edit the copied values; shared Tags maps remain
+// read-only. Ordering is unspecified because adjacency is stored in a map.
+func (g *Graph) Edges() []OSMEdge {
+	edges := make([]OSMEdge, 0, g.EdgeCount())
+	for _, outgoing := range g.adjList {
+		edges = append(edges, outgoing...)
+	}
+	return edges
+}
+
 // PrintInfo prints outgoing edges for manual inspection during development.
 func (g *Graph) PrintInfo(nodeID int) {
 	fmt.Printf("nodeID %d\n", nodeID)
