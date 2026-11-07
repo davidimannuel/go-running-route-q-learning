@@ -146,9 +146,9 @@ qlearning:
       width_threshold_m: 3.0
     return_phase_ratio: 0.50
     outward_penalty_scale: 0.60
-    return_reward_scale: 0.60
+    return_reward_scale: 1.20
     permissive_penalty_per_100m: -0.10
-    revisit_penalty: -10.0
+    revisit_penalty: -5.0
     success_bonus: 100.0
     over_distance_penalty: -50.0
     no_action_penalty: -50.0
@@ -229,6 +229,10 @@ konfigurasi workdir, waktu mulai/selesai UTC, seed aktual, hash SHA-256 snapshot
 jumlah node/edge, start dan jarak snap, reward, aturan algoritma, serta informasi
 build yang tersedia. **Editing YAML tidak mengubah metadata hasil lama.**
 Halaman report menampilkan konfigurasi yang direkam, bukan membaca config saat ini.
+Peta `routes.html` menyediakan layer **Comfort score** dan **Access** untuk graf
+sekitar rute. Keduanya tersembunyi saat dibuka (**Roads hidden**); pilih tema di
+kontrol layer dan gunakan **Selected route** untuk menampilkan/menyembunyikan rute.
+Warna dan kategori mengikuti peta analisis; popup tetap memuat setiap edge terarah.
 Nilai metrik yang tidak terdefinisi disimpan sebagai NaN pada CSV dan null pada JSON.
 
 Training menyiapkan satu direktori sementara lalu memublikasikannya setelah

@@ -41,6 +41,7 @@ type routeTrialData struct {
 }
 
 type routeMapData struct {
+	Graph        mapData
 	Scenario     qlearning.Scenario
 	Input, Start [2]float64
 	StartNode    string
@@ -52,6 +53,7 @@ type routeMapData struct {
 // RoutesToHTML follows make_route_map in the reference: kilometer colors,
 // start/finish markers, and honest display of failed routes. A selector exposes
 // EVERY seed, defaulting to the same representative ranking as the reference.
+// Optional comfort/access layers inspect the full graph and start hidden.
 // Data is embedded with html/template escaping; OSM text is inserted through
 // DOM textContent rather than interpreted as popup HTML.
 func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM float64, trials []RouteTrial, scores qlearning.RoadScoreConfig) error {
@@ -72,7 +74,11 @@ func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM 
 	if len(trials) == 0 {
 		return fmt.Errorf("route map: at least one evaluation is required")
 	}
-	data := routeMapData{Scenario: trials[0].Metrics.Scenario, Input: [2]float64{lat, lon}, Start: [2]float64{start.Lat, start.Lon}, StartNode: strconv.Itoa(startNode), SnapM: snapM}
+	graphData, err := prepareMapData(graph, lat, lon, scores)
+	if err != nil {
+		return err
+	}
+	data := routeMapData{Graph: graphData, Scenario: trials[0].Metrics.Scenario, Input: [2]float64{lat, lon}, Start: [2]float64{start.Lat, start.Lon}, StartNode: strconv.Itoa(startNode), SnapM: snapM}
 	rows := make([]qlearning.Metrics, 0, len(trials))
 	for _, trial := range trials {
 		m := trial.Metrics

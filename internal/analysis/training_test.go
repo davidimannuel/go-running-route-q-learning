@@ -46,6 +46,8 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 	if err := graph.LoadOSM(osm.OSMData{Version: 0.6, Elements: []osm.Element{
 		{Type: osm.TypeNode, ID: 0, Lat: 0, Lon: 0}, {Type: osm.TypeNode, ID: 1, Lat: 0, Lon: 0.01},
 		{Type: osm.TypeWay, ID: 10, Nodes: []int{0, 1}, Tags: osm.Tags{"name": hostile}},
+		{Type: osm.TypeNode, ID: 2, Lat: 0.01, Lon: 0.01},
+		{Type: osm.TypeWay, ID: 20, Nodes: []int{1, 2}, Tags: osm.Tags{"access": "private"}},
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -70,12 +72,26 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 	var payload struct {
 		Selected int
 		Trials   []routeTrialData
+		Graph    mapData
 	}
 	if err := json.Unmarshal([]byte(match[1]), &payload); err != nil {
 		t.Fatal(err)
 	}
 	if payload.Selected != 1 || len(payload.Trials) != 2 || payload.Trials[1].Seed != "9007199254740993" {
 		t.Fatalf("payload=%+v", payload)
+	}
+	if len(payload.Graph.Nodes) != 3 || len(payload.Graph.Edges) != 4 || len(payload.Graph.Segments) != 2 {
+		t.Fatalf("route inspection must include the surrounding graph: %+v", payload.Graph)
+	}
+	privateEdges := 0
+	for _, edge := range payload.Graph.Edges {
+		if edge.Access == "private" {
+			privateEdges++
+		}
+		checkScores(t, edge.RoadScores, qlearning.RoadScores{HighwayScore: -0.5, SurfaceScore: -0.5, WidthScore: -0.5, ComfortScore: -0.5})
+	}
+	if privateEdges != 2 {
+		t.Fatal("inspection must retain blocked roads without adding them to the route")
 	}
 	if payload.Trials[0].Segments[0].Name != hostile || payload.Trials[0].IsLoop {
 		t.Fatal("failed route/OSM text lost")

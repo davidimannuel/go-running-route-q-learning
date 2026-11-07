@@ -59,12 +59,27 @@ type mapData struct {
 // network request, or training is performed. Leaflet/OSM assets load in-browser.
 // IDs are strings because JavaScript numbers cannot represent all Go integers.
 func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64, scores qlearning.RoadScoreConfig) error {
-	if err := scores.Validate(); err != nil {
+	data, err := prepareMapData(g, latitude, longitude, scores)
+	if err != nil {
 		return err
+	}
+	// html/template serializes this typed value as JSON in script context and
+	// escapes <, >, and &. Original OSM strings cannot terminate the data script.
+	if err := roadAnalysisTemplate.Execute(w, data); err != nil {
+		return fmt.Errorf("export map HTML: %w", err)
+	}
+	return nil
+}
+
+// prepareMapData shares one validated graph payload between analysis and route maps.
+// Coincident lines are grouped for display; every directed/parallel edge stays available.
+func prepareMapData(g *osm.Graph, latitude, longitude float64, scores qlearning.RoadScoreConfig) (mapData, error) {
+	if err := scores.Validate(); err != nil {
+		return mapData{}, err
 	}
 
 	if err := validateCoordinates(latitude, longitude); err != nil {
-		return fmt.Errorf("export map: input location: %w", err)
+		return mapData{}, fmt.Errorf("export map: input location: %w", err)
 	}
 	data := mapData{
 		Center:   [2]float64{latitude, longitude},
@@ -81,20 +96,20 @@ func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64, scores ql
 	for _, id := range ids {
 		node := g.Nodes[id]
 		if err := validateCoordinates(node.Lat, node.Lon); err != nil {
-			return fmt.Errorf("export map: node %d: %w", id, err)
+			return mapData{}, fmt.Errorf("export map: node %d: %w", id, err)
 		}
 		data.Nodes = append(data.Nodes, mapNode{ID: strconv.Itoa(id), Latitude: node.Lat, Longitude: node.Lon})
 	}
 	segmentIndex := make(map[[2]int]int)
 	for _, edge := range sortedEdges(g) {
 		if _, ok := g.Nodes[edge.From]; !ok {
-			return fmt.Errorf("export map: edge references missing source node %d", edge.From)
+			return mapData{}, fmt.Errorf("export map: edge references missing source node %d", edge.From)
 		}
 		if _, ok := g.Nodes[edge.To]; !ok {
-			return fmt.Errorf("export map: edge references missing destination node %d", edge.To)
+			return mapData{}, fmt.Errorf("export map: edge references missing destination node %d", edge.To)
 		}
 		if math.IsNaN(edge.LengthM) || math.IsInf(edge.LengthM, 0) || edge.LengthM < 0 {
-			return fmt.Errorf("export map: invalid edge length for (%d, %d, %d)", edge.From, edge.To, edge.Key)
+			return mapData{}, fmt.Errorf("export map: invalid edge length for (%d, %d, %d)", edge.From, edge.To, edge.Key)
 		}
 		index := len(data.Edges)
 		data.Edges = append(data.Edges, mapEdge{
@@ -114,12 +129,7 @@ func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64, scores ql
 		}
 		data.Segments[position].Edges = append(data.Segments[position].Edges, index)
 	}
-	// html/template serializes this typed value as JSON in script context and
-	// escapes <, >, and &. Original OSM strings cannot terminate the data script.
-	if err := roadAnalysisTemplate.Execute(w, data); err != nil {
-		return fmt.Errorf("export map HTML: %w", err)
-	}
-	return nil
+	return data, nil
 }
 
 // validateCoordinates checks export inputs directly; exporting does not need to

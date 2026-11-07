@@ -5,7 +5,7 @@
 <title>Running routes — Scenario {{.Scenario}}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
-*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}@media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}.leaflet-control-zoom{display:none}}
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}.leaflet-control-layers{max-width:230px;font:13px/1.5 system-ui,sans-serif}.leaflet-control-layers label{font-weight:400;margin:4px 0}.leaflet-control-layers input{margin-right:5px}@media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}.leaflet-control-zoom{display:none}}
 </style>
 </head>
 <body><div id="map"></div>
@@ -13,6 +13,8 @@
 <label for="seed">Training seed</label><select id="seed"></select><div id="status" class="status"></div><dl id="metrics"></dl>
 <button id="fit">Fit selected route</button><div class="legend" id="legend"></div>
 <div class="muted">Each color follows the kilometer at the start of a segment. Click a road for its attributes and reward.</div>
+<div id="road-legend" hidden><strong id="road-legend-title"></strong><div class="legend" id="road-legend-items"></div></div>
+<div class="muted foot">Use the map layers to inspect comfort scores or access tags on surrounding roads. Hide Selected route to inspect roads beneath it. Counts refer to displayed line groups; access tags are not permission decisions.</div>
 <div class="muted foot">Comfort is a research preference, not a safety assessment. Overlap counts repeated physical-road traversals. A failed route is shown for inspection.</div>
 <div class="muted foot" id="snap"></div><div id="error" role="alert"></div></aside>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -35,6 +37,79 @@ routeData.Trials.forEach((trial,i)=>{const option=document.createElement('option
 select.value=String(routeData.Selected);
 const legend=document.getElementById('legend');colors.forEach((color,i)=>{const item=document.createElement('span'),line=document.createElement('i');line.style.background=color;item.append(line,document.createTextNode(`${i}–${i+1} km`));legend.append(item);});
 document.getElementById('snap').textContent=`Start node ${routeData.StartNode} · ${fmt(routeData.SnapM,1)} m from input. Distances use Haversine; the graph is not simplified.`;
+// Keep the inspection palette and bins aligned with road-analysis.html.
+const roadThemes={
+ comfort:{title:'Comfort score',values:{negative_low:['Score < −0.5','#b91c1c'],negative:['−0.5 ≤ score < 0','#f87171'],zero:['Score = 0','#9ca3af'],positive:['0 < score ≤ 0.5','#86efac'],positive_high:['Score > 0.5','#15803d']}},
+ access:{title:'Access',values:{yes:['yes','#15803d'],permissive:['permissive','#2563eb'],no:['no','#dc2626'],private:['private','#991b1b'],destination:['destination','#d97706']}}
+};
+const extraRoadStyles={missing:['Missing','#9ca3af'],other:['Other value (see popup)','#475569'],combined:['Combined tag values','#a855f7'],overlap:['Different overlapping categories','#db2777']};
+const hiddenRoads=L.layerGroup().addTo(map);
+const roadLayers={comfort:L.layerGroup(),access:L.layerGroup()};
+const roadCounts={};
+map.createPane('inspectionRoads').style.zIndex=350;
+const roadRenderer=L.canvas({pane:'inspectionRoads',padding:.3});
+L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access},{'Selected route':layer},{position:'bottomright',collapsed:false}).addTo(map);
+
+function roadCategory(edge,theme){
+ if(theme==='comfort'){
+  const score=edge.comfort_score;
+  if(Math.abs(score)<1e-12)return 'zero';
+  if(score<-.5)return 'negative_low';
+  if(score<0)return 'negative';
+  return score<=.5?'positive':'positive_high';
+ }
+ const value=edge.access.trim().toLowerCase();
+ if(!value)return 'missing';
+ if(value.includes(';')||value.startsWith('['))return 'combined';
+ return Object.hasOwn(roadThemes.access.values,value)?value:'other';
+}
+const roadStyle=(category,theme)=>roadThemes[theme].values[category]??extraRoadStyles[category];
+function graphRoadPopup(segment){
+ const box=document.createElement('div'),selector=document.createElement('select'),details=document.createElement('div');
+ selector.setAttribute('aria-label','Directed road edge');
+ for(const index of segment.edges){
+  const edge=routeData.Graph.edges[index],option=document.createElement('option');
+  option.value=String(index);option.textContent=`${edge.from} → ${edge.to} / key=${edge.key} / way=${edge.way_id}`;selector.append(option);
+ }
+ selector.hidden=segment.edges.length===1;
+ function update(){
+  const edge=routeData.Graph.edges[Number(selector.value)];
+  details.replaceChildren(popup(edge.name||'Unnamed road',[
+   ['Action',`${edge.from} → ${edge.to}, key ${edge.key}`],['Way ID',edge.way_id],['Highway',edge.highway],['Surface',edge.surface],['Width',edge.width],['Access',edge.access],['Length',`${fmt(edge.length_m)} m`],['Highway score',fmt(edge.highway_score,4)],['Surface score',fmt(edge.surface_score,4)],['Width score',fmt(edge.width_score,4)],['Comfort score',fmt(edge.comfort_score,4)]
+  ]));
+ }
+ selector.addEventListener('change',update);box.append(selector,details);update();L.DomEvent.disableClickPropagation(box);return box;
+}
+function showRoadLegend(theme){
+ const box=document.getElementById('road-legend');box.hidden=!theme;
+ if(!theme)return;
+ document.getElementById('road-legend-title').textContent=`Surrounding roads · ${roadThemes[theme].title}`;
+ const legend=document.getElementById('road-legend-items');legend.replaceChildren();
+ for(const [category,count] of [...roadCounts[theme]].sort((a,b)=>b[1]-a[1])){
+  const [label,color]=roadStyle(category,theme),item=document.createElement('span'),line=document.createElement('i');line.style.background=color;
+  item.append(line,document.createTextNode(`${label} (${count.toLocaleString()})`));legend.append(item);
+ }
+}
+function buildRoadLayer(theme){
+ if(roadCounts[theme])return;
+ const graph=routeData.Graph,coordinates=new Map(graph.nodes.map(node=>[node.id,[node.latitude,node.longitude]])),counts=new Map();
+ for(const segment of graph.segments){
+  const categories=new Set(segment.edges.map(index=>roadCategory(graph.edges[index],theme)));
+  const category=categories.size===1?categories.values().next().value:'overlap',[label,color]=roadStyle(category,theme);
+  counts.set(category,(counts.get(category)||0)+1);
+  const edge=graph.edges[segment.edges[0]];
+  L.polyline([coordinates.get(segment.from),coordinates.get(segment.to)],{renderer:roadRenderer,color,weight:3,opacity:.85})
+   .bindTooltip(()=>{const text=document.createElement('span');text.textContent=`${edge.name||'Unnamed road'} · ${label} · ${segment.edges.length} directed edge(s)`;return text;},{sticky:true})
+   .bindPopup(()=>graphRoadPopup(segment),{minWidth:280,maxWidth:400}).addTo(roadLayers[theme]);
+ }
+ roadCounts[theme]=counts;
+}
+map.on('baselayerchange',event=>{
+ const theme=Object.keys(roadLayers).find(key=>roadLayers[key]===event.layer);
+ if(theme)buildRoadLayer(theme);
+ showRoadLegend(theme);
+});
+
 function render(){
  layer.clearLayers();const trial=routeData.Trials[Number(select.value)],status=document.getElementById('status');
  status.className='status'+(trial.IsLoop?'':' failed');status.textContent=trial.IsLoop?'Valid loop':`Failed · ${trial.Termination.replaceAll('_',' ')}`;
