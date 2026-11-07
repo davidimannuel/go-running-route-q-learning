@@ -16,18 +16,18 @@ const Filename = "config.yaml"
 
 // Config contains the settings shared by commands operating on a workdir.
 type Config struct {
-	SchemaVersion int
-	Map           MapConfig
-	OutputDir     string
-	CacheDir      string
-	QLearning     qlearning.Config
+	SchemaVersion int              `json:"schema_version"`
+	Map           MapConfig        `json:"map"`
+	OutputDir     string           `json:"output_dir"`
+	CacheDir      string           `json:"cache_dir"`
+	QLearning     qlearning.Config `json:"qlearning"`
 }
 
 type MapConfig struct {
-	Latitude   float64
-	Longitude  float64
-	RadiusM    float64
-	TimeoutSec int
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	RadiusM    float64 `json:"radius_m"`
+	TimeoutSec int     `json:"timeout_sec"`
 }
 
 func (m MapConfig) FetchParam() osm.FetchParam {
@@ -113,7 +113,10 @@ func Load(workdir string) (Config, error) {
 		cfg.QLearning = *raw.QLearning
 	}
 	// Map-only workdirs remain valid. Train explicitly requires scenario A/B/C.
-	if cfg.QLearning.Scenario != "" {
+	if err := cfg.QLearning.Reward.Validate(); err != nil {
+		return Config{}, fmt.Errorf("config: %w", err)
+	}
+	if cfg.QLearning.Scenario != "" || cfg.QLearning.Training.Profiles != nil {
 		if err := cfg.QLearning.Validate(); err != nil {
 			return Config{}, fmt.Errorf("config: %w", err)
 		}

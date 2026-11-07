@@ -18,6 +18,7 @@ type edgeData struct {
 // Only the environment and Q-table are reset/mutated during training.
 type PreparedGraph struct {
 	graph     *osm.Graph
+	reward    RewardConfig
 	startNode int
 	actions   *Actions
 	distances map[int]float64 // Straight-line distance from each node to startNode, in meters (Haversine).
@@ -47,7 +48,10 @@ func NearestStart(graph *osm.Graph, lat, lon float64) (int, float64, error) {
 
 // NewPreparedGraph precomputes start distances, comfort/access rewards, and physical
 // road IDs once. The graph must remain read-only while the prepared graph is used.
-func NewPreparedGraph(graph *osm.Graph, startNode int) (*PreparedGraph, error) {
+func NewPreparedGraph(graph *osm.Graph, startNode int, reward RewardConfig) (*PreparedGraph, error) {
+	if err := reward.Validate(); err != nil {
+		return nil, err
+	}
 	if graph == nil {
 		return nil, fmt.Errorf("prepare training: graph is nil")
 	}
@@ -55,7 +59,7 @@ func NewPreparedGraph(graph *osm.Graph, startNode int) (*PreparedGraph, error) {
 	if !ok {
 		return nil, fmt.Errorf("prepare training: start node %d is missing", startNode)
 	}
-	p := &PreparedGraph{graph: graph, startNode: startNode, actions: NewActions(graph),
+	p := &PreparedGraph{graph: graph, reward: reward, startNode: startNode, actions: NewActions(graph),
 		distances: make(map[int]float64, len(graph.Nodes)), edges: make(map[*osm.OSMEdge]edgeData)}
 	for id, node := range graph.Nodes {
 		distance, err := osm.GreatCircleDistanceM(node.Lat, node.Lon, start.Lat, start.Lon)
@@ -85,9 +89,9 @@ func NewPreparedGraph(graph *osm.Graph, startNode int) (*PreparedGraph, error) {
 				roadID = len(roads)
 				roads[geometry] = roadID
 			}
-			data := edgeData{comfort: ScoreEdge(*edge).ComfortScore, roadID: roadID}
+			data := edgeData{comfort: reward.Road.ScoreEdge(*edge).ComfortScore, roadID: roadID}
 			if strings.EqualFold(strings.TrimSpace(edge.Access), "permissive") {
-				data.accessReward = PermissivePenaltyPer100M * edge.LengthM / 100
+				data.accessReward = reward.PermissivePenaltyPer100M * edge.LengthM / 100
 			}
 			p.edges[edge] = data
 		}

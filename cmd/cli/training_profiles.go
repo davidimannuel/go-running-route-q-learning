@@ -26,10 +26,11 @@ func selectTrainingProfiles(cfg qlearning.TrainingConfig, name string) ([]qlearn
 }
 
 type profileStatus struct {
-	Name                 string `json:"name"`
-	Episodes             int    `json:"episodes"`
-	EpsilonDecayEpisodes *int   `json:"epsilon_decay_episodes"`
-	Status               string `json:"status"`
+	Name                 string             `json:"name"`
+	Scenario             qlearning.Scenario `json:"scenario"`
+	Episodes             int                `json:"episodes"`
+	EpsilonDecayEpisodes *int               `json:"epsilon_decay_episodes"`
+	Status               string             `json:"status"`
 }
 
 // executeProfiles reuses one prepared graph and one resolved seed list. Profiles
@@ -40,7 +41,7 @@ func executeProfiles(ctx context.Context, out io.Writer, p *qlearning.PreparedGr
 	marker := filepath.Join(output, "training-run.json")
 	statuses := make([]profileStatus, len(profiles))
 	for i, profile := range profiles {
-		statuses[i] = profileStatus{profile.Name, profile.Episodes, profile.EpsilonDecayEpisodes, "pending"}
+		statuses[i] = profileStatus{Name: profile.Name, Scenario: cfg.QLearning.ForProfile(profile).Scenario, Episodes: profile.Episodes, EpsilonDecayEpisodes: profile.EpsilonDecayEpisodes, Status: "pending"}
 	}
 	metadata["profiles"] = statuses
 	if err := writeJSON(ctx, marker, metadata); err != nil {
@@ -63,9 +64,7 @@ func executeProfiles(ctx context.Context, out io.Writer, p *qlearning.PreparedGr
 			return err
 		}
 		effective := cfg
-		effective.QLearning.Training.Profiles = nil
-		effective.QLearning.Training.Episodes = profile.Episodes
-		effective.QLearning.Training.EpsilonDecayEpisodes = profile.EpsilonDecayEpisodes
+		effective.QLearning = cfg.QLearning.ForProfile(profile)
 		// Construct new per-profile metadata without inheriting a completed status,
 		// representative seed, or another profile's effective training duration.
 		details := make(map[string]any, len(metadata))

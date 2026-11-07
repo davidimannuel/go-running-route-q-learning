@@ -36,7 +36,7 @@ func TestMapToHTMLPreservesGraphAndScores(t *testing.T) {
 	g := analysisTestGraph(t)
 	before := sortedEdges(g)
 	var body bytes.Buffer
-	if err := MapToHTML(&body, g, -7.282187, 112.709282); err != nil {
+	if err := MapToHTML(&body, g, -7.282187, 112.709282, qlearning.DefaultRewardConfig().Road); err != nil {
 		t.Fatal(err)
 	}
 	data := readMapData(t, body.String())
@@ -63,7 +63,7 @@ func TestMapToHTMLPreservesGraphAndScores(t *testing.T) {
 		t.Fatal("map export changed graph edges")
 	}
 	var again bytes.Buffer
-	if err := MapToHTML(&again, g, -7.282187, 112.709282); err != nil {
+	if err := MapToHTML(&again, g, -7.282187, 112.709282, qlearning.DefaultRewardConfig().Road); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(body.Bytes(), again.Bytes()) {
@@ -82,7 +82,7 @@ func TestMapEscapesOSMTextAndPreservesLargeIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	if err := MapToHTML(&out, g, 1, 2); err != nil {
+	if err := MapToHTML(&out, g, 1, 2, qlearning.DefaultRewardConfig().Road); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(out.String(), attack) {
@@ -96,7 +96,7 @@ func TestMapEscapesOSMTextAndPreservesLargeIDs(t *testing.T) {
 
 func TestMapEmptyGraphAndErrors(t *testing.T) {
 	var out bytes.Buffer
-	if err := MapToHTML(&out, osm.NewGraph(), 0, 0); err != nil {
+	if err := MapToHTML(&out, osm.NewGraph(), 0, 0, qlearning.DefaultRewardConfig().Road); err != nil {
 		t.Fatal(err)
 	}
 	data := readMapData(t, out.String())
@@ -104,7 +104,7 @@ func TestMapEmptyGraphAndErrors(t *testing.T) {
 		t.Fatal("empty arrays must not become null in JavaScript")
 	}
 	for _, point := range [][2]float64{{91, 0}, {0, 181}, {math.NaN(), 0}} {
-		if err := MapToHTML(&bytes.Buffer{}, osm.NewGraph(), point[0], point[1]); err == nil {
+		if err := MapToHTML(&bytes.Buffer{}, osm.NewGraph(), point[0], point[1], qlearning.DefaultRewardConfig().Road); err == nil {
 			t.Fatalf("invalid input location accepted: %v", point)
 		}
 	}
@@ -118,12 +118,12 @@ func TestMapEmptyGraphAndErrors(t *testing.T) {
 	invalidLength := analysisTestGraph(t)
 	invalidLength.OutgoingEdges(1)[0].LengthM = math.NaN()
 	for _, g := range []*osm.Graph{invalidCoordinates, missingDestination, missingSource, invalidLength} {
-		if err := MapToHTML(&bytes.Buffer{}, g, 0, 0); err == nil {
+		if err := MapToHTML(&bytes.Buffer{}, g, 0, 0, qlearning.DefaultRewardConfig().Road); err == nil {
 			t.Fatal("invalid graph accepted")
 		}
 	}
 	sentinel := errors.New("writer unavailable")
-	if err := MapToHTML(failingCSVWriter{sentinel}, osm.NewGraph(), 0, 0); !errors.Is(err, sentinel) {
+	if err := MapToHTML(failingCSVWriter{sentinel}, osm.NewGraph(), 0, 0, qlearning.DefaultRewardConfig().Road); !errors.Is(err, sentinel) {
 		t.Fatalf("writer error was lost: %v", err)
 	}
 }

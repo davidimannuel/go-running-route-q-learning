@@ -42,15 +42,41 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 }
 
 func printUsage(out io.Writer) {
-	fmt.Fprintln(out, "Usage: cli download --workdir <directory> [--force] [--debug]")
-	fmt.Fprintln(out, "       cli analyze --workdir <directory> [--debug]")
-	fmt.Fprintln(out, "       cli train --workdir <directory> [--snapshot <osm.json>] [--profile <name>] [--debug]")
-	fmt.Fprintln(out, "       cli serve [--dir <directory>] [--port <port>] [--debug]")
-	fmt.Fprintln(out, "Download reads <workdir>/config.yaml and saves OSM data to <workdir>/<output_dir>/osm.json.")
-	fmt.Fprintln(out, "Cache entries are stored in <workdir>/<cache_dir>; --force refreshes the selected entry.")
-	fmt.Fprintln(out, "Analyze reads the saved osm.json and always writes nodes.csv, edges.csv, and road-analysis.html in output_dir.")
-	fmt.Fprintln(out, "Train runs all configured profiles (or --profile), streams history CSV, and writes routes.html under output_dir/training/<profile>.")
-	fmt.Fprintln(out, "Serve lists HTML files recursively on 127.0.0.1; defaults: --dir . --port 8080.")
-	fmt.Fprintln(out, "Only HTML files are accessible; hidden entries and symlinks are excluded. Ctrl+C stops the server.")
-	fmt.Fprintln(out, "Logs go to stderr at info level by default. Train prints concise summaries to stdout; --debug adds detailed diagnostics to stderr.")
+	fmt.Fprint(out, `Usage: cli download --workdir <directory> [--force] [--debug]
+       cli analyze --workdir <directory> [--debug]
+       cli train --workdir <directory> [--snapshot <osm.json>] [--profile <name>] [--debug]
+       cli serve [--dir <directory>] [--port <port>] [--debug]
+
+Commands:
+  download  Read config.yaml; save osm.json and download.json. --force refreshes the cache.
+  analyze   Read the saved snapshot; write nodes.csv, edges.csv, road-analysis.html,
+            analysis.json, and analysis.html using the configured scoring parameters.
+  train     Run every configured profile, or only --profile. Each profile selects A/B/C.
+            Save histories, greedy evaluations, Q-tables, maps, and recorded settings.
+            Profile outputs: <output_dir>/training/<profile>/{routes.html,report.html,metadata.json}.
+            Each seed also has metadata.json. Profiles share the resolved seed list.
+  serve     Browse HTML maps and recorded settings on 127.0.0.1.
+            Defaults: --dir . --port 8080. Open the printed URL; Ctrl+C stops the server.
+            CSV/JSON/YAML files, hidden entries, and symlinks are not served directly.
+
+Examples (from the repository root):
+  go run ./cmd/cli download --workdir workdirs/training
+  go run ./cmd/cli analyze --workdir workdirs/training
+  go run ./cmd/cli train --workdir workdirs/training
+  go run ./cmd/cli train --workdir workdirs/training --profile b-horizon-50000-total-150000
+  go run ./cmd/cli download --workdir workdirs/testing
+  go run ./cmd/cli analyze --workdir workdirs/testing
+  go run ./cmd/cli train --workdir workdirs/testing
+  go run ./cmd/cli train --workdir workdirs/testing --profile a
+  go run ./cmd/cli train --workdir workdirs/testing --profile b
+  go run ./cmd/cli train --workdir workdirs/testing --profile c
+  go run ./cmd/cli serve --dir workdirs --port 8080
+
+Workdirs: training has 12 A/B/C profiles; testing has profiles a, b, c.
+Select a scenario through --profile, not a separate --scenario flag.
+With an existing osm.json, run analyze/train directly; no download is needed.
+Train always starts fresh Q-tables. A selected rerun replaces only that profile.
+Metadata records effective config, reward, actual seeds, snapshot hash, and evaluation.
+Logs use stderr/info by default. Train prints summaries to stdout; --debug adds detail.
+`)
 }

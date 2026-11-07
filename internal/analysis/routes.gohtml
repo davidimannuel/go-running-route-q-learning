@@ -9,7 +9,7 @@
 </style>
 </head>
 <body><div id="map"></div>
-<aside class="panel"><h1>Running routes · {{.Scenario}}</h1><div class="muted">Final greedy evaluation · epsilon = 0</div>
+<aside class="panel"><nav style="display:flex;gap:16px;margin-bottom:12px"><a href="/" target="_top">All results</a><a href="report.html">Training details</a></nav><h1>Running routes · {{.Scenario}}</h1><div class="muted">Final greedy evaluation · epsilon = 0</div>
 <label for="seed">Training seed</label><select id="seed"></select><div id="status" class="status"></div><dl id="metrics"></dl>
 <button id="fit">Fit selected route</button><div class="legend" id="legend"></div>
 <div class="muted">Each color follows the kilometer at the start of a segment. Click a road for its attributes and reward.</div>

@@ -34,7 +34,7 @@ func testPreparedGraph(t *testing.T, pairs [][3]int) *PreparedGraph {
 			edge.LengthM = float64(pairs[edge.WayID-100][2])
 		}
 	}
-	p, err := NewPreparedGraph(graph, 0)
+	p, err := NewPreparedGraph(graph, 0, DefaultRewardConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestBellmanManualLegalNonzeroBootstrapAndAccess(t *testing.T) {
 	// Test-only tag setup, then rebuild the immutable prepared graph.
 	p.graph.OutgoingEdges(0)[0].Access = " permissive "
 	var err error
-	p, err = NewPreparedGraph(p.graph, 0)
+	p, err = NewPreparedGraph(p.graph, 0, DefaultRewardConfig())
 	if err != nil {
 		t.Fatal(err)
 	}

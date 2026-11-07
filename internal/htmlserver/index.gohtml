@@ -1,26 +1,24 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HTML Previews</title>
-  <style>
-    body { max-width: 960px; margin: 48px auto; padding: 0 24px; font-family: system-ui, sans-serif; color: #172033; background: #f8fafc; }
-    h1 { margin-bottom: 8px; }
-    p { color: #475569; line-height: 1.6; }
-    ul { padding: 0; list-style: none; }
-    li { margin: 10px 0; }
-    a { display: block; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; color: #075985; background: white; overflow-wrap: anywhere; text-decoration: none; }
-    a:hover { background: #e0f2fe; }
-    a:focus-visible { outline: 3px solid #0284c7; outline-offset: 2px; }
-  </style>
-</head>
-<body>
-  <h1>HTML Previews</h1>
-  <p>{{len .}} HTML file(s). Refresh this page to find newly generated maps.</p>
-  <ul>
-    {{range .}}<li><a href="{{.URL}}">{{.Name}}</a></li>
-    {{else}}<li>No HTML files found in this directory.</li>{{end}}
-  </ul>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Running route results</title>
+<style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,sans-serif;background:light-dark(#f5f7fb,#111925);color:light-dark(#1b2940,#e2eaf6)}a{color:light-dark(#2351ba,#9abaff)}button,input,select{font:inherit}button,select,input{border:1px solid light-dark(#cad4e2,#41516a);border-radius:7px;background:light-dark(#fff,#202c40);color:inherit;padding:8px 10px}button{cursor:pointer}header{padding:16px 22px;border-bottom:1px solid light-dark(#dce3ee,#344055);display:flex;align-items:center;gap:20px;flex-wrap:wrap}header h1{font-size:20px;margin:0}header p{margin:0;color:light-dark(#5f6e84,#acb9cc)}.layout{display:grid;grid-template-columns:340px minmax(0,1fr);height:calc(100dvh - 77px)}aside{padding:16px;overflow:auto;border-right:1px solid light-dark(#dce3ee,#344055)}.filters{display:grid;gap:10px;margin-bottom:18px}label{display:grid;gap:4px}.count{margin:12px 0;color:light-dark(#5f6e84,#acb9cc)}ul{list-style:none;padding:0;margin:0}li{padding:13px 0;border-bottom:1px solid light-dark(#e1e7f0,#344055)}li>a{font-weight:600;text-decoration:none;display:block;overflow-wrap:anywhere}li.selected>a{color:light-dark(#173ba3,#c3d4ff)}.path,.summary{display:block;overflow-wrap:anywhere;color:light-dark(#5f6e84,#acb9cc);font-size:12px;margin-top:4px}.actions{display:flex;gap:14px;margin-top:8px;font-size:12px}.viewer{min-width:0;display:flex;flex-direction:column}.toolbar{padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:light-dark(#fff,#1a2639)}#selection{flex:1;overflow-wrap:anywhere;font-weight:600}iframe{border:0;width:100%;flex:1;min-height:400px;background:light-dark(#fff,#111925)}a:focus-visible{outline:3px solid #5389ef;outline-offset:3px}[hidden]{display:none!important}#empty{padding:24px;color:light-dark(#5f6e84,#acb9cc)}@media(max-width:760px){header{padding:12px 16px;gap:4px}.layout{height:auto;grid-template-columns:1fr}aside{max-height:310px;border-right:0;border-bottom:1px solid light-dark(#dce3ee,#344055)}.filters{grid-template-columns:minmax(0,1fr) 110px}iframe{height:70dvh;flex:auto}.toolbar{padding:10px 16px}.toolbar #selection{flex-basis:100%;min-width:0}.path{font-size:12px}}
+</style></head><body>
+<header><h1>Running route results</h1><p>Browse maps and the settings recorded with each result.</p><button id="refresh" type="button">Refresh results</button></header>
+<div class="layout"><aside aria-label="Results navigation"><div class="filters"><label>Find a result<input id="search" type="search" placeholder="Workdir, profile, or scenario"></label><label>Show<select id="kind"><option value="all">All HTML</option><option value="map">Maps</option><option value="details">Details</option></select></label></div>
+<p class="count"><span id="count">{{len .}}</span> HTML file(s)</p><ul id="results">
+{{range .}}<li data-kind="{{.Kind}}"><a class="result" href="{{.URL}}" target="preview" data-details="{{.DetailsURL}}" data-map="{{.MapURL}}">{{.Title}}</a><span class="path">{{.Name}}</span>{{if .Summary}}<span class="summary">{{.Summary}}</span>{{end}}<div class="actions">{{if .DetailsURL}}<a href="{{.DetailsURL}}" target="preview" class="details">Training / analysis details</a>{{end}}<a href="{{.URL}}" target="_blank" rel="noopener">Open separately ↗</a></div></li>
+{{else}}<li>No HTML files found in this directory.</li>{{end}}</ul></aside>
+<section class="viewer" aria-label="Selected result"><div class="toolbar"><span id="selection">Select a result</span><a id="map-link" hidden target="preview">Map</a><a id="details-link" hidden target="preview">Recorded settings</a><a id="open-link" hidden target="_blank" rel="noopener">Open separately ↗</a></div><p id="empty">Choose a map on the left. Navigation stays available while you inspect routes and training settings.</p><iframe name="preview" id="preview" title="Selected map or training details" hidden></iframe></section></div>
+<script>
+(()=>{
+ const rows=[...document.querySelectorAll('#results li[data-kind]')],frame=document.getElementById('preview');
+ const selected=document.getElementById('selection'),mapLink=document.getElementById('map-link'),details=document.getElementById('details-link'),open=document.getElementById('open-link');
+ function select(row,url){const link=row.querySelector('.result');rows.forEach(r=>r.classList.toggle('selected',r===row));selected.textContent=row.querySelector('.path').textContent;mapLink.href=link.dataset.map;mapLink.hidden=!link.dataset.map;details.href=link.dataset.details;details.hidden=!link.dataset.details;open.href=url;open.hidden=false;frame.hidden=false;document.getElementById('empty').hidden=true;const state=new URL(location.href);state.searchParams.set('file',link.getAttribute('href'));history.replaceState(null,'',state);}
+ for(const row of rows){row.querySelector('.result').addEventListener('click',event=>{if(event.ctrlKey||event.metaKey||event.shiftKey)return;select(row,event.currentTarget.href);});row.querySelector('.details')?.addEventListener('click',event=>select(row,event.currentTarget.href));}
+ const filter=()=>{const text=document.getElementById('search').value.toLowerCase(),kind=document.getElementById('kind').value;let count=0;for(const row of rows){row.hidden=!row.textContent.toLowerCase().includes(text)||(kind!=='all'&&row.dataset.kind!==kind);if(!row.hidden)count++;}document.getElementById('count').textContent=count;};
+ if(rows.some(row=>row.dataset.kind==='map'))document.getElementById('kind').value='map';filter();
+ document.getElementById('search').addEventListener('input',filter);document.getElementById('kind').addEventListener('change',filter);document.getElementById('refresh').addEventListener('click',()=>location.reload());
+ frame.addEventListener('load',()=>{try{if(frame.contentWindow.location.href!=='about:blank')open.href=frame.contentWindow.location.href;}catch{}});
+ const requested=new URL(location.href).searchParams.get('file');const row=rows.find(r=>r.querySelector('.result').getAttribute('href')===requested);if(row){const link=row.querySelector('.result');select(row,link.href);frame.src=link.href;}
+})();
+</script></body></html>

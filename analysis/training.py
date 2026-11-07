@@ -211,8 +211,11 @@ class TrainingAnalysis:
         plt.show()
         plt.close(figure)
 
+    def chart_title(self, results):
+        """Label each plotted run with its scenario and profile name."""
+        return "\n".join(f"Scenario {result['scenario']} | {result['name']}" for result in results)
+
     def plot_training(self, result, history, directory):
-        scenario = result["scenario"]
         curve = self.sampled(history["rolling"])
         environment = result["metadata"]["config"]["environment"]
         target = environment["target_distance_m"] / 1000
@@ -221,7 +224,7 @@ class TrainingAnalysis:
         # Match plot_training_charts in the reference; only CSV column names differ.
         figure, axes = plt.subplots(3, 2, figsize=(14, 13))
         figure.suptitle(
-            f"Training Q-Learning Scenario {scenario} - rata-rata {self.rolling_window} episode",
+            self.chart_title([result]),
             fontsize=14, fontweight="bold",
         )
         panels = [
@@ -283,7 +286,7 @@ class TrainingAnalysis:
         axis.legend(title="Tipe terminasi", fontsize=8)
         axis.grid(alpha=0.25)
         figure.suptitle(
-            f"Diagnosis Training Scenario {scenario} - rata-rata {self.rolling_window} episode",
+            self.chart_title([result]),
             fontsize=14, fontweight="bold",
         )
         self.save_figure(figure, directory, "diagnosis")
@@ -291,7 +294,7 @@ class TrainingAnalysis:
         # Match plot_overlap_chart: one panel, all episodes and all observed seeds.
         figure, axis = plt.subplots(figsize=(12, 4.5))
         figure.suptitle(
-            f"Overlap Training Scenario {scenario} — jendela {self.rolling_window} episode",
+            self.chart_title([result]),
             fontsize=14, fontweight="bold",
         )
         overlap = self.sampled(history["overlap"])
@@ -333,6 +336,7 @@ class TrainingAnalysis:
             "q_formula", "epsilon_formula", "tie_break",
         ]}
         shared["environment"] = metadata["config"]["environment"]
+        shared["reward"] = metadata["config"].get("reward")
         shared["seeds"] = result["seeds"]
         shared["hyperparameters"] = {key: training[key] for key in ["alpha", "gamma", "epsilon_start", "epsilon_end"]}
         return json.dumps(shared, sort_keys=True)
@@ -350,16 +354,17 @@ class TrainingAnalysis:
             axis.bar(labels, frame[column], color="#2563EB")
             axis.set(title=heading, ylabel=unit)
             axis.grid(axis="y", alpha=0.25)
-        figure.suptitle(title)
+        figure.suptitle(title, fontsize=14, fontweight="bold")
         self.save_figure(figure, directory, "evaluation_comparison")
         figure, axis = plt.subplots(figsize=(10, 4.5))
         axis.bar(labels, frame["mean_overlap_ratio"] * 100, color="#2563EB")
-        axis.set(title=f"{title} — overlap seluruh seed evaluasi",
+        figure.suptitle(title, fontsize=14, fontweight="bold")
+        axis.set(title="Overlap Seluruh Seed Evaluasi",
                  ylabel="Overlap seluruh seed (%)", ylim=(-1, 101))
         axis.grid(axis="y", alpha=0.25)
         self.save_figure(figure, directory, "evaluation_overlap")
 
-    def plot_profile_sensitivity(self, frame, directory):
+    def plot_profile_sensitivity(self, frame, directory, title):
         # Match section 3.1/3.2 in scenario_A/B/C.ipynb: four line plots by episodes.
         figure, axes = plt.subplots(2, 2, figsize=(13, 8))
         panels = [
@@ -372,6 +377,7 @@ class TrainingAnalysis:
             axis.plot(frame["episodes"], frame[column], marker="o")
             axis.set(title=heading, xlabel="Jumlah episode training", ylabel=unit)
             axis.grid(alpha=0.25)
+        figure.suptitle(title, fontsize=14, fontweight="bold")
         self.save_figure(figure, directory, "evaluation_comparison")
 
     def load(self):
@@ -468,11 +474,27 @@ class TrainingAnalysis:
         self.last_window_summary.to_csv(self.analysis_dir / "last_window_summary.csv", index=False)
 
     def compare_profiles(self):
+        """Compare episode counts within each recorded scenario separately."""
+        self._require_loaded()
+        summary = pd.DataFrame([self.evaluation_summary(result) for result in self.results])
+        summary.to_csv(self.analysis_dir / "profile_summary.csv", index=False)
+        base = self.analysis_dir
+        try:
+            for scenario in sorted({result["scenario"] for result in self.results}):
+                results = [result for result in self.results if result["scenario"] == scenario]
+                self.analysis_dir = base / f"scenario-{scenario.lower()}"
+                self.analysis_dir.mkdir(parents=True, exist_ok=True)
+                self._compare_profile_group(results)
+        finally:
+            self.analysis_dir = base
+            self.profile_summary = summary
+
+    def _compare_profile_group(self, results):
         """Compare episode counts separately for each epsilon strategy."""
         self._require_loaded()
-        self.profile_summary = pd.DataFrame([self.evaluation_summary(result) for result in self.results])
+        self.profile_summary = pd.DataFrame([self.evaluation_summary(result) for result in results])
         self.profile_summary.to_csv(self.analysis_dir / "profile_summary.csv", index=False)
-        if len({result["scenario"] for result in self.results}) != 1 or len({self.comparison_signature(result) for result in self.results}) != 1:
+        if len({result["scenario"] for result in results}) != 1 or len({self.comparison_signature(result) for result in results}) != 1:
             raise ValueError("Profiles have mismatched graph/reward/seeds/settings; review metadata before comparing.")
 
         summary_columns = [
@@ -493,7 +515,9 @@ class TrainingAnalysis:
             print(f"=== {label.upper()} ===")
             display(frame[summary_columns].rename(columns={"decay_horizon": "epsilon_decay_episodes"}).reset_index(drop=True))
             directory = self.analysis_dir / "comparison" / name
-            self.plot_profile_sensitivity(frame, directory)
+            selected = [result for result in results if result["name"] in set(frame["profile"])]
+            title = self.chart_title(selected)
+            self.plot_profile_sensitivity(frame, directory, title)
             frame.to_csv(directory / "summary.csv", index=False)
 
         # Match section 3.3: one overlap panel for each available epsilon strategy.
@@ -505,16 +529,21 @@ class TrainingAnalysis:
                 axis.text(0.5, 0.5, "Belum ada data overlap", ha="center", va="center", transform=axis.transAxes)
             axis.set(title=label, xlabel="Jumlah episode training", ylabel="Overlap seluruh seed (%)", ylim=(-1, 101))
             axis.grid(alpha=0.25)
+        figure.suptitle(self.chart_title(results),
+                        fontsize=14, fontweight="bold")
         self.save_figure(figure, self.analysis_dir, "evaluation_overlap")
         # Remove the older combined overview after the replacement strategy charts are saved.
         for extension in ("png", "svg"):
             (self.analysis_dir / f"evaluation_comparison.{extension}").unlink(missing_ok=True)
 
-    def compare_scenarios(self, workdirs):
+    def compare_scenarios(self, workdirs=None):
         """Compare scenarios only when their recorded settings match."""
         self._require_loaded()
-        workdirs = [resolve_workdir(workdir) for workdir in workdirs]
-        comparison_records, comparison_availability = [], []
+        if workdirs is None:
+            comparison_records, comparison_availability = list(self.results), []
+        else:
+            comparison_records, comparison_availability = [], []
+        workdirs = [] if workdirs is None else [resolve_workdir(workdir) for workdir in workdirs]
         for workdir in workdirs:
             if not (workdir / "config.yaml").is_file():
                 comparison_availability.append({"workdir": workdir.name, "profile": "—", "status": "config belum tersedia"})
@@ -527,11 +556,14 @@ class TrainingAnalysis:
             grouped_records = {}
             for result in comparison_records:
                 row = self.evaluation_summary(result)
-                key = (row["profile"], row["episodes"], row["decay_mode"], row["decay_horizon"])
+                key = (row["episodes"], row["decay_mode"], row["decay_horizon"])
                 grouped_records.setdefault(key, []).append(result)
             cross_rows = []
             for key, group in grouped_records.items():
                 matched = len({self.comparison_signature(result) for result in group}) == 1
+                if len({result["scenario"] for result in group}) != len(group):
+                    print(f"{key}: beberapa profil untuk scenario yang sama; pilih satu profil per scenario.")
+                    continue
                 state_count = len({result["scenario"] for result in group})
                 status = "matched" if matched and state_count >= 2 else ("one scenario only" if state_count < 2 else "mismatched metadata")
                 for result in group:
@@ -543,7 +575,9 @@ class TrainingAnalysis:
                     print(f"{key[0]}: metadata tidak sepadan; grafik perbandingan state tidak dibuat.")
                     continue
                 frame = pd.DataFrame([self.evaluation_summary(result) for result in group]).sort_values("scenario")
-                self.plot_comparison(frame, self.analysis_dir / "comparison" / key[0], key[0], frame["scenario"].tolist())
+                name = f"{key[1]}-{key[0]}-horizon-{key[2]}"
+                title = self.chart_title(group)
+                self.plot_comparison(frame, self.analysis_dir / "comparison" / name, title, frame["scenario"].tolist())
             cross_summary = pd.DataFrame(cross_rows)
             display(cross_summary.round(4))
             cross_summary.to_csv(self.analysis_dir / "state_comparison.csv", index=False)
@@ -555,7 +589,7 @@ class TrainingAnalysis:
             path = result["directory"] / "routes.html"
             try:
                 relative = path.resolve().relative_to(server_root.resolve()).as_posix()
-                url = f"{server_base.rstrip('/')}/files/{quote(relative, safe='/')}"
+                url = f"{server_base.rstrip('/')}/?file={quote('/files/' + relative, safe='')}"
                 display(HTML(f'<a href="{escape(url, quote=True)}" target="_blank" rel="noopener">'
                              f'Peta {escape(result["scenario"])} / {escape(result["name"])}</a>'))
             except ValueError:

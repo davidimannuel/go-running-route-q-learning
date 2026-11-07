@@ -58,7 +58,11 @@ type mapData struct {
 // in one HTML file. No local JSON fetch, graph mutation, nearest-start selection,
 // network request, or training is performed. Leaflet/OSM assets load in-browser.
 // IDs are strings because JavaScript numbers cannot represent all Go integers.
-func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64) error {
+func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64, scores qlearning.RoadScoreConfig) error {
+	if err := scores.Validate(); err != nil {
+		return err
+	}
+
 	if err := validateCoordinates(latitude, longitude); err != nil {
 		return fmt.Errorf("export map: input location: %w", err)
 	}
@@ -67,7 +71,7 @@ func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64) error {
 		Nodes:    make([]mapNode, 0, len(g.Nodes)),
 		Edges:    make([]mapEdge, 0, g.EdgeCount()),
 		Segments: make([]mapSegment, 0),
-		Weights:  [3]float64{qlearning.HighwayWeight, qlearning.SurfaceWeight, qlearning.WidthWeight},
+		Weights:  [3]float64{scores.Highway.Weight, scores.Surface.Weight, scores.Width.Weight},
 	}
 	ids := make([]int, 0, len(g.Nodes))
 	for id := range g.Nodes {
@@ -97,7 +101,7 @@ func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64) error {
 			From: strconv.Itoa(edge.From), To: strconv.Itoa(edge.To), Key: edge.Key,
 			WayID: strconv.Itoa(edge.WayID), LengthM: edge.LengthM,
 			Name: edge.Name, Highway: edge.Highway, Surface: edge.Surface,
-			Width: edge.Tags.Get("width"), Access: edge.Access, RoadScores: qlearning.ScoreEdge(edge),
+			Width: edge.Tags.Get("width"), Access: edge.Access, RoadScores: scores.ScoreEdge(edge),
 		})
 		pair := [2]int{min(edge.From, edge.To), max(edge.From, edge.To)}
 		position, exists := segmentIndex[pair]

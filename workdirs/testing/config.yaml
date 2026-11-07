@@ -10,25 +10,49 @@ output_dir: output
 cache_dir: cache
 
 qlearning:
-  # B observes the current node and distance-progress bin.
-  scenario: B
   environment:
     target_distance_m: 5000
     distance_tolerance: 0.10
     progress_bins: 16
-    max_steps: 220
+    max_steps: 500
     allow_revisit: true
     revisit_after_ratio: 0.50
     max_node_visits: 2
     max_snap_distance_m: 100
+  reward:
+    road:
+      highway: {weight: 0.55, priority: 1.0, other: -1.0, missing: -0.5}
+      surface: {weight: 0.30, priority: 1.0, other: -1.0, missing: -0.5}
+      width: {weight: 0.15, priority: 1.0, other: -1.0, missing: -0.5}
+      width_threshold_m: 3.0
+    return_phase_ratio: 0.50
+    outward_penalty_scale: 0.60
+    return_reward_scale: 0.60
+    permissive_penalty_per_100m: -0.10
+    revisit_penalty: -10.0
+    success_bonus: 100.0
+    over_distance_penalty: -50.0
+    no_action_penalty: -50.0
+    step_limit_penalty: -50.0
   training:
-    episodes: 150000
-    epsilon_decay_episodes: 50000
     alpha: 0.15
     gamma: 0.95
     epsilon_start: 1.0
     epsilon_end: 0.05
-    # Omit seeds to select five distinct random seeds on each train invocation.
-    # To repeat a run, replace runs with seeds copied from its metadata.json.
+    # Resolve five random seeds once; reuse them across A/B/C in this invocation.
+    # Replace runs with seeds: [...] from metadata.json to reproduce the batch.
     runs: 5
-    max_workers: 3
+    max_workers: 5
+    profiles:
+      - name: a
+        scenario: A
+        episodes: 150000
+        epsilon_decay_episodes: 50000
+      - name: b
+        scenario: B
+        episodes: 150000
+        epsilon_decay_episodes: 50000
+      - name: c
+        scenario: C
+        episodes: 150000
+        epsilon_decay_episodes: 50000

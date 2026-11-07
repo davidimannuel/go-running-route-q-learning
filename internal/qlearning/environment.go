@@ -163,7 +163,7 @@ func (e *Environment) Step(id ActionID) (Transition, error) {
 	t := e.transition()
 	t.Action, t.ActionTaken, t.Edge = id, true, edge
 	t.DistanceBeforeM = e.graph.distances[e.current]
-	outward := e.distance < ReturnPhaseRatio*e.config.TargetDistanceM
+	outward := e.distance < e.graph.reward.ReturnPhaseRatio*e.config.TargetDistanceM
 	t.IsRevisit = e.visits[edge.To] > 0
 	e.previous, e.current = e.current, edge.To
 	e.distance += edge.LengthM
@@ -173,7 +173,7 @@ func (e *Environment) Step(id ActionID) (Transition, error) {
 	data := e.graph.edges[edge]
 	e.roads[data.roadID] = struct{}{}
 	t.DistanceAfterM = e.graph.distances[e.current]
-	returning := e.distance >= ReturnPhaseRatio*e.config.TargetDistanceM
+	returning := e.distance >= e.graph.reward.ReturnPhaseRatio*e.config.TargetDistanceM
 	if returning {
 		e.returnSteps++
 		if t.DistanceAfterM < t.DistanceBeforeM {
@@ -184,7 +184,7 @@ func (e *Environment) Step(id ActionID) (Transition, error) {
 	t.Components.Access = data.accessReward
 	if t.IsRevisit && e.current != e.graph.startNode {
 		e.revisits++
-		t.Components.Revisit = RevisitPenalty
+		t.Components.Revisit = e.graph.reward.RevisitPenalty
 	}
 	// Terminal priority and phase boundary follow core.step exactly. In
 	// particular, terminal actions have no direction contribution, and an edge
@@ -192,18 +192,18 @@ func (e *Environment) Step(id ActionID) (Transition, error) {
 	switch {
 	case e.current == e.graph.startNode && e.distance >= e.config.MinDistanceM() && e.distance <= e.config.MaxDistanceM():
 		e.done, e.isLoop, e.reason = true, true, Success
-		t.Components.Terminal = SuccessBonus
+		t.Components.Terminal = e.graph.reward.SuccessBonus
 	case e.distance > e.config.MaxDistanceM():
 		e.done, e.reason = true, OverDistance
-		t.Components.Terminal = OverDistancePenalty
+		t.Components.Terminal = e.graph.reward.OverDistancePenalty
 	case e.steps >= e.config.MaxSteps:
 		e.done, e.reason = true, StepLimit
-		t.Components.Terminal = StepLimitPenalty
+		t.Components.Terminal = e.graph.reward.StepLimitPenalty
 	case outward && t.DistanceAfterM < t.DistanceBeforeM:
-		t.Components.Direction = -OutwardPenaltyScale * (t.DistanceBeforeM - t.DistanceAfterM) / 100
+		t.Components.Direction = -e.graph.reward.OutwardPenaltyScale * (t.DistanceBeforeM - t.DistanceAfterM) / 100
 		t.DirectionRule = "outward_approach_penalty"
 	case returning:
-		t.Components.Direction = ReturnRewardScale * (t.DistanceBeforeM - t.DistanceAfterM) / 100
+		t.Components.Direction = e.graph.reward.ReturnRewardScale * (t.DistanceBeforeM - t.DistanceAfterM) / 100
 		t.DirectionRule = "return_progress"
 	}
 	t.NextState, t.TotalDistanceM, t.Step, t.Done, t.Termination = e.State(), e.distance, e.steps, e.done, e.reason
@@ -214,6 +214,6 @@ func (e *Environment) stopWithoutAction() Transition {
 	t := e.transition()
 	e.done, e.reason = true, NoAvailableAction
 	t.Done, t.Termination = true, NoAvailableAction
-	t.Components.NoAction = NoActionPenalty
+	t.Components.NoAction = e.graph.reward.NoActionPenalty
 	return t
 }

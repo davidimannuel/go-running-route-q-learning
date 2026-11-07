@@ -108,7 +108,7 @@ func TestAnalyze(t *testing.T) {
 				t.Fatal("map was not replaced with the current graph")
 			}
 			entries, err := os.ReadDir(output)
-			if err != nil || len(entries) != 5 {
+			if err != nil || len(entries) != 7 {
 				t.Fatalf("temporary output was not cleaned up: %v, error=%v", entries, err)
 			}
 		})

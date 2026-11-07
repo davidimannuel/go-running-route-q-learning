@@ -56,7 +56,7 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 		{Metrics: qlearning.Metrics{Scenario: qlearning.ScenarioB, Seed: 9007199254740993, IsLoop: true, AbsoluteDistanceErrorM: 10}},
 	}
 	var buf bytes.Buffer
-	if err := RoutesToHTML(&buf, graph, 0, 0, 0, 0, trials); err != nil {
+	if err := RoutesToHTML(&buf, graph, 0, 0, 0, 0, trials, qlearning.DefaultRewardConfig().Road); err != nil {
 		t.Fatal(err)
 	}
 	html := buf.String()
@@ -85,10 +85,10 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 			t.Fatalf("missing %s", want)
 		}
 	}
-	if err := RoutesToHTML(failingCSVWriter{errors.New("full")}, graph, 0, 0, 0, 0, trials); err == nil {
+	if err := RoutesToHTML(failingCSVWriter{errors.New("full")}, graph, 0, 0, 0, 0, trials, qlearning.DefaultRewardConfig().Road); err == nil {
 		t.Fatal("map writer error ignored")
 	}
-	if err := RoutesToHTML(&buf, graph, 0, 0, 0, 0, nil); err == nil {
+	if err := RoutesToHTML(&buf, graph, 0, 0, 0, 0, nil, qlearning.DefaultRewardConfig().Road); err == nil {
 		t.Fatal("empty trials accepted")
 	}
 }

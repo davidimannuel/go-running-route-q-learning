@@ -49,7 +49,11 @@ func NodeToCSV(w io.Writer, g *osm.Graph) error {
 // width, and access, matching the inputs used by the route model.
 // Scores use the same Go mapping as the map export.
 // Sorting a copy preserves adjacency order and the existing action keys.
-func EdgeToCSV(w io.Writer, g *osm.Graph) error {
+func EdgeToCSV(w io.Writer, g *osm.Graph, scores qlearning.RoadScoreConfig) error {
+	if err := scores.Validate(); err != nil {
+		return err
+	}
+
 	writer := csv.NewWriter(w)
 	if err := writer.Write([]string{
 		"from", "to", "key", "way_id", "length_m", "name", "highway", "surface", "width", "access",
@@ -59,7 +63,7 @@ func EdgeToCSV(w io.Writer, g *osm.Graph) error {
 	}
 	edges := sortedEdges(g)
 	for _, edge := range edges {
-		scores := qlearning.ScoreEdge(edge)
+		scores := scores.ScoreEdge(edge)
 		if err := writer.Write([]string{
 			strconv.Itoa(edge.From), strconv.Itoa(edge.To), strconv.Itoa(edge.Key),
 			strconv.Itoa(edge.WayID), strconv.FormatFloat(edge.LengthM, 'f', -1, 64),

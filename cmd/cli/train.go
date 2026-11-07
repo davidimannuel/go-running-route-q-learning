@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davidimannuel/go-running-route-q-learning/internal/analysis"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/config"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/logger"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
@@ -80,7 +81,7 @@ func runTrain(ctx context.Context, args []string, out, logOut io.Writer) error {
 	if snapM > cfg.QLearning.Environment.MaxSnapDistanceM {
 		return fmt.Errorf("train: nearest start node %d is %.2f m away, exceeding max_snap_distance_m %.2f", start, snapM, cfg.QLearning.Environment.MaxSnapDistanceM)
 	}
-	prepared, err := qlearning.NewPreparedGraph(graph, start)
+	prepared, err := qlearning.NewPreparedGraph(graph, start, cfg.QLearning.Reward)
 	if err != nil {
 		return err
 	}
@@ -95,6 +96,7 @@ func runTrain(ctx context.Context, args []string, out, logOut io.Writer) error {
 	logger.Debug(ctx, "Graph uses raw unsimplified segments and Haversine start distances; results are not numerically equivalent to the projected, simplified Python graph")
 	logger.Debug(ctx, "Training seeds resolved", logger.String("seeds", fmt.Sprint(seeds)), logger.Int("workers", min(len(seeds), cfg.QLearning.Training.MaxWorkers)))
 	metadata := trainingMetadata(cfg, snapshot, hash, start, snapM, graph, seeds)
+	metadata["config_path"] = filepath.Join(workdir, config.Filename)
 	if profiles == nil {
 		return executeTraining(ctx, out, prepared, cfg, seeds, output, metadata)
 	}
@@ -124,7 +126,8 @@ func loadTrainingGraph(path string) (*osm.Graph, string, error) {
 func trainingMetadata(cfg config.Config, snapshot, hash string, start int, snapM float64, graph *osm.Graph, seeds []uint64) map[string]any {
 	return map[string]any{
 		"status": "running", "started_at": time.Now().UTC().Format(time.RFC3339Nano),
-		"config": cfg.QLearning, "map": cfg.Map, "resolved_seeds": seeds,
+		"config": cfg.QLearning, "workdir_config": cfg, "map": cfg.Map, "resolved_seeds": seeds,
+		"schema_version": 1, "build": buildMetadata(),
 		"automatic_seeds": cfg.QLearning.Training.Seeds == nil,
 		"snapshot_path":   snapshot, "snapshot_sha256": hash, "nodes": len(graph.Nodes), "directed_edges": graph.EdgeCount(),
 		"start_node": start, "snap_distance_m": snapM, "graph_simplified": false,
@@ -132,18 +135,10 @@ func trainingMetadata(cfg config.Config, snapshot, hash string, start int, snapM
 		"start_distance_method":  "Haversine; mean Earth radius 6371009 m; precomputed once per node",
 		"rng":                    "math/rand/v2 PCG(seed, 0); one independent RNG per seed; not NumPy-equivalent",
 		"evaluation_seed_offset": qlearning.EvaluationSeedOffset, "evaluation_epsilon": 0,
-		"actual_workers": min(len(seeds), cfg.QLearning.Training.MaxWorkers),
-		"reward_scheme":  "direct_signed_unclipped_missing_05_20261103",
-		"reward_constants": map[string]float64{
-			"return_phase_ratio": qlearning.ReturnPhaseRatio, "outward_penalty_scale": qlearning.OutwardPenaltyScale,
-			"return_reward_scale": qlearning.ReturnRewardScale, "permissive_penalty_per_100m": qlearning.PermissivePenaltyPer100M,
-			"revisit_penalty": qlearning.RevisitPenalty, "success_bonus": qlearning.SuccessBonus,
-			"over_distance_penalty": qlearning.OverDistancePenalty, "no_action_penalty": qlearning.NoActionPenalty, "step_limit_penalty": qlearning.StepLimitPenalty,
-		},
-		"road_score": map[string]any{"weights": []float64{qlearning.HighwayWeight, qlearning.SurfaceWeight, qlearning.WidthWeight},
-			"highway_priority": []string{"footway", "pedestrian", "living_street", "residential", "tertiary"},
-			"surface_priority": []string{"asphalt", "concrete", "paving_stones", "paved"},
-			"priority":         1, "other": -1, "missing": -0.5, "width_threshold_m": 3, "clipped": false},
+		"actual_workers":      min(len(seeds), cfg.QLearning.Training.MaxWorkers),
+		"reward_scheme":       "configurable_signed_unclipped_v1",
+		"reward_constants":    cfg.QLearning.Reward,
+		"road_score":          cfg.QLearning.Reward.Road,
 		"access_policy":       "single normalized value: blank, yes, permissive; foot does not override; combined values rejected",
 		"action_identity":     "(next_node, key); sorted numerically by (next_node, key)",
 		"action_mask":         "fresh + permitted node revisits + valid closing; shared by exploration, greedy, and bootstrap",
@@ -205,7 +200,29 @@ func executeTrainingAt(ctx context.Context, out io.Writer, p *qlearning.Prepared
 		rows[i] = t.Metrics
 	}
 	metadata["representative_seed"] = seeds[qlearning.Representative(rows)]
-	metadata["artifacts"] = []string{"history.csv", "evaluation.csv", "routes.html", "seed-<seed>/qtable.csv", "seed-<seed>/evaluation-steps.csv"}
+	metadata["artifacts"] = []string{"history.csv", "evaluation.csv", "routes.html", "report.html", "metadata.json", "seed-<seed>/qtable.csv", "seed-<seed>/evaluation-steps.csv", "seed-<seed>/metadata.json"}
+	evaluations := make([]map[string]any, 0, len(trials))
+	for _, trial := range trials {
+		evaluations = append(evaluations, evaluationMetadata(trial.Metrics))
+	}
+	metadata["evaluations"] = evaluations
+	for i, seed := range seeds {
+		detail := make(map[string]any, len(metadata))
+		for key, value := range metadata {
+			if key != "evaluations" {
+				detail[key] = value
+			}
+		}
+		detail["seed"] = fmt.Sprint(seed)
+		detail["evaluation"] = evaluations[i]
+		detail["artifacts"] = []string{"qtable.csv", "evaluation-steps.csv", "metadata.json"}
+		if err := writeJSON(ctx, filepath.Join(stage, fmt.Sprintf("seed-%d", seed), "metadata.json"), detail); err != nil {
+			return err
+		}
+	}
+	if err := writeOutput(ctx, filepath.Join(stage, "report.html"), func(w io.Writer) error { return analysis.ReportToHTML(w, "Training details", "training", metadata) }); err != nil {
+		return err
+	}
 	if err := writeJSON(ctx, filepath.Join(stage, "metadata.json"), metadata); err != nil {
 		return err
 	}

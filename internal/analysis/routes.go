@@ -54,7 +54,11 @@ type routeMapData struct {
 // EVERY seed, defaulting to the same representative ranking as the reference.
 // Data is embedded with html/template escaping; OSM text is inserted through
 // DOM textContent rather than interpreted as popup HTML.
-func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM float64, trials []RouteTrial) error {
+func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM float64, trials []RouteTrial, scores qlearning.RoadScoreConfig) error {
+	if err := scores.Validate(); err != nil {
+		return err
+	}
+
 	if err := validateCoordinates(lat, lon); err != nil {
 		return err
 	}
@@ -99,7 +103,7 @@ func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM 
 			t.Segments = append(t.Segments, routeSegment{From: integer(edge.From), To: integer(edge.To), Key: edge.Key, Step: step.Step,
 				WayID: integer(edge.WayID), Name: edge.Name, Highway: edge.Highway, Surface: edge.Surface, Width: edge.Tags.Get("width"), Access: edge.Access,
 				Coordinates: [2][2]float64{{from.Lat, from.Lon}, {to.Lat, to.Lon}}, LengthM: edge.LengthM, BeforeM: cumulative, AfterM: cumulative + edge.LengthM,
-				Reward: step.Reward, Components: step.Components, Scores: qlearning.ScoreEdge(*edge)})
+				Reward: step.Reward, Components: step.Components, Scores: scores.ScoreEdge(*edge)})
 			cumulative += edge.LengthM
 		}
 		data.Trials = append(data.Trials, t)

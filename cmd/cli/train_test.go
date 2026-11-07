@@ -55,7 +55,7 @@ func treeFiles(t *testing.T, root string) map[string][]byte {
 		if err != nil {
 			return err
 		}
-		if relative != "metadata.json" {
+		if filepath.Base(relative) != "metadata.json" && relative != "report.html" {
 			result[relative] = readFile(t, path)
 		}
 		return nil
@@ -125,7 +125,7 @@ func TestTrainCLIArtifactsParallelReproductionAndReload(t *testing.T) {
 		if err := graph.LoadOSM(loopSnapshot()); err != nil {
 			t.Fatal(err)
 		}
-		p, err := qlearning.NewPreparedGraph(graph, 0)
+		p, err := qlearning.NewPreparedGraph(graph, 0, qlearning.DefaultRewardConfig())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -214,7 +214,7 @@ func TestFailedTrainingRetainsPreviousCompletedResult(t *testing.T) {
 	if err := graph.LoadOSM(loopSnapshot()); err != nil {
 		t.Fatal(err)
 	}
-	prepared, err := qlearning.NewPreparedGraph(graph, 0)
+	prepared, err := qlearning.NewPreparedGraph(graph, 0, qlearning.DefaultRewardConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestFailedAttemptStatusRecordsResolvedSeed(t *testing.T) {
 	if err := graph.LoadOSM(loopSnapshot()); err != nil {
 		t.Fatal(err)
 	}
-	prepared, err := qlearning.NewPreparedGraph(graph, 0)
+	prepared, err := qlearning.NewPreparedGraph(graph, 0, qlearning.DefaultRewardConfig())
 	if err != nil {
 		t.Fatal(err)
 	}

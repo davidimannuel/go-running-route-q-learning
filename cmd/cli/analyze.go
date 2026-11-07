@@ -14,7 +14,6 @@ import (
 	"github.com/davidimannuel/go-running-route-q-learning/internal/analysis"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/config"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/logger"
-	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
 )
 
 // runAnalyze builds the saved snapshot into a raw graph and always exports both
@@ -54,7 +53,7 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 	path := filepath.Join(outputDir, "osm.json")
 	logger.Info(ctx, "Analyzing OSM snapshot", logger.String("path", path))
 	logger.Debug(ctx, "Analysis configuration loaded", logger.String("workdir", workdir), logger.String("output_dir", outputDir))
-	data, err := osm.Load(path)
+	graph, hash, err := loadTrainingGraph(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("analyze: snapshot missing; run download first: %w", err)
@@ -62,10 +61,6 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 		return fmt.Errorf("analyze: %w", err)
 	}
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("analyze: %w", err)
-	}
-	graph := osm.NewGraph()
-	if err := graph.LoadOSM(data); err != nil {
 		return fmt.Errorf("analyze: %w", err)
 	}
 	if err := ctx.Err(); err != nil {
@@ -80,10 +75,10 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 			return analysis.NodeToCSV(w, graph)
 		}},
 		{filename: "edges.csv", write: func(w io.Writer) error {
-			return analysis.EdgeToCSV(w, graph)
+			return analysis.EdgeToCSV(w, graph, cfg.QLearning.Reward.Road)
 		}},
 		{filename: "road-analysis.html", write: func(w io.Writer) error {
-			return analysis.MapToHTML(w, graph, cfg.Map.Latitude, cfg.Map.Longitude)
+			return analysis.MapToHTML(w, graph, cfg.Map.Latitude, cfg.Map.Longitude, cfg.QLearning.Reward.Road)
 		}},
 	} {
 		path := filepath.Join(outputDir, export.filename)
@@ -95,6 +90,20 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 			message = "Saved road analysis map"
 		}
 		logger.Info(ctx, message, logger.String("path", path))
+	}
+	metadata := map[string]any{"schema_version": 1, "status": "completed", "command": "analyze",
+		"started_at": started.UTC().Format(time.RFC3339Nano), "completed_at": time.Now().UTC().Format(time.RFC3339Nano),
+		"workdir_config": cfg, "config_path": filepath.Join(workdir, config.Filename), "config": cfg.QLearning, "snapshot_path": path, "snapshot_sha256": hash,
+		"nodes": len(graph.Nodes), "directed_edges": graph.EdgeCount(), "graph_simplified": false,
+		"road_score": cfg.QLearning.Reward.Road, "build": buildMetadata(),
+		"artifacts": []string{"nodes.csv", "edges.csv", "road-analysis.html", "analysis.json", "analysis.html"}}
+	if err := writeJSON(ctx, filepath.Join(outputDir, "analysis.json"), metadata); err != nil {
+		return err
+	}
+	if err := writeOutput(ctx, filepath.Join(outputDir, "analysis.html"), func(w io.Writer) error {
+		return analysis.ReportToHTML(w, "Graph analysis details", "analysis", metadata)
+	}); err != nil {
+		return err
 	}
 	logger.Info(ctx, "Analysis completed", logger.Duration("duration", time.Since(started)))
 	return nil

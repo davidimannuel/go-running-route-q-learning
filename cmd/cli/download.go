@@ -90,6 +90,17 @@ func runDownload(ctx context.Context, args []string, out, logOut io.Writer, fetc
 	if err := writeMap(ctx, path, data); err != nil {
 		return fmt.Errorf("download: %w", err)
 	}
+	hash, err := fileSHA256(path)
+	if err != nil {
+		return err
+	}
+	metadata := map[string]any{"schema_version": 1, "status": "completed", "command": "download",
+		"started_at": started.UTC().Format(time.RFC3339Nano), "completed_at": time.Now().UTC().Format(time.RFC3339Nano),
+		"workdir_config": cfg, "config_path": filepath.Join(workdir, config.Filename), "snapshot_path": path, "snapshot_sha256": hash, "cache_key": key, "cache_hit": found, "force": *force,
+		"elements": len(data.Elements), "osm_timestamp": data.Osm3S.TimestampOsmBase, "build": buildMetadata()}
+	if err := writeJSON(ctx, filepath.Join(workdir, cfg.OutputDir, "download.json"), metadata); err != nil {
+		return err
+	}
 	logger.Info(ctx, "Saved OSM data", logger.String("path", path),
 		logger.Int("elements", len(data.Elements)), logger.Duration("duration", time.Since(started)))
 	return nil

@@ -185,7 +185,7 @@ func finishTrainingFiles(ctx context.Context, p *qlearning.PreparedGraph, cfg co
 		return err
 	}
 	return writeOutput(ctx, filepath.Join(stage, "routes.html"), func(w io.Writer) error {
-		return analysis.RoutesToHTML(w, p.Graph(), p.StartNode(), cfg.Map.Latitude, cfg.Map.Longitude, snapM, trials)
+		return analysis.RoutesToHTML(w, p.Graph(), p.StartNode(), cfg.Map.Latitude, cfg.Map.Longitude, snapM, trials, cfg.QLearning.Reward.Road)
 	})
 }
 

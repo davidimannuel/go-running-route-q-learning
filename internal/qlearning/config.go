@@ -18,9 +18,10 @@ const (
 )
 
 // Config contains shared settings and optional training profiles for one workdir.
-// Reward constants intentionally remain in reward.go.
+// Reward defaults are applied before decoding optional YAML overrides.
 type Config struct {
 	Scenario    Scenario          `yaml:"scenario" json:"scenario"`
+	Reward      RewardConfig      `yaml:"reward" json:"reward"`
 	Environment EnvironmentConfig `yaml:"environment" json:"environment"`
 	Training    TrainingConfig    `yaml:"training" json:"training"`
 }
@@ -36,17 +37,23 @@ type EnvironmentConfig struct {
 	MaxSnapDistanceM  float64 `yaml:"max_snap_distance_m" json:"max_snap_distance_m"`
 }
 
-// TrainingProfile varies episode count and epsilon horizon while sharing graph,
-// state, reward, hyperparameters, and seeds with the other profiles in a workdir.
+// TrainingProfile selects a state scenario, episode count, and epsilon horizon.
+// Graph, environment, reward, hyperparameters, and seeds remain shared.
 // Name is also the result directory name; only lowercase letters, digits, and
 // interior hyphens are accepted, preventing ambiguous or escaping output paths.
 type TrainingProfile struct {
-	Name                 string `yaml:"name" json:"name"`
-	Episodes             int    `yaml:"episodes" json:"episodes"`
-	EpsilonDecayEpisodes *int   `yaml:"epsilon_decay_episodes" json:"epsilon_decay_episodes"`
+	Name                 string   `yaml:"name" json:"name"`
+	Scenario             Scenario `yaml:"scenario" json:"scenario"`
+	Episodes             int      `yaml:"episodes" json:"episodes"`
+	EpsilonDecayEpisodes *int     `yaml:"epsilon_decay_episodes" json:"epsilon_decay_episodes"`
 }
 
 func (p TrainingProfile) Validate() error {
+	if p.Scenario != "" {
+		if err := p.Scenario.Validate(); err != nil {
+			return fmt.Errorf("profile %s: %w", p.Name, err)
+		}
+	}
 	if len(p.Name) == 0 || len(p.Name) > 64 || p.Name[0] == '-' || p.Name[len(p.Name)-1] == '-' {
 		return fmt.Errorf("qlearning: profile name must have 1-64 lowercase letters/digits with optional interior hyphens")
 	}
@@ -63,7 +70,7 @@ func (p TrainingProfile) Validate() error {
 
 type TrainingConfig struct {
 	// Nil uses the flat episodes/horizon settings for a simple single training.
-	// Profiles override those durations; all other settings remain shared.
+	// Profiles select scenario and override durations; other settings remain shared.
 	Profiles []TrainingProfile `yaml:"profiles" json:"profiles,omitempty"`
 	Episodes int               `yaml:"episodes" json:"episodes"`
 	// Nil follows the total episode count; a supplied horizon must be positive.
@@ -80,6 +87,7 @@ type TrainingConfig struct {
 
 func DefaultConfig() Config {
 	return Config{
+		Reward: DefaultRewardConfig(),
 		Environment: EnvironmentConfig{TargetDistanceM: 5000, DistanceTolerance: 0.10,
 			ProgressBins: 16, MaxSteps: 220, AllowRevisit: true, RevisitAfterRatio: 0.50,
 			MaxNodeVisits: 2, MaxSnapDistanceM: 100},
@@ -165,11 +173,38 @@ func (c TrainingConfig) Validate() error {
 }
 
 func (c Config) Validate() error {
-	if err := c.Scenario.Validate(); err != nil {
+	if c.Training.Profiles == nil {
+		if err := c.Scenario.Validate(); err != nil {
+			return err
+		}
+	} else {
+		for _, p := range c.Training.Profiles {
+			scenario := p.Scenario
+			// Older profiles inherit their workdir's single scenario.
+			if scenario == "" {
+				scenario = c.Scenario
+			}
+			if err := scenario.Validate(); err != nil {
+				return fmt.Errorf("profile %s: %w", p.Name, err)
+			}
+		}
+	}
+	if err := c.Reward.Validate(); err != nil {
 		return err
 	}
 	if err := c.Environment.Validate(); err != nil {
 		return err
 	}
 	return c.Training.Validate()
+}
+
+// ForProfile resolves one independent training run from the shared workdir config.
+func (c Config) ForProfile(p TrainingProfile) Config {
+	if p.Scenario != "" {
+		c.Scenario = p.Scenario
+	}
+	c.Training.Profiles = nil
+	c.Training.Episodes = p.Episodes
+	c.Training.EpsilonDecayEpisodes = p.EpsilonDecayEpisodes
+	return c
 }

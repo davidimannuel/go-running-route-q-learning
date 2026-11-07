@@ -116,7 +116,7 @@ func TestDownloadOverwritesOnlyMap(t *testing.T) {
 		t.Fatal("expected only osm.json to be replaced")
 	}
 	entries, err := os.ReadDir(filepath.Join(workdir, "output"))
-	if err != nil || len(entries) != 2 {
+	if err != nil || len(entries) != 3 {
 		t.Fatalf("temporary output was not cleaned up: entries=%v, error=%v", entries, err)
 	}
 }

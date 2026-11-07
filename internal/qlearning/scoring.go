@@ -8,15 +8,6 @@ import (
 	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
 )
 
-// These weights and mappings match the active reference rute_lari_core.py,
-// section B (direct_signed_unclipped_missing_05_20261103). They are research
-// preferences, not measured runner comfort, accessibility, or road safety.
-const (
-	HighwayWeight = 0.55
-	SurfaceWeight = 0.30
-	WidthWeight   = 0.15
-)
-
 // RoadScores contains the three signed components and their unclipped sum.
 type RoadScores struct {
 	HighwayScore float64 `json:"highway_score"`
@@ -28,7 +19,7 @@ type RoadScores struct {
 // ScoreEdge uses width already parsed during graph loading. No export reparses tags.
 // Keeping one mapping function prevents CSV and HTML exports from diverging.
 func ScoreEdge(e osm.OSMEdge) RoadScores {
-	return ScoreRoad(e.Highway, e.Surface, e.Width, e.WidthValid)
+	return DefaultRewardConfig().Road.ScoreEdge(e)
 }
 
 // ScoreRoad matches calculate_highway_score, calculate_surface_score, and
@@ -36,34 +27,42 @@ func ScoreEdge(e osm.OSMEdge) RoadScores {
 // its validity flag distinguishes unavailable data from a usable measurement.
 // Access is a separate journey reward component.
 func ScoreRoad(highway, surface string, widthM float64, widthValid bool) RoadScores {
+	return DefaultRewardConfig().Road.ScoreRoad(highway, surface, widthM, widthValid)
+}
+
+func (c RoadScoreConfig) ScoreEdge(e osm.OSMEdge) RoadScores {
+	return c.ScoreRoad(e.Highway, e.Surface, e.Width, e.WidthValid)
+}
+
+func (c RoadScoreConfig) ScoreRoad(highway, surface string, widthM float64, widthValid bool) RoadScores {
 	scores := RoadScores{
-		HighwayScore: categoryScore(highway, func(value string) bool {
+		HighwayScore: categoryScore(highway, c.Highway, func(value string) bool {
 			switch value {
 			case "footway", "pedestrian", "living_street", "residential", "tertiary":
 				return true
 			}
 			return false
 		}),
-		SurfaceScore: categoryScore(surface, func(value string) bool {
+		SurfaceScore: categoryScore(surface, c.Surface, func(value string) bool {
 			switch value {
 			case "asphalt", "concrete", "paving_stones", "paved":
 				return true
 			}
 			return false
 		}),
-		WidthScore: -0.5,
+		WidthScore: c.Width.Missing,
 	}
 	if widthValid && widthM > 0 && !math.IsInf(widthM, 0) {
-		scores.WidthScore = -1
-		if widthM >= 3 {
-			scores.WidthScore = 1
+		scores.WidthScore = c.Width.Other
+		if widthM >= c.WidthThresholdM {
+			scores.WidthScore = c.Width.Priority
 		}
 	}
-	scores.ComfortScore = HighwayWeight*scores.HighwayScore + SurfaceWeight*scores.SurfaceScore + WidthWeight*scores.WidthScore
+	scores.ComfortScore = c.Highway.Weight*scores.HighwayScore + c.Surface.Weight*scores.SurfaceScore + c.Width.Weight*scores.WidthScore
 	return scores
 }
 
-func categoryScore(raw string, priority func(string) bool) float64 {
+func categoryScore(raw string, cfg AttributeScoreConfig, priority func(string) bool) float64 {
 	text := strings.ToLower(strings.TrimSpace(raw))
 	values := []string{text}
 	// OSM downloads use scalar strings. Also recognize quoted string lists from
@@ -71,7 +70,7 @@ func categoryScore(raw string, priority func(string) bool) float64 {
 	if parsed, ok := quotedTagList(text); ok {
 		values = parsed
 	}
-	score, found := 1.0, false
+	score, found := math.Inf(1), false
 	for _, value := range values {
 		for part := range strings.SplitSeq(value, ";") {
 			part = strings.ToLower(strings.TrimSpace(part))
@@ -79,13 +78,16 @@ func categoryScore(raw string, priority func(string) bool) float64 {
 				continue
 			}
 			found = true
-			if !priority(part) {
-				score = -1 // Minimum over all non-empty categories, as in the reference.
+			valueScore := cfg.Other
+			if priority(part) {
+				valueScore = cfg.Priority
 			}
+			score = math.Min(score, valueScore) // Minimum over non-empty categories.
+
 		}
 	}
 	if !found {
-		return -0.5
+		return cfg.Missing
 	}
 	return score
 }

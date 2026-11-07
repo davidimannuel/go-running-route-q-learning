@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"errors"
+	"github.com/davidimannuel/go-running-route-q-learning/internal/qlearning"
 	"io"
 	"math"
 	"reflect"
@@ -69,7 +70,7 @@ func TestEdgeToCSV(t *testing.T) {
 	}
 	for range 2 {
 		var out bytes.Buffer
-		if err := EdgeToCSV(&out, graph); err != nil {
+		if err := EdgeToCSV(&out, graph, qlearning.DefaultRewardConfig().Road); err != nil {
 			t.Fatal(err)
 		}
 		got := readCSV(t, out.String())
@@ -125,7 +126,7 @@ func TestCSVWriteErrors(t *testing.T) {
 			write func(io.Writer) error
 		}{
 			{name: "nodes", write: func(w io.Writer) error { return NodeToCSV(w, graph) }},
-			{name: "edges", write: func(w io.Writer) error { return EdgeToCSV(w, graph) }},
+			{name: "edges", write: func(w io.Writer) error { return EdgeToCSV(w, graph, qlearning.DefaultRewardConfig().Road) }},
 		} {
 			sentinel := errors.New("writer unavailable")
 			if err := export.write(failingCSVWriter{err: sentinel}); !errors.Is(err, sentinel) {
@@ -139,7 +140,7 @@ func TestEmptyGraphCSV(t *testing.T) {
 	graph := osm.NewGraph()
 	for _, export := range []func(io.Writer) error{
 		func(w io.Writer) error { return NodeToCSV(w, graph) },
-		func(w io.Writer) error { return EdgeToCSV(w, graph) },
+		func(w io.Writer) error { return EdgeToCSV(w, graph, qlearning.DefaultRewardConfig().Road) },
 	} {
 		var out bytes.Buffer
 		if err := export(&out); err != nil {
