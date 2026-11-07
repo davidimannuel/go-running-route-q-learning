@@ -13,7 +13,7 @@ qlearning:
   environment:
     target_distance_m: 5000
     distance_tolerance: 0.10
-    progress_bins: 16
+    progress_bins: 25
     max_steps: 500
     allow_revisit: true
     revisit_after_ratio: 0.50
@@ -39,20 +39,56 @@ qlearning:
     gamma: 0.95
     epsilon_start: 1.0
     epsilon_end: 0.05
-    # Resolve five random seeds once; reuse them across A/B/C in this invocation.
+    # Resolve five random seeds once; reuse them across all profiles in this invocation.
     # Replace runs with seeds: [...] from metadata.json to reproduce the batch.
     runs: 5
     max_workers: 5
     profiles:
-      - name: a
+      - name: a-dynamic-150000
         scenario: A
         episodes: 150000
-        epsilon_decay_episodes: 50000
-      - name: b
+        epsilon_decay_episodes: null
+      - name: a-dynamic-300000
+        scenario: A
+        episodes: 300000
+        epsilon_decay_episodes: null
+      - name: a-horizon-100000-total-150000
+        scenario: A
+        episodes: 150000
+        epsilon_decay_episodes: 100000
+      - name: a-horizon-100000-total-300000
+        scenario: A
+        episodes: 300000
+        epsilon_decay_episodes: 100000
+      - name: b-dynamic-150000
         scenario: B
         episodes: 150000
-        epsilon_decay_episodes: 50000
-      - name: c
+        epsilon_decay_episodes: null
+      - name: b-dynamic-300000
+        scenario: B
+        episodes: 300000
+        epsilon_decay_episodes: null
+      - name: b-horizon-100000-total-150000
+        scenario: B
+        episodes: 150000
+        epsilon_decay_episodes: 100000
+      - name: b-horizon-100000-total-300000
+        scenario: B
+        episodes: 300000
+        epsilon_decay_episodes: 100000
+      - name: c-dynamic-150000
         scenario: C
         episodes: 150000
-        epsilon_decay_episodes: 50000
+        epsilon_decay_episodes: null
+      - name: c-dynamic-300000
+        scenario: C
+        episodes: 300000
+        epsilon_decay_episodes: null
+      - name: c-horizon-100000-total-150000
+        scenario: C
+        episodes: 150000
+        epsilon_decay_episodes: 100000
+      - name: c-horizon-100000-total-300000
+        scenario: C
+        episodes: 300000
+        epsilon_decay_episodes: 100000

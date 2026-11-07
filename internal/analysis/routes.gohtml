@@ -5,14 +5,23 @@
 <title>Running routes — Scenario {{.Scenario}}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
-*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}.leaflet-control-layers{max-width:230px;font:13px/1.5 system-ui,sans-serif}.leaflet-control-layers label{font-weight:400;margin:4px 0}.leaflet-control-layers input{margin-right:5px}@media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}.leaflet-control-zoom{display:none}}
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}.leaflet-control-layers{max-width:230px;font:13px/1.5 system-ui,sans-serif}.leaflet-control-layers label{font-weight:400;margin:4px 0}.leaflet-control-layers input{margin-right:5px}.route-options{border-top:1px solid #e8edf2;margin-top:12px;padding-top:2px}.route-options .check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;margin:10px 0}.route-options input{margin:0;accent-color:#2457f5}.route-options .muted{margin:8px 0}.route-arrow{pointer-events:none!important}.route-arrow svg{width:20px;height:20px;display:block;filter:drop-shadow(0 1px 2px #0005)}.traversal-select{margin-bottom:10px}.repeat-key{display:inline-block;width:22px;border-top:4px dashed #be123c;vertical-align:middle;margin-right:5px}
+@media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}.leaflet-control-zoom{display:none}}
 </style>
 </head>
 <body><div id="map"></div>
 <aside class="panel"><nav style="display:flex;gap:16px;margin-bottom:12px"><a href="/" target="_top">All results</a><a href="report.html">Training details</a></nav><h1>Running routes · {{.Scenario}}</h1><div class="muted">Final greedy evaluation · epsilon = 0</div>
 <label for="seed">Training seed</label><select id="seed"></select><div id="status" class="status"></div><dl id="metrics"></dl>
-<button id="fit">Fit selected route</button><div class="legend" id="legend"></div>
-<div class="muted">Each color follows the kilometer at the start of a segment. Click a road for its attributes and reward.</div>
+<button id="fit">Fit selected route</button>
+<div class="route-options">
+<label for="kilometer">Route distance</label><select id="kilometer"><option value="all">All kilometers</option></select>
+<label class="check"><input type="checkbox" id="show-overlap">Highlight repeated roads</label>
+<label class="check"><input type="checkbox" id="show-directions">Direction arrows</label>
+<div class="muted" id="route-view" aria-live="polite"></div>
+<div class="muted" id="overlap-help" hidden><span class="repeat-key"></span>Dashed outlines mark roads traversed more than once in the entire route. Click a road to inspect each traversal.</div>
+</div>
+<div class="legend" id="legend"></div>
+<div class="muted">Colors follow traveled distance, with kilometer boundaries interpolated within road segments. A kilometer view keeps the rest of the route faint for context. Click a road for its attributes and reward.</div>
 <div id="road-legend" hidden><strong id="road-legend-title"></strong><div class="legend" id="road-legend-items"></div></div>
 <div class="muted foot">Use the map layers to inspect comfort scores or access tags on surrounding roads. Hide Selected route to inspect roads beneath it. Counts refer to displayed line groups; access tags are not permission decisions.</div>
 <div class="muted foot">Comfort is a research preference, not a safety assessment. Overlap counts repeated physical-road traversals. A failed route is shown for inspection.</div>
@@ -23,7 +32,10 @@ const routeData = {{.}};
 (() => {
 const error = document.getElementById('error');
 if (!window.L) { error.textContent='Leaflet could not load. Check your internet connection and reload.'; return; }
-const colors=['#2457F5','#00A884','#F59E0B','#8B3DFF','#EF4444'];
+const colors=['#2457F5','#00A884','#F59E0B','#8B3DFF','#EF4444','#0E7490'];
+const kilometer=document.getElementById('kilometer'),showOverlap=document.getElementById('show-overlap'),showDirections=document.getElementById('show-directions');
+let visibleFragments=[];
+const kmColor=km=>colors[km%colors.length];
 const map=L.map('map',{preferCanvas:true,zoomControl:false}).setView(routeData.Start,15);
 L.control.zoom({position:'topright'}).addTo(map);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
@@ -32,10 +44,10 @@ const layer=L.featureGroup().addTo(map), select=document.getElementById('seed');
 const fmt=(value,digits=2)=>Number.isFinite(Number(value))?Number(value).toLocaleString('en-US',{maximumFractionDigits:digits}):'—';
 const popup=(title,rows)=>{const box=document.createElement('div'),heading=document.createElement('div'),list=document.createElement('dl');heading.className='popup-title';heading.textContent=title;list.className='popup-table';for(const [key,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=key;dd.textContent=value===''?'Not tagged':String(value);list.append(dt,dd);}box.append(heading,list);return box;};
 const pin=(color,finish=false)=>L.divIcon({className:'route-pin',html:`<div class="pin" style="background:${color}"><svg viewBox="0 0 24 24">${finish?'<path d="M5 2h2v2h12l-3 5 3 5H7v8H5z"/>':'<path d="M8 4v16l13-8z"/>'}</svg></div>`,iconSize:[34,42],iconAnchor:[17,42]});
-const bounds=()=>{const trial=routeData.Trials[Number(select.value)],points=[routeData.Start,...trial.Segments.flatMap(s=>s.Coordinates)];map.fitBounds(L.latLngBounds(points),{paddingTopLeft:window.innerWidth>600?[340,30]:[25,Math.min(window.innerHeight*.43+24,320)],paddingBottomRight:[30,35],maxZoom:17});};
+const bounds=()=>{const trial=routeData.Trials[Number(select.value)],points=kilometer.value==='all'?[routeData.Start,...trial.Segments.flatMap(s=>s.Coordinates)]:visibleFragments.flatMap(f=>f.Coordinates);map.fitBounds(L.latLngBounds(points.length?points:[routeData.Start]),{paddingTopLeft:window.innerWidth>600?[340,30]:[25,Math.min(window.innerHeight*.43+24,320)],paddingBottomRight:[30,35],maxZoom:17});};
 routeData.Trials.forEach((trial,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=`Seed ${trial.Seed}${i===routeData.Selected?' · representative':''}`;select.append(option);});
 select.value=String(routeData.Selected);
-const legend=document.getElementById('legend');colors.forEach((color,i)=>{const item=document.createElement('span'),line=document.createElement('i');line.style.background=color;item.append(line,document.createTextNode(`${i}–${i+1} km`));legend.append(item);});
+
 document.getElementById('snap').textContent=`Start node ${routeData.StartNode} · ${fmt(routeData.SnapM,1)} m from input. Distances use Haversine; the graph is not simplified.`;
 // Keep the inspection palette and bins aligned with road-analysis.html.
 const roadThemes={
@@ -110,25 +122,116 @@ map.on('baselayerchange',event=>{
  showRoadLegend(theme);
 });
 
-function render(){
+// Match the metric's physical-road identity: endpoint geometry, independent of direction/key.
+function physicalRoadKey(segment){
+ const [a,b]=segment.Coordinates;
+ return a[0]<b[0]||(a[0]===b[0]&&a[1]<=b[1])?`${a}|${b}`:`${b}|${a}`;
+}
+function pointAtDistance(segment,distance){
+ const ratio=Math.max(0,Math.min(1,(distance-segment.BeforeM)/segment.LengthM));
+ const [a,b]=segment.Coordinates;
+ return [a[0]+(b[0]-a[0])*ratio,a[1]+(b[1]-a[1])*ratio];
+}
+// Split only the display geometry. Original lengths, rewards and steps stay intact.
+function routeFragments(segments,selectedKm){
+ const fragments=[];
+ for(const segment of segments){
+  if(segment.LengthM<=0)continue;
+  const first=Math.floor(segment.BeforeM/1000),last=Math.ceil(segment.AfterM/1000)-1;
+  for(let km=first;km<=last;km++){
+   if(selectedKm!=='all'&&km!==Number(selectedKm))continue;
+   const start=Math.max(segment.BeforeM,km*1000),end=Math.min(segment.AfterM,(km+1)*1000);
+   if(end<=start)continue;
+   fragments.push({Segment:segment,Km:km,StartM:start,EndM:end,Coordinates:[pointAtDistance(segment,start),pointAtDistance(segment,end)]});
+  }
+ }
+ return fragments;
+}
+function routeRoadPopup(traversals,selected){
+ const box=document.createElement('div'),selector=document.createElement('select'),details=document.createElement('div');
+ selector.className='traversal-select';selector.setAttribute('aria-label','Route traversal');
+ traversals.forEach((segment,index)=>{
+  const option=document.createElement('option');option.value=String(index);
+  option.textContent=`Traversal ${index+1} · step ${segment.Step} · ${fmt(segment.BeforeM/1000,3)}–${fmt(segment.AfterM/1000,3)} km`;
+  selector.append(option);
+ });
+ selector.value=String(traversals.indexOf(selected));selector.hidden=traversals.length===1;
+ function update(){
+  const segment=traversals[Number(selector.value)],c=segment.Components;
+  details.replaceChildren(popup(segment.Name||'Unnamed road',[
+   ['Step',segment.Step],['Road traversals',traversals.length],['Distance interval',`${fmt(segment.BeforeM/1000,3)}–${fmt(segment.AfterM/1000,3)} km`],
+   ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Step total',fmt(segment.Reward,4)]
+  ]));
+ }
+ selector.addEventListener('change',update);box.append(selector,details);update();L.DomEvent.disableClickPropagation(box);return box;
+}
+function updateKilometers(trial){
+ const previous=kilometer.value,distance=trial.Segments.at(-1)?.AfterM??0,count=Math.ceil(distance/1000);
+ const all=document.createElement('option');all.value='all';all.textContent='All kilometers';kilometer.replaceChildren(all);
+ const legend=document.getElementById('legend');legend.replaceChildren();
+ for(let km=0;km<count;km++){
+  const label=`${km}–${fmt(Math.min(km+1,distance/1000),3)} km`,option=document.createElement('option');
+  option.value=String(km);option.textContent=`KM ${km+1} · ${label}`;kilometer.append(option);
+  const item=document.createElement('span'),line=document.createElement('i');line.style.background=kmColor(km);
+  item.append(line,document.createTextNode(label));legend.append(item);
+ }
+ kilometer.value=previous==='all'||Number(previous)<count?previous:'all';
+ if(kilometer.value==='')kilometer.value='all';
+}
+function drawDirectionArrows(fragment){
+ const segment=fragment.Segment,[a,b]=segment.Coordinates,p=map.project(a,0),q=map.project(b,0);
+ const angle=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI;
+ // One arrow per 200 traveled meters avoids clutter on the raw OSM graph.
+ for(let distance=Math.ceil((fragment.StartM-100)/200)*200+100;distance<fragment.EndM;distance+=200){
+  const icon=L.divIcon({className:'route-arrow',html:`<svg viewBox="0 0 20 20" style="transform:rotate(${angle}deg)"><path d="M3 3 L17 10 L3 17 L7 10 Z" fill="${kmColor(fragment.Km)}" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>`,iconSize:[20,20],iconAnchor:[10,10]});
+  L.marker(pointAtDistance(segment,distance),{icon,interactive:false,keyboard:false}).addTo(layer);
+ }
+}
+function render(fit=true){
  layer.clearLayers();const trial=routeData.Trials[Number(select.value)],status=document.getElementById('status');
  status.className='status'+(trial.IsLoop?'':' failed');status.textContent=trial.IsLoop?'Valid loop':`Failed · ${trial.Termination.replaceAll('_',' ')}`;
  const metrics=document.getElementById('metrics');metrics.replaceChildren();
  const rows=[['Distance',`${fmt(trial.DistanceM)} m`],['Absolute target error',`${fmt(trial.ErrorM)} m`],['Total reward',fmt(trial.Reward)],['Mean comfort',fmt(trial.Comfort,4)],['Overlap',Number.isFinite(Number(trial.Overlap))?`${fmt(Number(trial.Overlap)*100)}%`:'—'],['Return progress',Number.isFinite(Number(trial.ReturnProgress))?`${fmt(Number(trial.ReturnProgress)*100)}%`:'—'],['End to start',`${fmt(trial.EndDistance)} m`],['Steps / revisits',`${trial.Steps} / ${trial.Revisits}`],['Closing was available',trial.ClosingAvailable?'Yes':'No']];
  for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;metrics.append(dt,dd);}
+ updateKilometers(trial);
+ const groups=new Map();
+ for(const segment of trial.Segments){
+  const key=physicalRoadKey(segment);
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(segment);
+ }
+ visibleFragments=routeFragments(trial.Segments,kilometer.value);
+ const repeated=trial.Segments.length-groups.size;
+ document.getElementById('route-view').textContent=`${kilometer.selectedOptions[0].textContent} · ${fmt(visibleFragments.reduce((sum,f)=>sum+f.EndM-f.StartM,0))} m shown. ${repeated} repeated traversal(s) in the entire route.`;
+ document.getElementById('overlap-help').hidden=!showOverlap.checked;
+ if(kilometer.value!=='all'){
+  for(const segment of trial.Segments)L.polyline(segment.Coordinates,{color:'#64748b',weight:3,opacity:.22,interactive:false}).addTo(layer);
+ }
+ if(showOverlap.checked){
+  for(const fragment of visibleFragments){
+   const traversals=groups.get(physicalRoadKey(fragment.Segment));
+   if(traversals.length<2)continue;
+   L.polyline(fragment.Coordinates,{color:'#be123c',weight:13,opacity:.8,dashArray:'8 6'})
+    .bindTooltip(`${traversals.length} traversals · click to inspect each step`)
+    .bindPopup(()=>routeRoadPopup(traversals,fragment.Segment),{minWidth:280,maxWidth:380}).addTo(layer);
+  }
+ }
+ for(const fragment of visibleFragments){
+  const segment=fragment.Segment,traversals=groups.get(physicalRoadKey(segment));
+  L.polyline(fragment.Coordinates,{color:kmColor(fragment.Km),weight:6,opacity:.9})
+   .bindTooltip(`Step ${segment.Step} · ${segment.From} → ${segment.To} · key ${segment.Key} · ${traversals.length} traversal(s)`)
+   .bindPopup(()=>routeRoadPopup(traversals,segment),{minWidth:280,maxWidth:380}).addTo(layer);
+  if(showDirections.checked)drawDirectionArrows(fragment);
+ }
  let nextKm=1;
  for(const segment of trial.Segments){
-  const color=colors[Math.min(4,Math.floor(segment.BeforeM/1000))],c=segment.Components;
-  const road=L.polyline(segment.Coordinates,{color,weight:6,opacity:.9}).addTo(layer);
-  road.bindTooltip(`Step ${segment.Step} · ${segment.From} → ${segment.To} · key ${segment.Key}`);
-  road.bindPopup(popup(segment.Name||'Unnamed road',[
-   ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Step total',fmt(segment.Reward,4)]
-  ]),{minWidth:270,maxWidth:340});
-  while(nextKm<=5 && segment.AfterM>=nextKm*1000){
-   if(!(nextKm===5&&trial.IsLoop)){
-    const ratio=Math.max(0,Math.min(1,(nextKm*1000-segment.BeforeM)/segment.LengthM)),a=segment.Coordinates[0],b=segment.Coordinates[1],location=[a[0]+(b[0]-a[0])*ratio,a[1]+(b[1]-a[1])*ratio];
-    L.marker(location,{icon:L.divIcon({className:'km-marker',html:`<div class="km" style="--color:${colors[nextKm-1]}">${nextKm}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(`KM ${nextKm} · interpolated along this segment`).addTo(layer);
-   }nextKm++;
+  while(nextKm*1000<=segment.AfterM){
+   const atFinish=Math.abs(nextKm*1000-Number(trial.DistanceM))<1e-6;
+   const inView=kilometer.value==='all'||nextKm===Number(kilometer.value)||nextKm===Number(kilometer.value)+1;
+   if(!atFinish&&inView){
+    L.marker(pointAtDistance(segment,nextKm*1000),{icon:L.divIcon({className:'km-marker',html:`<div class="km" style="--color:${kmColor(nextKm-1)}">${nextKm}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(`KM ${nextKm} · interpolated along this segment`).addTo(layer);
+   }
+   nextKm++;
   }
  }
  L.circleMarker(routeData.Input,{radius:5,color:'#2563eb',fillOpacity:.9}).bindPopup(popup('Input coordinate',[['Latitude',routeData.Input[0]],['Longitude',routeData.Input[1]]]),{minWidth:260}).addTo(layer);
@@ -139,8 +242,12 @@ function render(){
  // Offset the icon, not the geographic endpoint, when start and finish coincide.
  if(end[0]===routeData.Start[0]&&end[1]===routeData.Start[1])finishIcon.options.iconAnchor=[-10,42];
  L.marker(end,{icon:finishIcon,zIndexOffset:600}).bindTooltip(trial.IsLoop?'FINISH · same node as START':'END · unsuccessful route').bindPopup(popup(trial.IsLoop?'FINISH':'END',[['Result',trial.IsLoop?'Valid loop':trial.Termination],['Distance',`${fmt(trial.DistanceM)} m`],['Latitude',end[0]],['Longitude',end[1]]]),{minWidth:260,maxWidth:320}).addTo(layer);
- bounds();
+ if(fit)bounds();
 }
-select.addEventListener('change',render);document.getElementById('fit').addEventListener('click',bounds);render();
+select.addEventListener('change',()=>{kilometer.value='all';render();});
+kilometer.addEventListener('change',()=>render());
+showOverlap.addEventListener('change',()=>render(false));
+showDirections.addEventListener('change',()=>render(false));
+document.getElementById('fit').addEventListener('click',bounds);render();
 })();
 </script></body></html>

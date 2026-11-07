@@ -2,47 +2,42 @@
 
 ## Collaboration
 
-Proyek ini menulis ulang core TA rute lari Dukuh Kupang dari Python ke Go. Chat berbahasa Indonesia; identifier, komentar kode, dan error berbahasa Inggris. Pengguna belajar lewat coding dan review per komponen. Diskusikan perubahan desain sebelum implementasi.
+Proyek ini menulis ulang core TA rute lari dari Python ke Go. Chat berbahasa Indonesia; identifier, komentar kode, dan error berbahasa Inggris. Pengguna belajar melalui coding dan review per komponen. Diskusikan perubahan desain sebelum implementasi.
 
-**Always keep it simple:** utamakan kode idiomatic, mudah dibaca, hemat memori, dan standard library. Hindari abstraksi atau penanganan format yang belum dibutuhkan. Pertahankan referensi dan komentar singkat. Sinkronkan command di README dan `--help` saat CLI berubah; jangan membuat docs tambahan tanpa permintaan. Jaga panduan ringkas.
+**Always keep it simple:** utamakan kode idiomatic, mudah dibaca, standard library, serta penggunaan memori yang wajar. Hindari abstraksi dan format yang belum dibutuhkan. Pertahankan referensi dan komentar singkat. Sinkronkan README dan bantuan CLI; jangan membuat dokumen tambahan tanpa permintaan.
 
-## Layout
+## Project Layout
 
 - `cmd/cli`: download, analyze, train, serve, dan penyimpanan hasil.
-- `internal/osm`: Overpass, cache, graf mentah, parsing, Haversine.
-- `internal/qlearning`: scoring, state, mask, environment, reward, training, metrik.
-- `internal/analysis`: ekspor CSV/Q-table dan HTML peta.
-- `analysis/`: modul Python untuk analisis graf/training. Notebook hanya parameter, pemanggilan, penjelasan, dan hasil; jangan menduplikasi core Go.
-- `workdirs/`: config, cache, output; tanpa folder input. Output/cache, `.venv`, dan playground diabaikan Git.
+- `internal/osm`: Overpass, cache, graf mentah, Haversine, parsing width.
+- `internal/qlearning`: scoring, state, mask, environment, reward, Q-table, metrik.
+- `internal/analysis`: CSV, HTML peta, Q-table, dan report metadata.
+- `internal/config`, `internal/logger`, `internal/htmlserver`: konfigurasi, log, navigasi hasil.
+- `analysis/`: core analisis Python; notebook hanya parameter, pemanggilan, dan penjelasan.
+- `workdirs/`: config, cache, output; tanpa folder input. Output/cache/playground diabaikan Git.
 
 ## Research Rules
 
-Acuan baca saja: `/Users/david/widya_kartika/uwika-ta-31123022-2026`; baca bagian relevan `rute_lari_core.py`, `IMPLEMENTASI.md`, dan metadata hasil.
+Acuan baca saja: `/Users/david/widya_kartika/uwika-ta-31123022-2026`. Rujukan teknisnya `rute_lari_core.py` dan `IMPLEMENTASI.md`; analisis final memakai hasil proyek Go sendiri.
 
-Pertahankan loop 5.000 m ±10%, state A/B/C, action `(next_node,key)`, mask, dan reward yang disepakati. Reward/scoring dari `qlearning.reward`, default `reward.go`; catat perubahan pada metadata. Access scalar kosong/yes/permissive diperbolehkan; tanpa split/list. Urutan action numerik menurut tujuan lalu key. Jarak ke start memakai Haversine. Overlap berdasarkan hitungan lintasan geometri ruas, menyatukan arah balik/geometri sama.
+Pertahankan target 5.000 m ±10% dan kembali ke start. State A=current node, B=ditambah progress bin, C=ditambah previous node. Action `(next_node,key)` diurutkan numerik. Akses scalar kosong/yes/permissive diizinkan, tanpa split/list atau override foot.
 
-Graf utama tetap mentah; simplifikasi tidak menjadi lingkup TA saat ini agar atribut setiap segmen tetap asli. Pemilihan komponen dan truncation belum diterapkan. Hasil Go belum identik dengan OSMnx/NumPy. Jangan mengubah metadata/arsip lama atau menganggap seed sama memberi urutan acak lintas bahasa yang sama.
+Graf tetap mentah dan bidirectional; simplifikasi di luar lingkup saat ini. Seleksi komponen/truncation belum diterapkan. Jarak memakai Haversine; hasil tidak identik dengan graf proyeksi/simplifikasi atau RNG Python. Overlap adalah hitungan lintasan ruas fisik berdasarkan endpoint, menggabungkan arah balik/geometri identik. Jalan berbeda yang berdekatan bukan overlap. Skor highway/surface/width adalah preferensi penelitian, bukan keamanan aktual.
 
-## Workdirs and Validation
+## Final Experiment
 
-Dua workdir aktif: `training` (12 profil A/B/C, seed 0–4) dan `testing` (tiga profil A/B/C, lima seed acak bersama, 150k/horizon 50k). Scenario ada pada setiap profil; lingkungan/reward/parameter lain dipakai bersama. Workdir aktif memakai `max_steps=500` dan `max_workers=5`. Setiap seed memiliki Q-table/environment/RNG mandiri. Pertahankan hasil/metadata arsip saat migrasi. Jangan menjalankan training panjang tanpa permintaan.
+Workdir `training`: A/B/C × dinamis150k/300k dan horizon100k-total150k/300k, 12 profil/60 training/13.500.000 episode. Seed tetap0–4, alpha0.15, gamma0.95, epsilon1→0.05, evaluasi greedy0. Setiap profil/seed mulai dari Q-table/RNG mandiri. `testing`: 12 profil dan parameter yang sama, dengan koordinat sendiri dan lima seed acak bersama per command; total13.500.000episode bila semua profil dijalankan. Nama profil kedua workdir identik; jangan memakai alias lama a/b/c.
 
-Output memiliki metadata JSON; training mencatat konfigurasi efektif/provenance per profil dan seed serta report HTML. Server menyediakan navigasi peta/detail; JSON/CSV tidak disajikan langsung. Notebook membandingkan profil dalam scenario dan A/B/C dengan parameter sepadan dari satu workdir. Peta rute memiliki layer graf Comfort score/Access, default tersembunyi; payload dan scoring berbagi builder dengan peta analisis.
+Parameter bersama: 25 bin, max_steps500, max_workers5, outward0.60, return1.20, revisit−5. Reward lain ada di YAML. Jangan menambah variasi atau menjalankan training panjang tanpa permintaan. Rancangan dikunci; prioritas berikutnya analisis BAB IV dan penyesuaian Bab I–III.
 
-Gunakan `gofmt`, `go test ./...`, `go test -race ./...` untuk konkurensi, `go vet ./...`, dan `go build ./...`. Tes memakai fixture lokal; expected hitungan Q harus independen. Setelah perubahan Python, jalankan notebook terkait dari kernel bersih dan periksa grafik; simpan notebook tanpa output. Commit deskriptif; jangan sertakan artefak lokal.
+Pengguna menyelesaikan hasil final 7 November 2026 pukul18.25 WIB: greedy31/60, A1/20, B18/20, C12/20. Urutan dinamis150k/300k dan horizon-total150k/300k: A=0/1/0/0, B=5/5/3/5, C=0/3/4/5, masing-masing dari5. Tabel serta ringkasan metrik ada di README; sumber angka tetap CSV/metadata hasil final.
 
-Prioritaskan review metrik dan verifikasi langkah/reward/Q.
+Audit: seluruh13,5juta history diperiksa;60 evaluasi dan8.640 baris trace direproduksi dari Q-table byte-for-byte. Semua29 gagal tanpa closing legal:25 over_distance/4 buntu; tidak ada step_limit, maksimum353 langkah. Ringkasan lokal: `workdirs/training/output/analysis/final-experiment-audit.json`. Output pendahuluan/arsip lama dihapus atas permintaan pengguna; hasil final sekarang dipertahankan.
 
+## Maps and Validation
 
-## Latest Audit — 2026-11-07
+Peta mempertahankan seed, metrik, marker input/start/finish/KM, serta layer Comfort/Access. Route distance memilih seluruh rute/per-KM; konteks lain samar. Sorotan ruas ulang dan panah arah default mati. Popup memilih setiap traversal beserta step/interval/reward. Ini tampilan saja; seluruh12 HTML final diperbarui dengan payload identik,240 artefak non-HTML tetap. Desktop/mobile diuji.
 
-- Hasil terbaru workdir `training`: revisit **-5**, return1.20, progress_bins16, max_steps500/max_workers5; 12 profil/60 evaluasi/6.750.000 episode selesai 7 November pukul16.00 WIB. Metadata faktor lain, graf/start/seeds identik dengan baseline revisit-10. Snapshot `f0a5885d…`, start `9620836306`.
-- Greedy baseline-10→-5: **14/60→28/60**; A0→0/20, B10→17/20, C4→11/20. Loop per konfigurasi B/C (lima seed): dinamis75K=2/0, dinamis150K=5/3, horizon50K-total75K=5/3, horizon50K-total150K=5/5. A seluruh profil0/5.
-- Horizon50K/total150K: training10K terakhir B51,196%→67,534%, C25,392%→56,814%. Greedy terbaru B/C: galat229,50/353,60m, comfort0,9248/0,9405, overlap2,88%/4,28%, Q-state59.593/95.582. B dinamis150K juga5/5 dengan galat135,54m, tetapi overlap4,59% dan training-tail38,956%; jangan menyebut horizon unggul seluruh metrik.
-- Kegagalan terbaru32:21 over_distance/11 no_available_action; semuanya tidak pernah memiliki closing legal. Tidak ada step_limit pada6,75 juta episode; maksimum353 langkah. Loop valid4.544,87–5.469,86m. Overlap seluruh evaluasi B3,41%→3,90%, C1,45%→3,52%; jumlah kegagalan berubah, jangan mengisolasi mutu rute dari rerata ini.
-- Audit latest: seluruh history diperiksa jumlah/urutan episode, seed, jadwal epsilon; metadata hanya berbeda revisit-10→-5. Reward/jarak/overlap8584 langkah konsisten. Seluruh60 greedy direproduksi dari Q-table; evaluation.csv dan evaluation-steps.csv cocok byte-for-byte. Tidak training/unduh atau mengubah core/config saat audit.
-- Audit aturan sebelumnya (revisit-10):114 kasus sintetis A/B/C, skala pulang0.60/1.20, cocok Go/Python untuk state/mask/reward/terminasi/bootstrap/Q; replay60 rute/8.989 langkah dan scoring58.020 edge cocok setelah jarak/parameter disamakan di memori. Ini bukan kesetaraan seluruh training/RNG/graf atau jaminan bebas bug. C membagi pengalaman menurut previous_node, tetapi tetap tidak menyimpan seluruh riwayat kunjungan yang memengaruhi mask.
-- Keputusan: fokus reward/aturan perjalanan; gamma0.95, alpha, epsilon, state dan rumus Q tetap. Pengurangan revisit-5 disetujui dan sudah dilatih. Pertahankan progress_bins16; eksperimen8/32 belum disetujui. Hasil baik pada start/snapshot/lima seed ini belum membuktikan generalisasi. Total reward lintas penalti tidak dibandingkan langsung sebagai kualitas rute.
-- Baseline return1.20/revisit-10 disimpan di `workdirs/training/output/baselines/revisit-10-return-1.20-20261107.json`: metadata/evaluasi/ringkasan training, tanpa history/Q-table lengkap. Baseline lebih lama return0.60 hanya tersisa angka audit. Jangan menimpa baseline.
-- Pembanding Python aktif adalah `reward_missing_05_20261103` (CSV/metadata12 konfigurasi diperiksa):23/60 loop, A2/B9/C12; Go terbaru28/60, A0/B17/C11. B lebih banyak loop di seluruh konfigurasi; C horizon75K turun5→3 dan horizon150K tetap5, tetapi galat276,57→353,60m. Go tidak unggul seluruh metrik. Reward pulang1.20 vs0.60, revisit-5 vs-10, max_steps500 vs220, graf/snapshot/start/RNG berbeda; overlap hitungan segmen juga dipengaruhi simplifikasi. Ini perbandingan deskriptif, bukan efek bahasa Go atau satu faktor.
-- Sumber aktif: metadata, evaluation.csv, history.csv, dan seed-*/evaluation-steps.csv di `workdirs/training/output/training/<profile>/`. Untuk sesi paralel, baca ulang file sebelum mengedit, pertahankan perubahan sesi lain, dan pisahkan keputusan dari usulan. Tinjau hasil ini sebelum mengubah faktor lain; konfigurasi belum diubah lagi.
+Jangan menyimpulkan optimalitas, generalisasi, atau validasi lapangan dari lima seed. Laporkan kegagalan dan jumlah sampel saat memakai rerata rute valid. Overlap rendah belum menjamin bentuk rute yang memuaskan. Jangan memakai angka arsip sebagai hasil baru atau mengubah metadata lama.
+
+Gunakan gofmt, `go test ./...`, `go vet ./...`, `go build ./...`; tambah `go test -race ./...` untuk perubahan konkurensi. Tes memakai fixture lokal dan expected Q/reward independen. Setelah perubahan Python, jalankan notebook terkait dari kernel bersih dan periksa grafik. Commit deskriptif; simpan notebook tanpa output dan jangan sertakan artefak lokal. Baca ulang file sebelum edit untuk menjaga perubahan sesi lain.

@@ -63,16 +63,21 @@ Examples (from the repository root):
   go run ./cmd/cli download --workdir workdirs/training
   go run ./cmd/cli analyze --workdir workdirs/training
   go run ./cmd/cli train --workdir workdirs/training
-  go run ./cmd/cli train --workdir workdirs/training --profile b-horizon-50000-total-150000
+  go run ./cmd/cli train --workdir workdirs/training --profile b-dynamic-150000
+  go run ./cmd/cli train --workdir workdirs/training --profile b-dynamic-300000
+  go run ./cmd/cli train --workdir workdirs/training --profile b-horizon-100000-total-150000
+  go run ./cmd/cli train --workdir workdirs/training --profile b-horizon-100000-total-300000
   go run ./cmd/cli download --workdir workdirs/testing
   go run ./cmd/cli analyze --workdir workdirs/testing
   go run ./cmd/cli train --workdir workdirs/testing
-  go run ./cmd/cli train --workdir workdirs/testing --profile a
-  go run ./cmd/cli train --workdir workdirs/testing --profile b
-  go run ./cmd/cli train --workdir workdirs/testing --profile c
+  go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-150000
+  go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
+  go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-150000
+  go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
   go run ./cmd/cli serve --dir workdirs --port 8080
 
-Workdirs: training has 12 A/B/C profiles; testing has profiles a, b, c.
+Both workdirs have 12 A/B/C profiles: 150k/300k, dynamic or horizon 100k.
+Training uses seeds 0-4; testing resolves five random seeds once for all selected profiles.
 Select a scenario through --profile, not a separate --scenario flag.
 With an existing osm.json, run analyze/train directly; no download is needed.
 Train always starts fresh Q-tables. A selected rerun replaces only that profile.

@@ -19,7 +19,7 @@ internal/config/     konfigurasi YAML dan validasi
 internal/htmlserver/ navigasi hasil HTML lokal dan halaman metadata arsip
 analysis/            modul Python untuk analisis CSV dan plotting
 workdirs/training/   analisis dan 12 profil penelitian A/B/C
-workdirs/testing/    analisis dan tiga profil A/B/C untuk uji parameter
+workdirs/testing/    12 profil A/B/C dengan lima seed acak untuk uji parameter
 analisa.ipynb        pilihan parameter dan laporan analisis graf
 training.ipynb       pilihan profil, laporan training, dan perbandingan state
 playground/          pemeriksaan manual lokal; diabaikan Git
@@ -58,22 +58,31 @@ tersedia, lanjutkan dengan `analyze` atau `train` sesuai kebutuhan.
 go run ./cmd/cli download --workdir workdirs/training
 go run ./cmd/cli analyze --workdir workdirs/training
 
-# Semua 12 profil, atau hanya satu profil.
+# Semua 12 profil penelitian (A/B/C, masing-masing lima seed).
 go run ./cmd/cli train --workdir workdirs/training
+
+# Atau pilih satu dari empat konfigurasi; ganti awalan b menjadi a/c bila perlu.
 go run ./cmd/cli train --workdir workdirs/training \
-  --profile b-horizon-50000-total-150000
+  --profile b-dynamic-150000
+go run ./cmd/cli train --workdir workdirs/training \
+  --profile b-dynamic-300000
+go run ./cmd/cli train --workdir workdirs/training \
+  --profile b-horizon-100000-total-150000
+go run ./cmd/cli train --workdir workdirs/training \
+  --profile b-horizon-100000-total-300000
 
 # Snapshot dan analisis testing.
 go run ./cmd/cli download --workdir workdirs/testing
 go run ./cmd/cli analyze --workdir workdirs/testing
 
-# Ketiga skenario testing.
+# Semua 12 profil testing dengan lima seed acak bersama.
 go run ./cmd/cli train --workdir workdirs/testing
 
-# Atau pilih salah satu profil testing: A, B, atau C.
-go run ./cmd/cli train --workdir workdirs/testing --profile a
-go run ./cmd/cli train --workdir workdirs/testing --profile b
-go run ./cmd/cli train --workdir workdirs/testing --profile c
+# Atau pilih satu konfigurasi testing; awalan a/b/c menentukan scenario.
+go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-150000
+go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
+go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-150000
+go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
 
 # Navigasi peta dan informasi training.
 go run ./cmd/cli serve --dir workdirs --port 8080
@@ -89,23 +98,23 @@ filter jenis hasil, lalu pilih **Recorded settings** untuk melihat konfigurasi
 hasil tersebut. Peta ditampilkan di panel sebelah daftar sehingga navigasi tetap
 tersedia. **Open separately** membuka hasil pada tab lain.
 
-`train` tanpa `--profile` menjalankan seluruh profil secara berurutan. Penelitian:
-12 profil × lima seed, total **6.750.000 episode**. Testing: tiga profil × lima
-seed × 150.000 episode, total **2.250.000 episode**. Setiap profil dimulai dari
-Q-table kosong. Hasil yang sudah ada tidak membuat profil dilewati otomatis.
+`train` tanpa `--profile` menjalankan seluruh profil secara berurutan.
+Kedua workdir memakai 12 profil × lima seed, total **13.500.000 episode per
+workdir**. Training memakai seed tetap 0–4; testing memilih lima seed acak sekali
+per command untuk seluruh profil yang dipilih. Setiap profil dimulai dari Q-table
+kosong. Hasil yang sudah ada tidak membuat profil dilewati otomatis.
 
 Profil yang tersedia untuk `--profile`:
 
 | Konfigurasi | Scenario A | Scenario B | Scenario C |
 |---|---|---|---|
-| Dinamis 75k | `a-dynamic-75000` | `b-dynamic-75000` | `c-dynamic-75000` |
 | Dinamis 150k | `a-dynamic-150000` | `b-dynamic-150000` | `c-dynamic-150000` |
-| Horizon 50k, total 75k | `a-horizon-50000-total-75000` | `b-horizon-50000-total-75000` | `c-horizon-50000-total-75000` |
-| Horizon 50k, total 150k | `a-horizon-50000-total-150000` | `b-horizon-50000-total-150000` | `c-horizon-50000-total-150000` |
-| Testing 150k/horizon 50k | `a` | `b` | `c` |
+| Dinamis 300k | `a-dynamic-300000` | `b-dynamic-300000` | `c-dynamic-300000` |
+| Horizon 100k, total 150k | `a-horizon-100000-total-150000` | `b-horizon-100000-total-150000` | `c-horizon-100000-total-150000` |
+| Horizon 100k, total 300k | `a-horizon-100000-total-300000` | `b-horizon-100000-total-300000` | `c-horizon-100000-total-300000` |
 
-Empat baris pertama berlaku untuk `workdirs/training`; baris terakhir untuk
-`workdirs/testing`. Scenario dipilih melalui profil di YAML. Tidak ada flag
+Keempat konfigurasi berlaku untuk `workdirs/training` dan `workdirs/testing`,
+dengan nama profil yang sama. Scenario dipilih melalui profil di YAML. Tidak ada flag
 `--scenario`. Jalankan `go run ./cmd/cli --help` untuk ringkasan command dan contoh
 terbaru; `download --help`, `analyze --help`, `train --help`, dan `serve --help`
 menampilkan panduan yang sama.
@@ -132,7 +141,7 @@ qlearning:
   environment:
     target_distance_m: 5000
     distance_tolerance: 0.10
-    progress_bins: 16
+    progress_bins: 25
     max_steps: 500
     allow_revisit: true
     revisit_after_ratio: 0.50
@@ -161,25 +170,29 @@ qlearning:
     seeds: [0, 1, 2, 3, 4]
     max_workers: 5
     profiles:
-      - name: a-dynamic-75000
+      - name: a-dynamic-150000
         scenario: A
-        episodes: 75000
+        episodes: 150000
         epsilon_decay_episodes: null
-      - name: b-dynamic-75000
+      - name: b-dynamic-150000
         scenario: B
-        episodes: 75000
+        episodes: 150000
         epsilon_decay_episodes: null
 ```
 
 Setiap profil menentukan `name`, `scenario`, `episodes`, dan
 `epsilon_decay_episodes`. Nama unik memakai huruf kecil, angka, dan hyphen;
 nama tersebut juga menjadi direktori hasil. Config penelitian memuat empat
-kombinasi per skenario: dinamis 75k/150k serta horizon 50k dengan total 75k/150k.
-Config testing memakai profil `a`, `b`, dan `c`, masing-masing 150k/horizon 50k.
+kombinasi per skenario: dinamis 150k/300k dan horizon 100k dengan total 150k/300k.
+Config testing memakai 12 profil yang sama; koordinat dan cara pemilihan seed
+tetap berbeda dari workdir penelitian.
 
-`epsilon_decay_episodes: null` mengikuti total episode. Horizon tetap membuat
-epsilon bertahan pada `epsilon_end` setelah horizon tercapai. Evaluasi akhir
-selalu greedy, `epsilon=0`.
+`epsilon_decay_episodes: null` menurunkan epsilon secara linear dari 1,00 ke 0,05
+sepanjang total episode profil. Horizon tetap 100k mencapai 0,05 pada episode
+100.000, lalu bertahan sampai training selesai. Evaluasi akhir selalu greedy,
+`epsilon=0`. Semua profil penelitian memakai 25 bin, graf, reward, dan lima seed
+yang sama; setiap profil mulai dari Q-table kosong. Rancangan ini membandingkan
+state A/B/C, jadwal epsilon pada durasi yang sama, dan durasi pada jadwal yang sama.
 
 Untuk seed acak, hapus `seeds` dan gunakan `runs: 5`. Seed dipilih **sekali per
 command** lalu dipakai bersama oleh seluruh profil. Salin `resolved_seeds` dari
@@ -198,6 +211,32 @@ Config lama dengan `qlearning.scenario` dan tanpa profil masih dapat dibaca.
 Profil lama tanpa `scenario` mewarisi nilai itu; config aktif memakai scenario
 pada setiap profil. Field YAML yang tidak dikenal ditolak.
 
+Rancangan final memakai outward 0,60, return 1,20, revisit −5, 25 bin, dan
+batas 500 langkah; alpha 0,15 dan gamma 0,95. Kedua workdir memakai reward yang
+sama. Pada 7 November 2026, seluruh output eksperimen lama beserta arsip dan
+baseline dihapus atas permintaan pengguna. Snapshot OSM yang sama disiapkan
+kembali dari cache lokal. Pengguna menyelesaikan seluruh rancangan final pada
+7 November 2026: 12 profil, 60 training, dan 13.500.000 episode; greedy valid
+31/60 (A 1/20, B 18/20, C 12/20). Jumlah loop per lima seed:
+
+| Konfigurasi | A | B | C |
+|---|---:|---:|---:|
+| Dinamis 150k | 0 | 5 | 0 |
+| Dinamis 300k | 1 | 5 | 3 |
+| Horizon 100k, total 150k | 0 | 3 | 4 |
+| Horizon 100k, total 300k | 0 | 5 | 5 |
+
+Seluruh history diperiksa dan 60 evaluasi direproduksi dari Q-table tersimpan.
+Ringkasan audit ada di `workdirs/training/output/analysis/final-experiment-audit.json`.
+Hasil berlaku pada graf/start/seed yang diuji; bukan jaminan optimalitas atau
+validasi lapangan. Pertahankan konfigurasi dan hasil ini untuk analisis BAB IV.
+
+Snapshot final memiliki **26.345 node dan 58.020 edge terarah**, dengan start node
+`9620836306`. SHA-256 snapshot:
+`f0a5885db46c2f9cd962674aaeaa82f7d5c69579d5ba5d80641f727b6e20f964`.
+CSV, Q-table, peta hasil, serta cache merupakan artefak lokal yang tidak masuk
+Git. Unduhan OSM baru dapat mengubah graf dan hasil, meskipun seed sama.
+
 ## Output dan metadata
 
 ```text
@@ -209,8 +248,8 @@ output/
   analysis.json / analysis.html  config dan provenance analisis
   training-run.json              status batch terakhir dan seed aktual
   training/
-    b-dynamic-75000-run.json     status percobaan terakhir profil ini
-    b-dynamic-75000/
+    b-dynamic-150000-run.json     status percobaan terakhir profil ini
+    b-dynamic-150000/
       metadata.json              config efektif, seed, graf, reward, evaluasi
       report.html                informasi training yang dapat dibaca di browser
       routes.html                peta evaluasi seluruh seed
@@ -221,7 +260,6 @@ output/
         qtable.csv
         evaluation-steps.csv     transisi, komponen reward, dan nilai Q
   analysis/                      tabel/diagram turunan dari Python
-  archive/                       hasil/config lama yang dipertahankan
 ```
 
 Metadata training menyimpan parameter efektif setelah profil diterapkan,
@@ -233,6 +271,23 @@ Peta `routes.html` menyediakan layer **Comfort score** dan **Access** untuk graf
 sekitar rute. Keduanya tersembunyi saat dibuka (**Roads hidden**); pilih tema di
 kontrol layer dan gunakan **Selected route** untuk menampilkan/menyembunyikan rute.
 Warna dan kategori mengikuti peta analisis; popup tetap memuat setiap edge terarah.
+
+Di panel rute, **Route distance** memilih **All kilometers** atau satu rentang
+kilometer. Bagian lain tetap samar untuk konteks; **Fit selected route**
+menyesuaikan peta dengan pilihan tersebut. Batas kilometer diinterpolasi pada
+garis tampilan, termasuk sisa jarak setelah KM 5, tanpa mengubah edge atau metrik.
+**Highlight repeated roads** menambahkan garis tepi putus-putus pada ruas yang
+dilalui ulang; **Direction arrows** menambahkan petunjuk arah. Keduanya awalnya
+mati. Penandaan pengulangan selalu memakai seluruh rute seed yang dipilih,
+meskipun tampilan sedang dibatasi ke satu kilometer.
+
+Klik ruas yang dilalui ulang untuk memilih **Route traversal** pada popup.
+Setiap lintasan menampilkan step, rentang jarak kumulatif, arah/action, atribut,
+dan komponen reward asli. Identitas ruas mengikuti metrik overlap: koordinat
+endpoint yang sama digabung tanpa membedakan arah/key. Pilihan seed, metrik,
+marker input/start/finish/KM, serta layer Comfort score/Access tetap tersedia.
+Peta hasil final yang sudah ada telah diperbarui; tidak perlu training ulang.
+
 Nilai metrik yang tidak terdefinisi disimpan sebagai NaN pada CSV dan null pada JSON.
 
 Training menyiapkan satu direktori sementara lalu memublikasikannya setelah
@@ -240,13 +295,6 @@ seluruh artefak selesai. Pembatalan/kegagalan mempertahankan hasil lengkap
 sebelumnya; file `*-run.json` merekam percobaan terbaru. Menjalankan ulang satu
 profil hanya menimpa profil itu. File download/analisis ditulis secara atomik
 per file; gunakan hasil setelah command sukses.
-
-Hasil penelitian B lama dipindahkan ke profil `b-*` tanpa mengubah isinya.
-Metadata lama tetap mencatat nama profil/path dan aturan saat run aslinya.
-Hasil testing tunggal sebelumnya berada di
-`workdirs/testing/output/archive/training-before-profiles/`. Hasil tersebut bukan
-hasil baru tiga skenario. Navigasi server dapat menampilkan metadata arsip di
-**Training / analysis details**, meskipun arsip belum mempunyai `report.html`.
 
 ## OSM, cache, dan graf
 
@@ -263,7 +311,7 @@ snapshot lain secara eksplisit:
 
 ```bash
 go run ./cmd/cli train --workdir workdirs/testing \
-  --snapshot workdirs/training/output/osm.json --profile b
+  --snapshot workdirs/training/output/osm.json --profile b-dynamic-150000
 ```
 
 Snapshot harus sesuai titik start; CLI menolak snap melebihi
@@ -292,7 +340,7 @@ sehingga segmen pendek/panjang memiliki bobot hitungan sama.
 Jalankan `analisa.ipynb` dan `training.ipynb` dengan **Restart Kernel and Run All**.
 Default keduanya `workdirs/training`; ganti `WORKDIR` menjadi `testing` sesuai
 kebutuhan. `PROFILES=None` memuat semua profil selesai; contohnya
-`PROFILES=["b-dynamic-75000"]` untuk satu profil. Profil belum tersedia dilaporkan
+`PROFILES=["b-dynamic-150000"]` untuk satu profil. Profil belum tersedia dilaporkan
 pada tabel ketersediaan. Jika belum ada hasil selesai, jalankan Go terlebih dahulu.
 
 Notebook hanya menyimpan pilihan data, pemanggilan, dan hasil. Implementasi
@@ -307,7 +355,7 @@ Riwayat dibaca per chunk (`CHUNK_SIZE=50000`). `ROLLING_WINDOW=50`,
 `PLOT_EVERY` mengurangi titik sesudah rolling dihitung; tidak mengubah data sumber.
 Grafik mencakup reward, jarak, keberhasilan, TD-error, diagnosis, dan overlap
 seluruh episode. Judul grafik cukup menampilkan scenario dan nama profil,
-misalnya `Scenario A | a-dynamic-75000`.
+misalnya `Scenario A | a-dynamic-150000`.
 Hasil turunan disimpan di `output/analysis/`.
 
 Untuk dependensi baru gunakan `uv add <package>` atau `uv add --group dev <package>`,
@@ -335,8 +383,8 @@ menjadi HTML. Tile OSM memerlukan internet dan server lokal dengan referrer norm
 Graf mentah, jarak Haversine, urutan key numerik, dan RNG PCG berbeda dari
 OSMnx/proyeksi UTM/NumPy. Seed yang sama tidak menjamin rute identik lintas bahasa.
 Workdir aktif memakai batas 500 langkah dan lima worker untuk percobaan graf
-mentah. Unit test bukan validasi lapangan; rute gagal tetap dilaporkan. Jangan menyimpulkan kualitas dari reward
-atau satu loop berhasil saja.
+mentah. Unit test bukan validasi lapangan; rute gagal tetap dilaporkan. Jangan
+menyimpulkan kualitas dari reward atau satu loop berhasil saja.
 
 ## Referensi
 

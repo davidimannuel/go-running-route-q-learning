@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -38,8 +39,9 @@ func TestReferenceWorkdirConfigurations(t *testing.T) {
 		name              string
 		episodes, horizon int
 	}{
-		{"dynamic-75000", 75000, 0}, {"dynamic-150000", 150000, 0},
-		{"horizon-50000-total-75000", 75000, 50000}, {"horizon-50000-total-150000", 150000, 50000},
+		{"dynamic-150000", 150000, 0}, {"dynamic-300000", 300000, 0},
+		{"horizon-100000-total-150000", 150000, 100000},
+		{"horizon-100000-total-300000", 300000, 100000},
 	}
 
 	cfg, err := Load(filepath.Join("..", "..", "workdirs", "training"))
@@ -47,12 +49,12 @@ func TestReferenceWorkdirConfigurations(t *testing.T) {
 		t.Fatal(err)
 	}
 	training := cfg.QLearning.Training
-	if cfg.QLearning.Scenario != "" || fmt.Sprint(training.Seeds) != "[0 1 2 3 4]" || training.MaxWorkers != 5 || len(training.Profiles) != 12 {
+	if cfg.QLearning.Scenario != "" || fmt.Sprint(training.Seeds) != "[0 1 2 3 4]" || training.MaxWorkers != 5 || len(training.Profiles) != 3*len(expected) {
 		t.Fatalf("shared settings mismatch: %+v", training)
 	}
 	for si, scenario := range []string{"a", "b", "c"} {
 		for i, want := range expected {
-			got := training.Profiles[si*4+i]
+			got := training.Profiles[si*len(expected)+i]
 			if got.Name != scenario+"-"+want.name || string(got.Scenario) != strings.ToUpper(scenario) || got.Episodes != want.episodes {
 				t.Fatalf("profile mismatch: %+v", got)
 			}
@@ -65,13 +67,15 @@ func TestReferenceWorkdirConfigurations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(testing.QLearning.Training.Profiles) != 3 || testing.QLearning.Training.Seeds != nil || testing.QLearning.Training.Runs == nil || *testing.QLearning.Training.Runs != 5 {
-		t.Fatal("testing must share five automatic seeds across three profiles")
+	testTraining := testing.QLearning.Training
+	if testTraining.Seeds != nil || testTraining.Runs == nil || *testTraining.Runs != 5 || testTraining.MaxWorkers != 5 {
+		t.Fatal("testing must share five automatic seeds across all profiles")
 	}
-	for i, p := range testing.QLearning.Training.Profiles {
-		if string(p.Scenario) != []string{"A", "B", "C"}[i] || p.Episodes != 150000 || p.EpsilonDecayEpisodes == nil || *p.EpsilonDecayEpisodes != 50000 {
-			t.Fatalf("testing profile=%+v", p)
-		}
+	if !reflect.DeepEqual(testTraining.Profiles, training.Profiles) {
+		t.Fatal("testing must use the same twelve profile definitions as training")
+	}
+	if testing.QLearning.Environment != cfg.QLearning.Environment || testing.QLearning.Reward != cfg.QLearning.Reward {
+		t.Fatal("testing environment and reward must match training")
 	}
 
 }
