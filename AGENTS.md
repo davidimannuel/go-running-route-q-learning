@@ -20,15 +20,15 @@ Proyek ini menulis ulang core TA rute lari dari Python ke Go. Chat berbahasa Ind
 
 Acuan baca saja: `/Users/david/widya_kartika/uwika-ta-31123022-2026`. Rujukan teknisnya `rute_lari_core.py` dan `IMPLEMENTASI.md`; analisis final memakai hasil proyek Go sendiri.
 
-Pertahankan target 5.000 m ±10% dan kembali ke start. State A=current node, B=ditambah progress bin, C=ditambah previous node. Action `(next_node,key)` diurutkan numerik. Akses scalar kosong/yes/permissive wajib lolos pada way dan kedua endpoint, tanpa split/list atau override foot. Start yang tidak lolos ditolak tanpa resnap; barrier saja tidak melarang. Penalti permissive tetap dari way. Policy baru `edge_and_endpoint_whitelist_v1` berlaku 9 November; hasil 7 November memakai way saja. Hasil terbaru dapat bercampur versi kebijakan; cek metadata tiap profil. Pertahankan baseline; gunakan output terpisah untuk eksperimen baru. Warna Access jalan tetap tag way; overlay Node access default mati pada kedua peta, memakai tag access/barrier node dan status whitelist dari Go. Akses node di peta analisis memakai satu checkbox Node access / barriers di bawah Show nodes; tanpa duplikat kanan bawah. Server/iframe memuat ulang HTML tanpa cache. Legenda menghitung node bertag. Diagram analisa tetap edge; node untuk struktur/validasi CSV.
+Pertahankan target 5.000 m dan kembali ke start; eksperimen aktif memakai toleransi20%, checkpoint lama10%. State A=current node, B=ditambah progress bin, C=ditambah previous node. Action `(next_node,key)` diurutkan numerik. Akses scalar kosong/yes/permissive wajib lolos pada way dan kedua endpoint, tanpa split/list atau override foot. Start yang tidak lolos ditolak tanpa resnap; barrier saja tidak melarang. Penalti permissive tetap dari way. Policy baru `edge_and_endpoint_whitelist_v1` berlaku 9 November; hasil 7 November memakai way saja. Hasil terbaru dapat bercampur versi kebijakan; cek metadata tiap profil. Pertahankan baseline; gunakan output terpisah untuk eksperimen baru. Warna Access jalan tetap tag way; overlay Node access default mati pada kedua peta, memakai tag access/barrier node dan status whitelist dari Go. Akses node di peta analisis memakai satu checkbox Node access / barriers di bawah Show nodes; tanpa duplikat kanan bawah. Server/iframe memuat ulang HTML tanpa cache. Legenda menghitung node bertag. Diagram analisa tetap edge; node untuk struktur/validasi CSV.
 
 Graf tetap mentah dan bidirectional; simplifikasi di luar lingkup saat ini. Seleksi komponen/truncation belum diterapkan. Jarak memakai Haversine; hasil tidak identik dengan graf proyeksi/simplifikasi atau RNG Python. Overlap adalah hitungan lintasan ruas fisik berdasarkan endpoint, menggabungkan arah balik/geometri identik. Jalan berbeda yang berdekatan bukan overlap. Skor highway/surface/width adalah preferensi penelitian, bukan keamanan aktual.
 
 ## Final Experiment
 
-Workdir `training`: A/B/C × dinamis150k/300k dan horizon100k-total150k/300k, 12 profil/60 training/13.500.000 episode. Seed tetap0–4, alpha0.15, gamma0.95, epsilon1→0.05, evaluasi greedy0. Setiap profil/seed mulai dari Q-table/RNG mandiri. `testing`: 12 profil dan parameter yang sama, dengan koordinat sendiri dan lima seed acak bersama per command; total13.500.000episode bila semua profil dijalankan. Nama profil kedua workdir identik; jangan memakai alias lama a/b/c.
+Workdir `training`: A/B/C × dinamis150k/300k dan horizon100k-total150k/300k, 12 profil/60 training/13.500.000 episode. Seed tetap0–4, alpha0.15, gamma0.95, epsilon1→0.05, evaluasi greedy0. Setiap profil/seed mulai dari Q-table/RNG mandiri. `testing`: dua profil B300k aktif (dinamis/horizon100k), koordinat sendiri dan lima seed acak bersama per command; total3.000.000episode. Nama profil kedua workdir identik; jangan memakai alias lama a/b/c.
 
-Parameter aktif: 25 bin, max_steps500, max_workers5, outward0 (uji terbaru; sebelumnya0,60), return1.20, revisit−5. Reward lain ada di YAML. Jangan menambah variasi atau menjalankan training panjang tanpa permintaan. Rancangan dikunci; prioritas berikutnya analisis BAB IV dan penyesuaian Bab I–III.
+Parameter aktif: toleransi20%, 25 bin, max_steps500, max_workers5, outward0, return1.20, revisit−10; highway.other−10/missing−2. Penalti selisih jarak akhir−5/100m sudah dilatih pada batch22.18 WIB (22/60 valid). Reward lain ada di YAML. Jangan menambah variasi atau menjalankan training panjang tanpa permintaan. Pengguna masih mengevaluasi konfigurasi; jangan menetapkan final otomatis. Prioritas berikutnya analisis BAB IV dan penyesuaian Bab I–III.
 
 Pengguna menyelesaikan hasil final 7 November 2026 pukul18.25 WIB: greedy31/60, A1/20, B18/20, C12/20. Urutan dinamis150k/300k dan horizon-total150k/300k: A=0/1/0/0, B=5/5/3/5, C=0/3/4/5, masing-masing dari5. Angka ini checkpoint historis 7 November; output terbaru dapat sudah dilatih ulang. Tabel ringkasan ada di README; sumber angka terkini tetap CSV/metadata tiap profil.
 
@@ -45,7 +45,51 @@ Pembanding **9 November16.10 WIB**, secondary+0,5/other−1:12 profil/60run/13,5
 Pembanding **training9 November16.29 WIB**, input−7.281518/112.710178, start311432306: **38/60 valid (A0 B18 C20)**; urutan profil A0/0/0/0 B3/5/5/5 C5/5/5/5. Snapshot/reward/env/profil/seed sama dengan batch16.10 (3/60); hanya start berubah. Start lama1/2 edge legal, baru4/4. Angka dari metadata/60 evaluasi/trace, belum audit history/Q replay baru. Testing35/60 memakai start9645488767, snapshot/seed berbeda. Pengguna mencurigai bias radial fase awal; outward adalah penalti mendekat, bukan bonus menjauh. Batch ini masih outward0,60; percobaan berikutnya memakai0, return tetap1,20. Bahas reward arah dulu; jangan otomatis memakai Dijkstra atau mengubah config/training. Koordinat kedua workdir adalah edit pengguna, pertahankan.
 
 
-Hasil terbaru **training9 November16.54 WIB**, outward0: start kembali9620836306 (−7.282187/112.709282), snapshot/reward lain/seed tetap. **12/60 valid (A0 B9 C3)**, urutan Asemua0 B0/1/3/5 C0/1/1/1. Bandingkan3/60 pada start sama/outward0,60;38/60 berbeda start. Gagal40 over_distance/8 buntu, maks252 langkah tanpa step_limit. Tujuh loop tanpa service; B horizon300k5/5, seed0/1/3 tanpa service. Dua way TPU160013981/160014008 dilintasi B5/20 C17/20; diagnosis tanpa dua way hanya mengurangi reachable24.638→24.633, bukan memaksa semua loop lewat TPU. Contoh B/C horizon300k seed0 bercabang pada step44/node1720772306; dua alternatif legal, C memilih9570022203 Q5,7619 vs5,5095 ke1720772195; B memilih1720772195 dan berhasil tanpa service. Metadata/60 trace diperiksa, belum history/full replay. Jangan auto-adjust/training. Testing YAMLoutward0 tetapi hasil35/60 masih batchoutward0,60; koordinat pengguna dipertahankan.
+Pembanding **training9 November16.54 WIB**, outward0: start kembali9620836306 (−7.282187/112.709282), snapshot/reward lain/seed tetap. **12/60 valid (A0 B9 C3)**, urutan Asemua0 B0/1/3/5 C0/1/1/1. Bandingkan3/60 pada start sama/outward0,60;38/60 berbeda start. Gagal40 over_distance/8 buntu, maks252 langkah tanpa step_limit. Tujuh loop tanpa service; B horizon300k5/5, seed0/1/3 tanpa service. Dua way TPU160013981/160014008 dilintasi B5/20 C17/20; diagnosis tanpa dua way hanya mengurangi reachable24.638→24.633, bukan memaksa semua loop lewat TPU. Contoh B/C horizon300k seed0 bercabang pada step44/node1720772306; dua alternatif legal, C memilih9570022203 Q5,7619 vs5,5095 ke1720772195; B memilih1720772195 dan berhasil tanpa service. Metadata/60 trace diperiksa, belum history/full replay. Jangan auto-adjust/training. Testing YAMLoutward0 tetapi hasil35/60 masih batchoutward0,60; koordinat pengguna dipertahankan.
+
+## Checkpoint 9 November 21.50 WIB dan penalti galat jarak
+
+Pengguna melatih ulang12 profil A/B/C/60run/13,5juta episode; seluruh metadata
+outward0/toleransi20%/25bin/start311432306/seed0–4 konsisten. Greedy23/60:
+A3 (0/1/1/1), B16 (4/4/4/4), C4 (0/0/1/3), urutan konfigurasi tetap.
+Gagal29 over_distance/8 buntu; tidak ada step_limit atau closing legal pada
+kegagalan. Dari23 loop,13 masuk rentang10%; semua4 loop C>5.500m.
+B horizon300k:4/5, galat178,38m/comfort0,9124/overlap0,70% pada4loop;
+tail10k63,10%. C horizon300k3/5, galat766,69m pada3loop/tail22,35%.
+History13,5juta/metadata/evaluasi diperiksa; belum full Q replay/validasi lapangan.
+Testing21.27 WIB tetap8/10 pada dua profil B dengan snapshot/start/seed berbeda.
+
+Keputusan pengguna sesudah audit: pertahankan terminasi over_distance dan mask
+closing; tambahkan distance_error_penalty_per_100m=−5 di kedua YAML.
+Rumus koefisien*abs(jarak_akhir−target)/100, proporsional, sekali pada seluruh
+terminasi (termasuk buntu awal/setelah bergerak). Langkah nonterminal0; jangan
+menghukum kekurangan jarak setiap langkah. Tambahan terpisah DistanceError /
+reward_distance_error masuk trace/popup dan jumlah reward sebelum Bellman;
+terminal tanpa bootstrap. Nol/omitted menjaga hasil lama; konfigurasi baru
+memakai reward_scheme=configurable_signed_unclipped_distance_error_v2.
+Batas valid, fase, revisit, state, seed dan reward lainnya tetap. Angka23/60
+adalah checkpoint sebelum penalti; hasil sesudah−5 ada di bagian berikut.
+Hasil/snapshot/notebook output lama dipertahankan. Gunakan output_dir berbeda
+serta --snapshot untuk eksperimen berikut agar pembanding tidak tertimpa.
+
+## Hasil terbaru 9 November 22.18 WIB — penalti galat sudah aktif
+
+Batchtraining 12 profil/60 run/13,5 juta episode selesai dengan −5/100 m:
+**22/60 valid (A 2 B 15 C 5)**; urutan konfigurasi A 0/1/0/1, B 0/5/5/5, C 0/1/2/2.
+Gagal 31 over_distance/7 buntu. Sebanyak 18 loop pada 4.500–5.500 m, dibanding 13/23
+checkpoint 21.50; ini pengelompokan hasil toleransi 20%, bukan uji 10% baru.
+B horizon 300k 5/5, galat 161,29 m/comfort 0,9093/overlap 0,71% pada 5 loop,
+4 urutan edge unik. B dinamis 150k turun 4/5→0/5; manfaat penalti belum merata.
+Start 311432306, input −7.281518/112.710178; snapshot/env/reward/seed 0–4
+konsisten antarprofil. Testing 22.21 WIB:6/10 (B dinamis 300k 1/5, horizon 5/5),
+start 311431485/input −7.281885/112.711476; snapshot/seed berbeda.
+Chat “Jawab pertanyaan umum” melaporkan audit 16,5 juta history/70 evaluasi;
+sinkronisasi ini hanya mencocokkan source/config/metadata/CSV/rute.
+Analysis.jsontraining 16.58 masih highway.other −1/missing −0,5;
+last_window_summary.csv 21.03 hanya B/C; audit 7 November historis. Perbarui
+artefak dari hasil tersimpan sebelum tabel/grafik Bab IV, tanpa training ulang.
+DOCX tetap milik pengguna; verifikasi/validasi ditunda. Config terbaru belum
+otomatis menjadi konfigurasi final penelitian.
 
 ## Maps and Validation
 

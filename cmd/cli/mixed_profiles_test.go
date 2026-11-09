@@ -23,7 +23,7 @@ func TestMixedScenarioProfilesRecordEffectiveConfigAndReports(t *testing.T) {
       - {name: c, scenario: C, episodes: 4}
 `, 1)
 	text = strings.Replace(text, "seeds: [0, 1]", "runs: 2", 1)
-	text = strings.Replace(text, "qlearning:\n", "qlearning:\n  reward:\n    revisit_penalty: -3\n    road:\n      highway:\n        priority: 2\n        secondary_priority: 0.5\n", 1)
+	text = strings.Replace(text, "qlearning:\n", "qlearning:\n  reward:\n    revisit_penalty: -3\n    distance_error_penalty_per_100m: -5\n    road:\n      highway:\n        priority: 2\n        secondary_priority: 0.5\n", 1)
 	workdir := newWorkdir(t, text)
 	output := filepath.Join(workdir, "output")
 	saveSnapshot(t, output, loopSnapshot())
@@ -41,7 +41,7 @@ func TestMixedScenarioProfilesRecordEffectiveConfigAndReports(t *testing.T) {
 		if err := json.Unmarshal(readFile(t, filepath.Join(root, "metadata.json")), &meta); err != nil {
 			t.Fatal(err)
 		}
-		if string(meta.Config.Scenario) != strings.ToUpper(scenario) || meta.Config.Training.Profiles != nil || meta.Config.Reward.RevisitPenalty != -3 || meta.Config.Reward.Road.Highway.Priority != 2 || meta.Config.Reward.Road.Highway.SecondaryPriority == nil || *meta.Config.Reward.Road.Highway.SecondaryPriority != 0.5 || len(meta.Evaluations) != 2 {
+		if string(meta.Config.Scenario) != strings.ToUpper(scenario) || meta.Config.Training.Profiles != nil || meta.Config.Reward.RevisitPenalty != -3 || meta.Config.Reward.DistanceErrorPenaltyPer100M != -5 || meta.Config.Reward.Road.Highway.Priority != 2 || meta.Config.Reward.Road.Highway.SecondaryPriority == nil || *meta.Config.Reward.Road.Highway.SecondaryPriority != 0.5 || len(meta.Evaluations) != 2 {
 			t.Fatalf("effective metadata mismatch: %+v", meta)
 		}
 		if seeds == nil {
@@ -59,7 +59,7 @@ func TestMixedScenarioProfilesRecordEffectiveConfigAndReports(t *testing.T) {
 			}
 		}
 		report := string(readFile(t, filepath.Join(root, "report.html")))
-		if !strings.Contains(report, "Training details") || !strings.Contains(report, "revisit_penalty") || !strings.Contains(report, "snapshot_sha256") || !strings.Contains(report, "secondary_priority") {
+		if !strings.Contains(report, "Training details") || !strings.Contains(report, "revisit_penalty") || !strings.Contains(report, "snapshot_sha256") || !strings.Contains(report, "secondary_priority") || !strings.Contains(report, "distance_error_penalty_per_100m") || !strings.Contains(report, "distance_error_reward") {
 			t.Fatal("report missing provenance")
 		}
 		dirs, err := filepath.Glob(filepath.Join(root, "seed-*", "metadata.json"))
@@ -72,7 +72,7 @@ func TestMixedScenarioProfilesRecordEffectiveConfigAndReports(t *testing.T) {
 				t.Fatal(err)
 			}
 			priority := seedMeta.Config.Reward.Road.Highway.SecondaryPriority
-			if priority == nil || *priority != 0.5 {
+			if priority == nil || *priority != 0.5 || seedMeta.Config.Reward.DistanceErrorPenaltyPer100M != -5 {
 				t.Fatal("per-seed metadata lost secondary preference")
 			}
 		}

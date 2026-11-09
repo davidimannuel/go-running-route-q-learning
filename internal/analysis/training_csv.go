@@ -194,7 +194,7 @@ func StepsToCSV(w io.Writer, graph *osm.Graph, steps []qlearning.StepResult) err
 	if err := writer.Write([]string{"step", "scenario", "current_node", "previous_node", "progress_bin", "action_taken", "next_node", "key",
 		"next_previous_node", "next_progress_bin", "from_lat", "from_lon", "to_lat", "to_lon", "way_id", "name", "highway", "surface", "width", "access",
 		"length_m", "total_distance_m", "straight_distance_before_m", "straight_distance_after_m", "is_revisit", "direction_rule",
-		"reward_edge", "reward_access", "reward_direction", "reward_revisit", "reward_terminal", "reward_no_action", "reward_step", "stop_penalty", "reward",
+		"reward_edge", "reward_access", "reward_direction", "reward_revisit", "reward_terminal", "reward_no_action", "reward_distance_error", "reward_step", "stop_penalty", "reward",
 		"done", "termination_reason", "q_updated", "q_before", "max_next_q", "td_target", "td_error", "q_after"}); err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func StepsToCSV(w io.Writer, graph *osm.Graph, steps []qlearning.StepResult) err
 		if err := writer.Write([]string{integer(s.Step), string(s.State.Scenario), integer(s.State.CurrentNode), integer(s.State.PreviousNode), integer(s.State.ProgressBin), boolean(s.ActionTaken), next, key,
 			integer(s.NextState.PreviousNode), integer(s.NextState.ProgressBin), number(from.Lat), number(from.Lon), number(to.Lat), number(to.Lon), way, name, highway, surface, width, access,
 			length, number(s.TotalDistanceM), number(s.DistanceBeforeM), number(s.DistanceAfterM), boolean(s.IsRevisit), s.DirectionRule,
-			number(c.Edge), number(c.Access), number(c.Direction), number(c.Revisit), number(c.Terminal), number(c.NoAction), number(s.RewardStep), number(s.StopPenalty), number(s.Reward),
+			number(c.Edge), number(c.Access), number(c.Direction), number(c.Revisit), number(c.Terminal), number(c.NoAction), number(c.DistanceError), number(s.RewardStep), number(s.StopPenalty), number(s.Reward),
 			boolean(s.Done), string(s.Termination), boolean(s.QUpdated), qBefore, maxNext, target, td, qAfter}); err != nil {
 			return err
 		}

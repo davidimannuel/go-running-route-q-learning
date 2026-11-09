@@ -82,6 +82,8 @@ Select a scenario through --profile, not a separate --scenario flag.
 With an existing osm.json, run analyze/train directly; no download is needed.
 Train always starts fresh Q-tables. A selected rerun replaces only that profile.
 Metadata records effective config, reward, actual seeds, snapshot hash, and evaluation.
+Reward distance_error_penalty_per_100m <= 0 adds a final absolute-distance penalty once.
+Zero/omitted disables it. Existing distance, closing, and termination rules still apply.
 Logs use stderr/info by default. Train prints summaries to stdout; --debug adds detail.
 `)
 }

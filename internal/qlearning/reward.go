@@ -35,16 +35,17 @@ type RoadScoreConfig struct {
 // RewardConfig contains every numeric road and journey reward parameter.
 // Defaults follow the reference; changing YAML starts a different experiment.
 type RewardConfig struct {
-	Road                     RoadScoreConfig `yaml:"road" json:"road"`
-	ReturnPhaseRatio         float64         `yaml:"return_phase_ratio" json:"return_phase_ratio"`
-	OutwardPenaltyScale      float64         `yaml:"outward_penalty_scale" json:"outward_penalty_scale"`
-	ReturnRewardScale        float64         `yaml:"return_reward_scale" json:"return_reward_scale"`
-	PermissivePenaltyPer100M float64         `yaml:"permissive_penalty_per_100m" json:"permissive_penalty_per_100m"`
-	RevisitPenalty           float64         `yaml:"revisit_penalty" json:"revisit_penalty"`
-	SuccessBonus             float64         `yaml:"success_bonus" json:"success_bonus"`
-	OverDistancePenalty      float64         `yaml:"over_distance_penalty" json:"over_distance_penalty"`
-	NoActionPenalty          float64         `yaml:"no_action_penalty" json:"no_action_penalty"`
-	StepLimitPenalty         float64         `yaml:"step_limit_penalty" json:"step_limit_penalty"`
+	Road                        RoadScoreConfig `yaml:"road" json:"road"`
+	ReturnPhaseRatio            float64         `yaml:"return_phase_ratio" json:"return_phase_ratio"`
+	OutwardPenaltyScale         float64         `yaml:"outward_penalty_scale" json:"outward_penalty_scale"`
+	ReturnRewardScale           float64         `yaml:"return_reward_scale" json:"return_reward_scale"`
+	PermissivePenaltyPer100M    float64         `yaml:"permissive_penalty_per_100m" json:"permissive_penalty_per_100m"`
+	RevisitPenalty              float64         `yaml:"revisit_penalty" json:"revisit_penalty"`
+	DistanceErrorPenaltyPer100M float64         `yaml:"distance_error_penalty_per_100m" json:"distance_error_penalty_per_100m"`
+	SuccessBonus                float64         `yaml:"success_bonus" json:"success_bonus"`
+	OverDistancePenalty         float64         `yaml:"over_distance_penalty" json:"over_distance_penalty"`
+	NoActionPenalty             float64         `yaml:"no_action_penalty" json:"no_action_penalty"`
+	StepLimitPenalty            float64         `yaml:"step_limit_penalty" json:"step_limit_penalty"`
 }
 
 // DefaultRewardConfig preserves the agreed reference values when YAML omits a field.
@@ -104,6 +105,9 @@ func (c RewardConfig) Validate() error {
 	if !finite(c.OutwardPenaltyScale) || c.OutwardPenaltyScale < 0 || !finite(c.ReturnRewardScale) || c.ReturnRewardScale < 0 {
 		return fmt.Errorf("qlearning: direction scales must be nonnegative and finite")
 	}
+	if !finite(c.DistanceErrorPenaltyPer100M) || c.DistanceErrorPenaltyPer100M > 0 {
+		return fmt.Errorf("qlearning: distance_error_penalty_per_100m must be finite and nonpositive")
+	}
 	for _, v := range []float64{c.PermissivePenaltyPer100M, c.RevisitPenalty, c.SuccessBonus, c.OverDistancePenalty, c.NoActionPenalty, c.StepLimitPenalty} {
 		if !finite(v) {
 			return fmt.Errorf("qlearning: reward bonuses and penalties must be finite")
@@ -116,9 +120,9 @@ func (c RewardConfig) Validate() error {
 // calculation for reporting. NoAction is separate to avoid double penalizing
 // a dead end reached after moving. Closing to start never receives Revisit.
 type RewardComponents struct {
-	Edge, Access, Direction, Revisit, Terminal, NoAction float64
+	Edge, Access, Direction, Revisit, Terminal, NoAction, DistanceError float64
 }
 
 func (r RewardComponents) Total() float64 {
-	return r.Edge + r.Access + r.Revisit + r.Terminal + r.Direction + r.NoAction
+	return r.Edge + r.Access + r.Revisit + r.Terminal + r.Direction + r.NoAction + r.DistanceError
 }

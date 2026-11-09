@@ -182,7 +182,7 @@ function routeRoadPopup(traversals,selected){
   const segment=traversals[Number(selector.value)],c=segment.Components;
   details.replaceChildren(popup(segment.Name||'Unnamed road',[
    ['Step',segment.Step],['Road traversals',traversals.length],['Distance interval',`${fmt(segment.BeforeM/1000,3)}–${fmt(segment.AfterM/1000,3)} km`],
-   ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Step total',fmt(segment.Reward,4)]
+   ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Distance error penalty',fmt(c.DistanceError??0,4)],['Step total',fmt(segment.Reward,4)]
   ]));
   details.append(nodeInspector.button(segment.From,`Inspect node ${segment.From}`,{step:segment.Step}),nodeInspector.button(segment.To,`Inspect node ${segment.To}`));
  }

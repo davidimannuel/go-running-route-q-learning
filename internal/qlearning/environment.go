@@ -2,6 +2,7 @@ package qlearning
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
 )
@@ -206,6 +207,9 @@ func (e *Environment) Step(id ActionID) (Transition, error) {
 		t.Components.Direction = e.graph.reward.ReturnRewardScale * (t.DistanceBeforeM - t.DistanceAfterM) / 100
 		t.DirectionRule = "return_progress"
 	}
+	if e.done {
+		t.Components.DistanceError = e.distanceErrorPenalty()
+	}
 	t.NextState, t.TotalDistanceM, t.Step, t.Done, t.Termination = e.State(), e.distance, e.steps, e.done, e.reason
 	return t, nil
 }
@@ -215,5 +219,16 @@ func (e *Environment) stopWithoutAction() Transition {
 	e.done, e.reason = true, NoAvailableAction
 	t.Done, t.Termination = true, NoAvailableAction
 	t.Components.NoAction = e.graph.reward.NoActionPenalty
+	t.Components.DistanceError = e.distanceErrorPenalty()
 	return t
+}
+
+// Apply the final absolute error once. Repeated early-deficit penalties would
+// depend on the number of segments rather than the final route length.
+func (e *Environment) distanceErrorPenalty() float64 {
+	penalty := e.graph.reward.DistanceErrorPenaltyPer100M
+	if penalty == 0 || e.distance == e.config.TargetDistanceM {
+		return 0 // Omitted/zero preserves archived configurations.
+	}
+	return penalty * (math.Abs(e.distance-e.config.TargetDistanceM) / 100)
 }

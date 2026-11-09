@@ -32,7 +32,7 @@ func TestRewardOverridesPreserveDefaultsAndAllowZero(t *testing.T) {
 			t.Fatal("scenario not resolved")
 		}
 	}
-	for _, field := range []string{"return_phase_ratio: 2", "return_phase_ratio: .nan", "no_action_penalty: .inf", "outward_penalty_scale: -1", "road: {width_threshold_m: 0}", "road: {highway: {weight: -1}}", "road: {surface: {other: .nan}}", "road: {typo: 1}"} {
+	for _, field := range []string{"distance_error_penalty_per_100m: 1", "distance_error_penalty_per_100m: .nan", "distance_error_penalty_per_100m: .inf", "distance_error_penalty_per_100m: -.inf", "return_phase_ratio: 2", "return_phase_ratio: .nan", "no_action_penalty: .inf", "outward_penalty_scale: -1", "road: {width_threshold_m: 0}", "road: {highway: {weight: -1}}", "road: {surface: {other: .nan}}", "road: {typo: 1}"} {
 		text := validYAML + "qlearning:\n  reward:\n    " + field + "\n"
 		if _, err := loadYAML(t, text); err == nil {
 			t.Fatalf("invalid reward accepted: %s", field)

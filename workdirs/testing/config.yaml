@@ -6,12 +6,12 @@ map:
   # longitude: 112.709282
 
   # depan gang
-  latitude: -7.2816034
-  longitude: 112.7101655
+  # latitude: -7.2816034
+  # longitude: 112.7101655
 
   # depan WK
-  # latitude: -7.281885
-  # longitude: 112.711476
+  latitude: -7.281885
+  longitude: 112.711476
 
   # depan indomaret
   # latitude: -7.275646
@@ -45,6 +45,8 @@ qlearning:
     return_reward_scale: 1.20
     permissive_penalty_per_100m: -0.10
     revisit_penalty: -10.0
+    # Charge final absolute target error once; partial 100m intervals are proportional.
+    distance_error_penalty_per_100m: -5.0
     success_bonus: 100.0
     over_distance_penalty: -50.0
     no_action_penalty: -50.0

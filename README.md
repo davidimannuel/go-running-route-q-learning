@@ -4,7 +4,8 @@ Core Go untuk TA rekomendasi rute lari loop berbasis OpenStreetMap. Go menangani
 OSM, graf, reward, Q-learning, CSV, dan peta HTML. Python/Jupyter membaca hasil
 untuk analisis dan diagram laporan.
 
-Target rute adalah kembali ke node start dengan panjang **4.500–5.500 meter**.
+Target rute adalah kembali ke node start mendekati **5.000 meter**. Konfigurasi
+aktif memakai toleransi **20% (4.000–6.000 meter)**; checkpoint lama memakai 10%.
 Skor highway/surface/width adalah preferensi penelitian, bukan ukuran keamanan
 atau hasil survei kenyamanan pelari.
 
@@ -19,7 +20,7 @@ internal/config/     konfigurasi YAML dan validasi
 internal/htmlserver/ navigasi hasil HTML lokal dan halaman metadata arsip
 analysis/            modul Python untuk analisis CSV dan plotting
 workdirs/training/   analisis dan 12 profil penelitian A/B/C
-workdirs/testing/    12 profil A/B/C dengan lima seed acak untuk uji parameter
+workdirs/testing/    profil aktif pilihan dengan lima seed acak untuk uji parameter
 analisa.ipynb        pilihan parameter dan laporan analisis graf
 training.ipynb       pilihan profil, laporan training, dan perbandingan state
 playground/          pemeriksaan manual lokal; diabaikan Git
@@ -48,8 +49,8 @@ Tidak perlu mengaktifkan environment secara manual. Pilih kernel
 
 ## Command utama
 
-Config penelitian saat ini menggunakan `-7.282187, 112.709282`; testing
-menggunakan `-7.2816034, 112.7101655`. Lokasi dan radius masing-masing dapat diubah di config.
+Config penelitian saat ini menggunakan `-7.281518, 112.710178`; testing
+menggunakan `-7.281885, 112.711476`. Lokasi dan radius masing-masing dapat diubah di config.
 Semua command berikut dijalankan dari root repository. Jika `osm.json` sudah
 tersedia, lanjutkan dengan `analyze` atau `train` sesuai kebutuhan.
 
@@ -75,13 +76,11 @@ go run ./cmd/cli train --workdir workdirs/training \
 go run ./cmd/cli download --workdir workdirs/testing
 go run ./cmd/cli analyze --workdir workdirs/testing
 
-# Semua 12 profil testing dengan lima seed acak bersama.
+# Profil testing aktif dengan lima seed acak bersama.
 go run ./cmd/cli train --workdir workdirs/testing
 
 # Atau pilih satu konfigurasi testing; awalan a/b/c menentukan scenario.
-go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-150000
 go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
-go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-150000
 go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
 
 # Navigasi peta dan informasi training.
@@ -104,8 +103,10 @@ HTML tanpa cache. Setelah mengubah kode Go/template server, hentikan `serve`
 dengan Ctrl+C lalu jalankan kembali agar server memakai versi kode terbaru.
 
 `train` tanpa `--profile` menjalankan seluruh profil secara berurutan.
-Kedua workdir memakai 12 profil × lima seed, total **13.500.000 episode per
-workdir**. Training memakai seed tetap 0–4; testing memilih lima seed acak sekali
+Rancangan penuh memakai 12 profil × lima seed, total **13.500.000 episode**.
+Profil aktif mengikuti YAML; testing saat ini memilih dua profil B total 300k
+(dinamis dan horizon), yaitu **3.000.000 episode**. Training memakai seed tetap
+0–4; testing memilih lima seed acak sekali
 per command untuk seluruh profil yang dipilih. Setiap profil dimulai dari Q-table
 kosong. Hasil yang sudah ada tidak membuat profil dilewati otomatis.
 
@@ -118,8 +119,8 @@ Profil yang tersedia untuk `--profile`:
 | Horizon 100k, total 150k | `a-horizon-100000-total-150000` | `b-horizon-100000-total-150000` | `c-horizon-100000-total-150000` |
 | Horizon 100k, total 300k | `a-horizon-100000-total-300000` | `b-horizon-100000-total-300000` | `c-horizon-100000-total-300000` |
 
-Keempat konfigurasi berlaku untuk `workdirs/training` dan `workdirs/testing`,
-dengan nama profil yang sama. Scenario dipilih melalui profil di YAML. Tidak ada flag
+Keempat konfigurasi ada di `workdirs/training`; testing saat ini mengaktifkan
+hanya `b-dynamic-300000` dan `b-horizon-100000-total-300000`. Scenario dipilih melalui profil di YAML. Tidak ada flag
 `--scenario`. Jalankan `go run ./cmd/cli --help` untuk ringkasan command dan contoh
 terbaru; `download --help`, `analyze --help`, `train --help`, dan `serve --help`
 menampilkan panduan yang sama.
@@ -136,8 +137,8 @@ Konfigurasi lengkap tersedia di [training](workdirs/training/config.yaml) dan
 ```yaml
 schema_version: 1
 map:
-  latitude: -7.282187
-  longitude: 112.709282
+  latitude: -7.281518
+  longitude: 112.710178
   radius_m: 3025
   timeout_sec: 90
 output_dir: output
@@ -145,7 +146,7 @@ cache_dir: cache
 qlearning:
   environment:
     target_distance_m: 5000
-    distance_tolerance: 0.10
+    distance_tolerance: 0.20
     progress_bins: 25
     max_steps: 500
     allow_revisit: true
@@ -154,7 +155,7 @@ qlearning:
     max_snap_distance_m: 100
   reward:
     road:
-      highway: {weight: 0.55, priority: 1.0, secondary_priority: 0.5, other: -1.0, missing: -0.5}
+      highway: {weight: 0.55, priority: 1.0, secondary_priority: 0.5, other: -10.0, missing: -2.0}
       surface: {weight: 0.30, priority: 1.0, other: -1.0, missing: -0.5}
       width: {weight: 0.15, priority: 1.0, other: -1.0, missing: -0.5}
       width_threshold_m: 3.0
@@ -162,7 +163,8 @@ qlearning:
     outward_penalty_scale: 0.0
     return_reward_scale: 1.20
     permissive_penalty_per_100m: -0.10
-    revisit_penalty: -5.0
+    revisit_penalty: -10.0
+    distance_error_penalty_per_100m: -5.0
     success_bonus: 100.0
     over_distance_penalty: -50.0
     no_action_penalty: -50.0
@@ -189,8 +191,9 @@ Setiap profil menentukan `name`, `scenario`, `episodes`, dan
 `epsilon_decay_episodes`. Nama unik memakai huruf kecil, angka, dan hyphen;
 nama tersebut juga menjadi direktori hasil. Config penelitian memuat empat
 kombinasi per skenario: dinamis 150k/300k dan horizon 100k dengan total 150k/300k.
-Config testing memakai 12 profil yang sama; koordinat dan cara pemilihan seed
-tetap berbeda dari workdir penelitian.
+Config testing dapat memilih subset dari definisi profil yang sama; saat ini
+hanya B dinamis300k dan horizon100k-total300k aktif. Koordinat dan cara pemilihan
+seed berbeda dari workdir penelitian.
 
 `epsilon_decay_episodes: null` menurunkan epsilon secara linear dari 1,00 ke 0,05
 sepanjang total episode profil. Horizon tetap 100k mencapai 0,05 pada episode
@@ -213,10 +216,11 @@ ulang `analyze` setelah mengubah parameter scoring agar peta analisis diperbarui
 Kategori prioritas highway/surface dan kebijakan akses tetap berada di kode.
 
 `highway.secondary_priority` hanya berlaku untuk tag `highway=secondary`.
-Kedua workdir menetapkan `0.5`: prioritas utama tetap `+1`, service/kategori lain
-`−1`, dan tag kosong `−0.5`. `secondary_link` tetap memakai `other`. Dengan
+Kedua workdir menetapkan `0.5`: prioritas utama tetap `+1`; highway
+service/kategori lain saat ini `−10`, dan highway kosong `−2`. Surface/width
+memakai missing `−0.5`. `secondary_link` tetap memakai `other`. Dengan
 surface/width kosong, skor gabungan secondary adalah `0.05`, dibanding service
-`−0.775`. Aturan ini preferensi penelitian lokal, bukan penilaian keamanan.
+`−5.725`. Aturan ini preferensi penelitian lokal, bukan penilaian keamanan.
 Jika parameter dihilangkan atau null, secondary memakai `other` seperti versi
 lama; angka `0` merupakan override yang sah. Default core tetap kompatibel dengan
 aturan lama. Nilai eksplisit ikut direkam pada config/road_score metadata dan
@@ -224,11 +228,45 @@ halaman Recorded settings. CSV, peta analisis, peta rute, dan reward training
 memakai pemetaan yang sama; hasil tersimpan tidak berubah sebelum command terkait
 dijalankan ulang.
 
+### Penalti selisih jarak akhir
+
+Keputusan pengguna 9 November: `distance_error_penalty_per_100m: -5.0` pada
+training/testing. Komponen tambahan dihitung **sekali saat episode selesai**:
+
+```text
+reward_distance_error = -5 * abs(total_distance_m - target_distance_m) / 100
+```
+
+Jarak memakai total panjang rute, bukan jarak langsung ke start. Selisih 50m
+mendapat −2,5; 250m mendapat −12,5; 500m mendapat −25; 1.000m mendapat −50.
+Kekurangan dan kelebihan diperlakukan sama. Pada langkah nonterminal komponen
+ini nol. Nilai nol/field yang dihilangkan menonaktifkannya, termasuk ketika
+membaca metadata lama. Nilai harus finite dan tidak positif.
+
+Penalti ditambahkan pada sukses, over_distance, step_limit, maupun buntu, termasuk
+buntu sebelum action pertama. Buntu setelah bergerak memasukkannya sekali ke
+StopPenalty bersama penalti buntu, sebelum pembaruan Q; reward terminal tidak
+bootstrap. Success bonus +100 dan penalti gagal yang sudah ada tetap berlaku.
+Contoh loop 5.500m: bonus sukses +100 dan penalti galat −25, sebelum reward ruas,
+akses, arah, dan revisit lain dijumlahkan.
+
+Terminasi over_distance, mask closing, toleransi 20%, state/bin, epsilon, graf,
+seed dan reward lain tidak berubah. Eksperimen ini **bukan** mode eksplorasi
+melewati batas maksimum. Trace baru menambahkan `reward_distance_error`, popup
+rute menampilkan komponennya, dan metadata mencatat rumus/aplikasi serta scheme
+`configurable_signed_unclipped_distance_error_v2` bila koefisien tidak nol.
+
+Training dengan penalti baru selesai22.18 WIB, menghasilkan22/60 loop valid
+(rincian checkpoint di bawah). Untuk menyimpan pembanding,
+pilih `output_dir` lain sebelum training berikutnya dan gunakan snapshot lama
+melalui `--snapshot workdirs/training/output/osm.json`; editing YAML tidak
+mengubah hasil tersimpan. Command train tetap mengganti profil pada output tujuan.
+
 Config lama dengan `qlearning.scenario` dan tanpa profil masih dapat dibaca.
 Profil lama tanpa `scenario` mewarisi nilai itu; config aktif memakai scenario
 pada setiap profil. Field YAML yang tidak dikenal ditolak.
 
-Rancangan final memakai outward 0,60, return 1,20, revisit −5, 25 bin, dan
+Checkpoint 7 November memakai outward 0,60, return 1,20, revisit −5, 25 bin, dan
 batas 500 langkah; alpha 0,15 dan gamma 0,95. Kedua workdir memakai reward yang
 sama. Pada 7 November 2026, seluruh output eksperimen lama beserta arsip dan
 baseline dihapus atas permintaan pengguna. Snapshot OSM yang sama disiapkan
@@ -339,7 +377,7 @@ sedangkan menjauh mendapat0; sesudahnya reward mendekat/penalti menjauh.
 Loop dapat memerlukan langkah mendekat di fase awal. Percobaan berikutnya
 menonaktifkan penalti awal; Dijkstra tetap diagnosis saja, belum digunakan training.
 
-**Hasil terbaru training — 9 November 2026, selesai 16.54 WIB (outward `0`).**
+**Pembanding training — 9 November 2026, selesai 16.54 WIB (outward `0`).**
 Input kembali ke `-7.282187, 112.709282`, start `9620836306`; reward secondary+0,5,
 return1,20, seed0–4 dan snapshot tetap. Greedy **12/60 (A0 B9 C3)**, dibanding
 3/60 pada start yang sama dengan outward0,60. Urutan profil A=0/0/0/0,
@@ -365,10 +403,73 @@ reward/config/training otomatis. Config testing juga outward0, tetapi hasil
 terakhirnya35/60 masih batch16.24 WIB dengan outward0,60 dan seed/snapshot berbeda.
 
 Snapshot training memiliki **26.345 node dan 58.020 edge terarah**; start aktif
-`9620836306` (start percobaan depan gang `311432306`). SHA-256 snapshot:
+`311432306` (start checkpoint lama `9620836306`). SHA-256 snapshot:
 `f0a5885db46c2f9cd962674aaeaa82f7d5c69579d5ba5d80641f727b6e20f964`.
 CSV, Q-table, peta hasil, serta cache merupakan artefak lokal yang tidak masuk
 Git. Unduhan OSM baru dapat mengubah graf dan hasil, meskipun seed sama.
+
+**Checkpoint sebelum penalti selisih jarak — 9 November 2026, selesai 21.50 WIB.**
+
+Pengguna menjalankan ulang seluruh A/B/C: 12 profil, 60 seed-run, dan
+13.500.000 episode. Metadata konsisten: start311432306 (input−7.281518,
+112.710178), snapshot training yang sama, seed0–4, outward0, return1,20,
+toleransi20%, 25bin, revisit−10, highway.other−10/missing−2, secondary+0,5.
+Penalti selisih jarak belum ada pada batch ini (efektif0).
+
+| Konfigurasi | A valid | B valid | C valid |
+|---|---:|---:|---:|
+| Dinamis150k | 0/5 | 4/5 | 0/5 |
+| Dinamis300k | 1/5 | 4/5 | 0/5 |
+| Horizon100k-total150k | 1/5 | 4/5 | 1/5 |
+| Horizon100k-total300k | 1/5 | 4/5 | 3/5 |
+
+Total23/60: A3, B16, C4; gagal29 over_distance/8 buntu, tanpa step_limit.
+Seluruh kegagalan memiliki closing_action_available=false. Sebanyak13 dari23
+loop juga berada pada4.500–5.500m; semua4 loop C di atas5.500m. Ini pengelompokan
+jarak rute tersimpan, bukan evaluasi ulang Q-table dengan toleransi10%.
+B horizon-total300k: galat rata-rata178,38m, comfort0,9124, overlap0,70% pada
+4 loop valid; keberhasilan training10k terakhir63,10%. C konfigurasi sama3/5,
+galat766,69m pada3 loop, training10k terakhir22,35%. Rerata subset berhasil
+harus dibaca bersama jumlah keberhasilan.
+
+Audit membaca13,5juta baris history, metadata dan60 evaluasi; episode per seed,
+epsilon, galat, overshoot dan status konsisten. Ini belum full replay Q-table
+atau validasi lapangan. Pembanding B/C21.07 WIB memakai outward0,60: B15/20,
+C6/20; batch21.50 memakai0: B16/20,C4/20. Perubahan tidak seragam antar-state.
+Testing21.27 WIB tetap batch dua profil B sebelumnya (8/10), snapshot/start/seed
+berbeda; tidak dicampurkan ke60 evaluasi training.
+
+## Checkpoint terbaru — 9 November 2026, selesai 22.18 WIB
+
+Penalti galat jarak −5/100 m sudah aktif pada seluruh 12 profil/60 run/13,5 juta
+episode, dengan graf/start/reward/environment/seed/akses konsisten antarprofil.
+Start 311432306, input −7.281518/112.710178; toleransi 20%, 25 bin, outward 0,
+return 1,20, revisit −10, highway.other −10/missing −2/secondary +0,5.
+
+| Konfigurasi | A valid | B valid | C valid |
+|---|---:|---:|---:|
+| Dinamis 150k | 0/5 | 0/5 | 0/5 |
+| Dinamis 300k | 1/5 | 5/5 | 1/5 |
+| Horizon 100k-total 150k | 0/5 | 5/5 | 2/5 |
+| Horizon 100k-total 300k | 1/5 | 5/5 | 2/5 |
+
+Total **22/60 (A 2 B 15 C 5)**,31 over_distance/7 buntu. Sebanyak 18 dari 22 loop
+berada dalam 4.500–5.500 m; ini bukan eksperimen baru dengan toleransi 10%.
+Checkpoint 21.50 tanpa penalti menghasilkan 23/60 dan 13 loop dalam rentang tersebut.
+B horizon 300k 5/5, galat 161,29 m, comfort 0,9093, overlap 0,71% pada 5 loop,
+dan 4 urutan edge unik; B dinamis 150k turun 4/5→0/5. Efek penalti belum merata.
+
+Testing 22.21 WIB: B dinamis 300k 1/5, horizon 300k 5/5, total 6/10. Titik/snapshot/seed
+berbeda dari training dan testing sebelumnya; jangan menyimpulkan efek penalti
+saja dari perubahan itu. Chat “Jawab pertanyaan umum” melaporkan audit 16,5 juta
+history/70 evaluasi; sinkronisasi Markdown mencocokkan source/config/metadata/CSV,
+tanpa mengulang audit penuh, tes atau training. Pemilihan konfigurasi final tetap
+pada pengguna; lima seed belum membuktikan optimalitas atau validasi lapangan.
+
+Artefak turunan tertinggal: analysis.json training 16.58 masih scoring −1/−0,5;
+analysis/training/last_window_summary.csv 21.03 hanya B/C; final-experiment-audit.json
+7 November. Perbarui analyze/notebook dari data tersimpan sebelum mengutip
+grafik/tabel Bab IV. Pembaruan ini tidak menjalankannya atau mengubah hasil lama.
 
 ## Output dan metadata
 

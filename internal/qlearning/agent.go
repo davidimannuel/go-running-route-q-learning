@@ -64,7 +64,7 @@ func advance(e *Environment, id *ActionID) (StepResult, error) {
 			return StepResult{}, fmt.Errorf("qlearning: an action is required when legal actions exist")
 		}
 		t := e.stopWithoutAction()
-		return StepResult{Transition: t, StopPenalty: e.graph.reward.NoActionPenalty, Reward: e.graph.reward.NoActionPenalty}, nil
+		return StepResult{Transition: t, StopPenalty: t.Components.Total(), Reward: t.Components.Total()}, nil
 	}
 	t, err := e.Step(*id)
 	if err != nil {
@@ -72,9 +72,10 @@ func advance(e *Environment, id *ActionID) (StepResult, error) {
 	}
 	r := StepResult{Transition: t, RewardStep: t.Components.Total()}
 	if !e.done && len(e.Available()) == 0 {
-		e.stopWithoutAction()
-		r.Components.NoAction = e.graph.reward.NoActionPenalty
-		r.StopPenalty = e.graph.reward.NoActionPenalty
+		stop := e.stopWithoutAction()
+		r.Components.NoAction = stop.Components.NoAction
+		r.Components.DistanceError = stop.Components.DistanceError
+		r.StopPenalty = stop.Components.Total()
 		r.Done, r.Termination = true, NoAvailableAction
 	}
 	r.Reward = r.RewardStep + r.StopPenalty

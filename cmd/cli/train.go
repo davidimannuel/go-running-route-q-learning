@@ -124,6 +124,10 @@ func loadTrainingGraph(path string) (*osm.Graph, string, error) {
 }
 
 func trainingMetadata(cfg config.Config, snapshot, hash string, start int, snapM float64, graph *osm.Graph, seeds []uint64) map[string]any {
+	rewardScheme := "configurable_signed_unclipped_v1"
+	if cfg.QLearning.Reward.DistanceErrorPenaltyPer100M != 0 {
+		rewardScheme = "configurable_signed_unclipped_distance_error_v2"
+	}
 	return map[string]any{
 		"status": "running", "started_at": time.Now().UTC().Format(time.RFC3339Nano),
 		"config": cfg.QLearning, "workdir_config": cfg, "map": cfg.Map, "resolved_seeds": seeds,
@@ -135,8 +139,13 @@ func trainingMetadata(cfg config.Config, snapshot, hash string, start int, snapM
 		"start_distance_method":  "Haversine; mean Earth radius 6371009 m; precomputed once per node",
 		"rng":                    "math/rand/v2 PCG(seed, 0); one independent RNG per seed; not NumPy-equivalent",
 		"evaluation_seed_offset": qlearning.EvaluationSeedOffset, "evaluation_epsilon": 0,
-		"actual_workers":        min(len(seeds), cfg.QLearning.Training.MaxWorkers),
-		"reward_scheme":         "configurable_signed_unclipped_v1",
+		"actual_workers": min(len(seeds), cfg.QLearning.Training.MaxWorkers),
+		"reward_scheme":  rewardScheme,
+		"distance_error_reward": map[string]any{
+			"formula":         "distance_error_penalty_per_100m * abs(total_distance_m - target_distance_m) / 100",
+			"application":     "once at episode termination: success, over_distance, no_available_action, or step_limit",
+			"fractional_100m": true, "zero_disables": true,
+		},
 		"reward_constants":      cfg.QLearning.Reward,
 		"road_score":            cfg.QLearning.Reward.Road,
 		"access_policy_version": "edge_and_endpoint_whitelist_v1",
