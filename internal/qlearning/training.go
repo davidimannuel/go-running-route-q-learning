@@ -69,7 +69,7 @@ func Train(ctx context.Context, p *PreparedGraph, cfg Config, seed uint64, histo
 	if seed > MaxSeed {
 		return TrainingResult{}, fmt.Errorf("qlearning: seed exceeds %d", MaxSeed)
 	}
-	if p == nil || p.reward != cfg.Reward {
+	if p == nil || !p.reward.Equal(cfg.Reward) {
 		return TrainingResult{}, fmt.Errorf("qlearning: prepared graph reward does not match effective config")
 	}
 	env, err := NewEnvironment(p, cfg.Scenario, cfg.Environment)
@@ -138,7 +138,7 @@ func Evaluate(ctx context.Context, p *PreparedGraph, cfg Config, seed uint64, ta
 	if table == nil || seed > MaxSeed {
 		return Metrics{}, nil, fmt.Errorf("evaluate: valid seed and non-nil Q-table required")
 	}
-	if p == nil || p.reward != cfg.Reward {
+	if p == nil || !p.reward.Equal(cfg.Reward) {
 		return Metrics{}, nil, fmt.Errorf("qlearning: prepared graph reward does not match effective config")
 	}
 	env, err := NewEnvironment(p, cfg.Scenario, cfg.Environment)

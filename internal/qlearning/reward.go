@@ -11,8 +11,22 @@ type AttributeScoreConfig struct {
 	Missing  float64 `yaml:"missing" json:"missing"`
 }
 
+// HighwayScoreConfig adds a preference for highway=secondary only.
+// A missing secondary_priority keeps the legacy Other score; zero is valid.
+type HighwayScoreConfig struct {
+	AttributeScoreConfig `yaml:",inline"`
+	SecondaryPriority    *float64 `yaml:"secondary_priority,omitempty" json:"secondary_priority,omitempty"`
+}
+
+func (c HighwayScoreConfig) secondaryScore() float64 {
+	if c.SecondaryPriority != nil {
+		return *c.SecondaryPriority
+	}
+	return c.Other
+}
+
 type RoadScoreConfig struct {
-	Highway         AttributeScoreConfig `yaml:"highway" json:"highway"`
+	Highway         HighwayScoreConfig   `yaml:"highway" json:"highway"`
 	Surface         AttributeScoreConfig `yaml:"surface" json:"surface"`
 	Width           AttributeScoreConfig `yaml:"width" json:"width"`
 	WidthThresholdM float64              `yaml:"width_threshold_m" json:"width_threshold_m"`
@@ -37,7 +51,7 @@ type RewardConfig struct {
 func DefaultRewardConfig() RewardConfig {
 	return RewardConfig{
 		Road: RoadScoreConfig{
-			Highway:         AttributeScoreConfig{Weight: 0.55, Priority: 1, Other: -1, Missing: -0.5},
+			Highway:         HighwayScoreConfig{AttributeScoreConfig: AttributeScoreConfig{Weight: 0.55, Priority: 1, Other: -1, Missing: -0.5}},
 			Surface:         AttributeScoreConfig{Weight: 0.30, Priority: 1, Other: -1, Missing: -0.5},
 			Width:           AttributeScoreConfig{Weight: 0.15, Priority: 1, Other: -1, Missing: -0.5},
 			WidthThresholdM: 3,
@@ -53,18 +67,31 @@ func (c RoadScoreConfig) Validate() error {
 		name  string
 		value AttributeScoreConfig
 	}{
-		{"highway", c.Highway}, {"surface", c.Surface}, {"width", c.Width},
+		{"highway", c.Highway.AttributeScoreConfig}, {"surface", c.Surface}, {"width", c.Width},
 	} {
 		v := item.value
 		if !finite(v.Weight) || v.Weight < 0 || !finite(v.Priority) || !finite(v.Other) || !finite(v.Missing) {
 			return fmt.Errorf("qlearning: reward.road.%s requires finite scores and a nonnegative finite weight", item.name)
 		}
 	}
+	if !finite(c.Highway.secondaryScore()) {
+		return fmt.Errorf("qlearning: reward.road.highway.secondary_priority must be finite")
+	}
 	total := c.Highway.Weight + c.Surface.Weight + c.Width.Weight
 	if !finite(total) || total <= 0 || !finite(c.WidthThresholdM) || c.WidthThresholdM <= 0 {
 		return fmt.Errorf("qlearning: reward.road requires positive finite total weight and width_threshold_m")
 	}
 	return nil
+}
+
+// Equal compares effective scores, not the addresses of optional config values.
+func (c RewardConfig) Equal(other RewardConfig) bool {
+	if c.Road.Highway.secondaryScore() != other.Road.Highway.secondaryScore() {
+		return false
+	}
+	c.Road.Highway.SecondaryPriority = nil
+	other.Road.Highway.SecondaryPriority = nil
+	return c == other
 }
 
 func (c RewardConfig) Validate() error {

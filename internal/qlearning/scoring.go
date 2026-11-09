@@ -22,10 +22,10 @@ func ScoreEdge(e osm.OSMEdge) RoadScores {
 	return DefaultRewardConfig().Road.ScoreEdge(e)
 }
 
-// ScoreRoad matches calculate_highway_score, calculate_surface_score, and
-// width_score in the reference. Width must come from osm.ParseWidthM at graph loading;
-// its validity flag distinguishes unavailable data from a usable measurement.
-// Access is a separate journey reward component.
+// ScoreRoad uses the reference highway/surface/width mapping by default.
+// Configured secondary_priority gives highway=secondary its own preference.
+// Width comes from osm.ParseWidthM at graph loading; its validity flag separates
+// missing data from a usable measurement. Access is a separate reward component.
 func ScoreRoad(highway, surface string, widthM float64, widthValid bool) RoadScores {
 	return DefaultRewardConfig().Road.ScoreRoad(highway, surface, widthM, widthValid)
 }
@@ -36,19 +36,23 @@ func (c RoadScoreConfig) ScoreEdge(e osm.OSMEdge) RoadScores {
 
 func (c RoadScoreConfig) ScoreRoad(highway, surface string, widthM float64, widthValid bool) RoadScores {
 	scores := RoadScores{
-		HighwayScore: categoryScore(highway, c.Highway, func(value string) bool {
+		HighwayScore: categoryScore(highway, c.Highway.Missing, func(value string) float64 {
 			switch value {
 			case "footway", "pedestrian", "living_street", "residential", "tertiary":
-				return true
+				return c.Highway.Priority
+			case "secondary":
+				return c.Highway.secondaryScore()
+			default:
+				return c.Highway.Other
 			}
-			return false
 		}),
-		SurfaceScore: categoryScore(surface, c.Surface, func(value string) bool {
+		SurfaceScore: categoryScore(surface, c.Surface.Missing, func(value string) float64 {
 			switch value {
 			case "asphalt", "concrete", "paving_stones", "paved":
-				return true
+				return c.Surface.Priority
+			default:
+				return c.Surface.Other
 			}
-			return false
 		}),
 		WidthScore: c.Width.Missing,
 	}
@@ -62,7 +66,7 @@ func (c RoadScoreConfig) ScoreRoad(highway, surface string, widthM float64, widt
 	return scores
 }
 
-func categoryScore(raw string, cfg AttributeScoreConfig, priority func(string) bool) float64 {
+func categoryScore(raw string, missing float64, scoreCategory func(string) float64) float64 {
 	text := strings.ToLower(strings.TrimSpace(raw))
 	values := []string{text}
 	// OSM downloads use scalar strings. Also recognize quoted string lists from
@@ -78,16 +82,11 @@ func categoryScore(raw string, cfg AttributeScoreConfig, priority func(string) b
 				continue
 			}
 			found = true
-			valueScore := cfg.Other
-			if priority(part) {
-				valueScore = cfg.Priority
-			}
-			score = math.Min(score, valueScore) // Minimum over non-empty categories.
-
+			score = math.Min(score, scoreCategory(part)) // Minimum over non-empty categories.
 		}
 	}
 	if !found {
-		return cfg.Missing
+		return missing
 	}
 	return score
 }

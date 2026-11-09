@@ -19,18 +19,20 @@
 <label class="check"><input type="checkbox" id="show-directions">Direction arrows</label>
 <label class="check"><input type="checkbox" id="show-graph-nodes">Show graph nodes</label>
 <div class="muted" id="node-status">Nodes are hidden.</div>
+<div id="q-node-tools" hidden><label for="q-node-id">Inspect node ID</label><div style="display:flex;gap:6px"><input id="q-node-id" inputmode="numeric" placeholder="OSM node ID" style="width:100%;min-width:0;padding:7px;border:1px solid #c4ced8;border-radius:6px"><button id="q-inspect">Inspect</button></div><div class="muted" id="q-node-help">Click a map node or enter its ID.</div></div>
 <div class="muted" id="route-view" aria-live="polite"></div>
 <div class="muted" id="overlap-help" hidden><span class="repeat-key"></span>Dashed outlines mark roads traversed more than once in the entire route. Click a road to inspect each traversal.</div>
 </div>
 <div class="legend" id="legend"></div>
 <div class="muted">Colors follow traveled distance, with kilometer boundaries interpolated within road segments. A kilometer view keeps the rest of the route faint for context. Click a road for its attributes and reward.</div>
 <div id="road-legend" hidden><strong id="road-legend-title"></strong><div class="legend" id="road-legend-items"></div></div>
-<div class="muted foot">Use the map layers to inspect comfort scores or access tags on surrounding roads. Hide Selected route to inspect roads beneath it. Road counts refer to displayed line groups. Enable Node access for tagged nodes and their current policy status; saved routes may use an earlier access policy (see Training details).</div>
+<div class="muted foot">Use the map layers to inspect comfort scores, access tags, or Q-values. Q-values colors only the selected node’s outgoing actions for one state; click a node or use Inspect node on a road popup. Q data loads on demand through CLI serve. Hide Selected route to inspect roads beneath it. Road counts refer to displayed line groups. Enable Node access for tagged nodes and their current policy status; saved routes may use an earlier access policy (see Training details).</div>
 <div class="muted foot">Comfort is a research preference, not a safety assessment. Overlap counts repeated physical-road traversals. A failed route is shown for inspection.</div>
 <div class="muted foot" id="snap"></div><div id="error" role="alert"></div></aside>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 {{template "node-inspection"}}
 {{template "node-access"}}
+{{template "q-values"}}
 <script>
 const routeData = {{.}};
 (() => {
@@ -64,11 +66,20 @@ const roadLayers={comfort:L.layerGroup(),access:L.layerGroup()};
 const roadCounts={};
 map.createPane('inspectionRoads').style.zIndex=350;
 const roadRenderer=L.canvas({pane:'inspectionRoads',padding:.3});
-const nodeInspector=createNodeInspector(map,routeData.Graph);
+const qView=createQValueInspector(map,routeData,select);
+const nodeInspector=createNodeInspector(map,routeData.Graph,{inspect:qView.inspect,clear:qView.clear,connectionsVisible:()=>!map.hasLayer(qView.layer)});
 const nodeAccess=createNodeAccessLayer(map,routeData.Graph.nodes,nodeInspector);
 const graphNodes=createGraphNodeLayer(map,routeData.Graph.nodes,nodeInspector,status=>{document.getElementById('node-status').textContent=status;});
+function inspectQNode(){
+ const id=document.getElementById('q-node-id').value.trim();
+ const node=routeData.Graph.nodes.find(node=>node.id===id),exists=!!node;
+ document.getElementById('q-node-help').textContent=exists?'Select a visit or stored state in the node popup.':'Node ID not found in this graph.';
+ if(exists){map.setView([node.latitude,node.longitude],Math.max(17,map.getZoom()),{animate:false});nodeInspector.open(id);}
+}
+document.getElementById('q-inspect').addEventListener('click',inspectQNode);
+document.getElementById('q-node-id').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();inspectQNode();}});
 document.getElementById('show-graph-nodes').addEventListener('change',event=>{if(event.target.checked)graphNodes.addTo(map);else map.removeLayer(graphNodes);});
-L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access},{'Selected route':layer,'Node access':nodeAccess},{position:'bottomright',collapsed:false}).addTo(map);
+L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access,'Q-values':qView.layer},{'Selected route':layer,'Node access':nodeAccess},{position:'bottomright',collapsed:false}).addTo(map);
 
 function roadCategory(edge,theme){
  if(theme==='comfort'){
@@ -129,6 +140,8 @@ map.on('baselayerchange',event=>{
  const theme=Object.keys(roadLayers).find(key=>roadLayers[key]===event.layer);
  if(theme)buildRoadLayer(theme);
  showRoadLegend(theme);
+ document.getElementById('q-node-tools').hidden=!map.hasLayer(qView.layer);
+ nodeInspector.refresh();
 });
 
 // Match the metric's physical-road identity: endpoint geometry, independent of direction/key.
@@ -171,7 +184,7 @@ function routeRoadPopup(traversals,selected){
    ['Step',segment.Step],['Road traversals',traversals.length],['Distance interval',`${fmt(segment.BeforeM/1000,3)}–${fmt(segment.AfterM/1000,3)} km`],
    ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Step total',fmt(segment.Reward,4)]
   ]));
-  details.append(nodeInspector.button(segment.From,`Inspect node ${segment.From}`),nodeInspector.button(segment.To,`Inspect node ${segment.To}`));
+  details.append(nodeInspector.button(segment.From,`Inspect node ${segment.From}`,{step:segment.Step}),nodeInspector.button(segment.To,`Inspect node ${segment.To}`));
  }
  selector.addEventListener('change',update);box.append(selector,details);update();L.DomEvent.disableClickPropagation(box);return box;
 }

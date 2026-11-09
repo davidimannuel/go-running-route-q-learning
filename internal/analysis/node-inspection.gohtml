@@ -1,8 +1,17 @@
 {{define "node-inspection"}}
+<style>
+/* Keep text opaque while allowing the road geometry to show through the popup. */
+.node-inspection-popup .leaflet-popup-content-wrapper,
+.node-inspection-popup .leaflet-popup-tip{background:rgba(255,255,255,.86)}
+.node-inspection-popup .leaflet-popup-content{max-width:calc(100vw - 64px);margin:10px 12px;font-size:12px;line-height:1.4}
+.node-inspection-popup p{margin:6px 0}
+.node-inspection-popup .q-value-table td:last-child{white-space:normal;min-width:140px}
+</style>
 <script>
 // Inspect the exported graph, not an episode's legal-action mask. Preserve every
 // outgoing parallel edge; highlight each distinct destination only once.
-function createNodeInspector(map, graph) {
+function createNodeInspector(map, graph, options = {}) {
+  let active = null;
   const nodes = new Map(graph.nodes.map(node => [node.id, node]));
   const outgoing = new Map();
   for (const edge of graph.edges) {
@@ -15,23 +24,24 @@ function createNodeInspector(map, graph) {
   const highlights = L.layerGroup().addTo(map);
   const point = node => [node.latitude, node.longitude];
   const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
-  const clear = () => { map.closePopup(); highlights.clearLayers(); };
-  const button = (id, label = 'Inspect connected nodes') => {
+  const clear = () => { active = null; map.closePopup(); highlights.clearLayers(); options.clear?.(); };
+  const button = (id, label = 'Inspect connected nodes', context = null) => {
     const control = text('button', label);
     control.type = 'button';
-    control.addEventListener('click', () => open(id));
+    control.addEventListener('click', () => open(id, context));
     return control;
   };
-  function open(id) {
+  function open(id, context = null) {
     const node = nodes.get(id);
     if (!node) return;
     map.stop();
     clear();
+    active = {id, context};
     const edges = outgoing.get(id) || [];
     const destinations = new Set(edges.map(edge => edge.to));
     for (const nextID of destinations) {
       const next = nodes.get(nextID);
-      L.polyline([point(node), point(next)], {renderer, color: '#0891b2', weight: 7, opacity: 0.9, interactive: false}).addTo(highlights);
+      if (options.connectionsVisible?.() !== false) L.polyline([point(node), point(next)], {renderer, color: '#0891b2', weight: 7, opacity: 0.9, interactive: false}).addTo(highlights);
       if (nextID === id) continue;
       L.circleMarker(point(next), {renderer, radius: 7, color: 'white', weight: 2, fillColor: '#0891b2', fillOpacity: 1, bubblingMouseEvents: false})
         .bindTooltip(() => text('span', nextID), {permanent: true, direction: 'right'})
@@ -41,7 +51,7 @@ function createNodeInspector(map, graph) {
     const box = document.createElement('div');
     box.append(text('strong', `Node ${id}`));
     const details = text('div', `Access: ${node.access || '(missing)'}\nBarrier: ${node.barrier || '(missing)'}\nCurrent node policy: ${node.access_allowed ? 'Allowed' : 'Blocked'}\nLatitude: ${node.latitude}\nLongitude: ${node.longitude}`);
-    details.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0';
+    details.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0';
     box.append(details, text('strong', `${destinations.size} connected node(s) · ${edges.length} outgoing edge(s)`));
     const note = text('p', 'Raw graph connections, before access and revisit masks. Parallel keys remain separate. Click a destination ID to inspect it.');
     note.style.cssText = 'font:12px/1.4 system-ui,sans-serif;color:#475569;margin:6px 0';
@@ -81,13 +91,14 @@ function createNodeInspector(map, graph) {
     const padding = size.x > 700 ? [365, 20] : [20, Math.min(size.y * 0.43 + 24, 320)];
     const corner = map.getContainer().querySelector('.leaflet-bottom.leaflet-right');
     const bottomPadding = Math.min((corner?.getBoundingClientRect().height || 0) + 16, Math.max(20, size.y - padding[1] - 180));
-    L.popup({minWidth: 240, maxWidth: Math.max(240, Math.min(520, size.x - padding[0] - 90)),
-      maxHeight: Math.max(100, Math.min(360, size.y - padding[1] - bottomPadding - 60)), keepInView: true,
+    const popup = L.popup({className: 'node-inspection-popup', minWidth: 240, maxWidth: Math.max(240, Math.min(480, size.x - padding[0] - 90)),
+      maxHeight: Math.max(100, Math.min(320, size.y - padding[1] - bottomPadding - 60)), keepInView: true,
       autoPanPaddingTopLeft: padding, autoPanPaddingBottomRight: [50, bottomPadding]})
       .setLatLng(point(node)).setContent(box).openOn(map);
+    options.inspect?.({id, node, edges, box, context, popup});
   }
-  map.on('popupclose', () => highlights.clearLayers());
-  return {open, clear, button};
+  map.on('popupclose', () => { active = null; highlights.clearLayers(); options.clear?.(); });
+  return {open, clear, button, refresh: () => { if (active) open(active.id, active.context); }};
 }
 
 // Draw raw nodes only when requested, at close zoom and within the viewport.

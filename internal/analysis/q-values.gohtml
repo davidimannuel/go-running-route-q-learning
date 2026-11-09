@@ -1,0 +1,146 @@
+{{define "q-values"}}
+<script>
+// Pure debug projection: saved state/action values, never an aggregate across
+// bins or previous nodes. This function does not choose or update any action.
+function qDebugActions(data, state, visit, edges, nodes) {
+  const values = new Map((state.actions || []).map(action => [`${action.next_node}/${action.key}`, action.value]));
+  const allowed = value => ['', 'yes', 'permissive'].includes((value || '').trim().toLowerCase());
+  const env = data.environment;
+  const knownPolicy = data.access_policy === 'edge_and_endpoint_whitelist_v1' || data.access_policy === '';
+  const results = edges.map(edge => {
+    const key = `${edge.to}/${edge.key}`, stored = values.has(key), value = values.get(key) ?? 0;
+    let reason = '';
+    if (!(edge.length_m > 0) || !Number.isFinite(edge.length_m)) reason = 'invalid length';
+    else if (!allowed(edge.access)) reason = 'way access';
+    else if (data.access_policy === 'edge_and_endpoint_whitelist_v1' && (!allowed(nodes.get(edge.from)?.access) || !allowed(nodes.get(edge.to)?.access))) reason = 'node access';
+    else if (!knownPolicy) reason = 'unknown policy';
+    else if (visit) {
+      if (edge.to === data.start_node) {
+        const distance = visit.distance_m + edge.length_m;
+        if (edge.from === data.start_node || distance < env.target_distance_m * (1 - env.distance_tolerance) || distance > env.target_distance_m * (1 + env.distance_tolerance)) reason = 'closing distance';
+      } else if ((visit.visited[edge.to] || 0) > 0) {
+        if (!env.allow_revisit) reason = 'revisit disabled';
+        else if (visit.distance_m < env.revisit_after_ratio * env.target_distance_m) reason = 'revisit too early';
+        else if (visit.visited[edge.to] >= env.max_node_visits) reason = 'visit limit';
+      }
+    }
+    const chosen = visit?.chosen?.next_node === edge.to && visit.chosen.key === edge.key;
+    return {edge, value, stored, reason, chosen, legal: visit && knownPolicy ? !reason : null};
+  });
+  const legal = results.filter(row => row.legal === true);
+  const best = legal.length ? Math.max(...legal.map(row => row.value)) : null;
+  for (const row of results) row.best = row.legal === true && best !== null && Math.abs(row.value - best) <= 1e-8 + 1e-5 * Math.abs(best);
+  return results;
+}
+
+function createQValueInspector(map, routeData, seedSelect) {
+  const layer = L.layerGroup(), cache = new Map();
+  const nodes = new Map(routeData.Graph.nodes.map(node => [node.id, node]));
+  map.createPane('qValues').style.zIndex = 610;
+  const renderer = L.svg({pane: 'qValues', padding: 0.3});
+  let serial = 0, controller = null, completedAt = null;
+  const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
+  const point = id => { const node = nodes.get(id); return [node.latitude, node.longitude]; };
+  function clear() { serial++; controller?.abort(); controller = null; layer.clearLayers(); }
+  async function inspect({id, edges, box, context, popup}) {
+    if (!map.hasLayer(layer)) return;
+    const token = ++serial, trial = routeData.Trials[Number(seedSelect.value)];
+    // Keep existing node details/connections available without hiding the Q table
+    // below a long popup. These details are expanded normally outside Q mode.
+    if (!box.querySelector('[data-q-details]')) {
+      const nodeDetails = document.createElement('details');
+      nodeDetails.dataset.qDetails = 'true';
+      nodeDetails.append(text('summary', 'Node access & coordinates'), box.children[1]);
+      const rawDetails = document.createElement('details');
+      rawDetails.style.marginTop = '8px';
+      rawDetails.append(text('summary', `Raw connections (${edges.length} edges)`));
+      while (box.children.length > 1) rawDetails.append(box.children[1]);
+      box.append(nodeDetails, rawDetails);
+    }
+    const area = document.createElement('section');
+    area.style.cssText = 'border-top:1px solid #cbd5e1;margin-top:8px;padding-top:6px;font:12px/1.5 system-ui,sans-serif';
+    area.append(text('strong', 'Q-values · saved final table'));
+    const status = text('p', 'Loading this node’s Q-values…');
+    area.append(status); box.insertBefore(area, box.children[2] || null); popup.update();
+    if (!['http:', 'https:'].includes(location.protocol) || !location.pathname.startsWith('/files/')) {
+      status.textContent = 'Open this map through CLI serve to inspect Q-values.'; popup.update(); return;
+    }
+    const key = `${trial.Seed}/${id}`;
+    try {
+      let data = cache.get(key), cached = !!data;
+      if (!data) {
+        controller?.abort(); controller = new AbortController();
+        const url = new URL('/q-values', location.origin);
+        url.search = new URLSearchParams({file: location.pathname.slice('/files/'.length).split('/').map(decodeURIComponent).join('/'), seed: trial.Seed, node: id});
+        const response = await fetch(url, {signal: controller.signal, cache: 'no-store'});
+        if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
+        data = await response.json();
+        if (completedAt !== null && completedAt !== data.completed_at) throw new Error('Training result changed; reload the map.');
+        if (data.scenario !== routeData.Scenario || data.seed !== trial.Seed || data.node !== id || data.start_node !== routeData.StartNode) throw new Error('Result identity differs; reload the map.');
+        // The HTML and CSV must describe the same evaluation, even if training
+        // was rerun while this page remained open.
+        const segments = trial.Segments.filter(segment => segment.From === id);
+        const visits = data.visits.filter(visit => visit.chosen);
+        if (segments.length !== visits.length || segments.some((segment, i) => segment.Step !== visits[i].step || segment.To !== visits[i].chosen.next_node || segment.Key !== visits[i].chosen.key || Math.abs(segment.BeforeM - visits[i].distance_m) > 1e-6)) throw new Error('Map and trace differ; reload the completed result.');
+        if (cache.size >= 100) cache.delete(cache.keys().next().value);
+        completedAt = data.completed_at;
+        cache.set(key, data);
+      }
+      if (token !== serial || !map.hasLayer(layer) || !box.isConnected) return;
+      status.textContent = `Seed ${data.seed} · Scenario ${data.scenario} · ${cached ? 'browser cache' : `${data.read_ms.toFixed(1)} ms server read`} · ${data.states.length} stored state(s)`;
+      const selector = document.createElement('select'); selector.setAttribute('aria-label', 'Q state');
+      selector.style.cssText = 'width:100%;font:inherit;margin:6px 0;padding:6px';
+      const choices = [];
+      const label = state => [data.scenario !== 'A' ? `bin ${state.progress_bin}` : '', data.scenario === 'C' ? `previous ${state.previous_node === '-1' ? '(none)' : state.previous_node}` : ''].filter(Boolean).join(' · ') || 'current node only';
+      const sameState = (a, b) => a.previous_node === b.previous_node && a.progress_bin === b.progress_bin;
+      data.visits.forEach((visit, i) => {
+        const state = data.states.find(state => sameState(state, visit)) || {...visit, actions: []};
+        choices.push({state, visit, title: `Visit ${i + 1} · step ${visit.step} · ${label(visit)}`});
+      });
+      for (const state of data.states) choices.push({state, visit: null, title: `Stored state · ${label(state)}`});
+      if (!choices.length) choices.push({state: {previous_node: '-1', progress_bin: 0, actions: []}, visit: null, title: 'Unseen state · all unrecorded Q-values are 0'});
+      choices.forEach((choice, i) => { const option = text('option', choice.title); option.value = String(i); selector.append(option); });
+      const requested = context?.step == null ? -1 : choices.findIndex(choice => choice.visit?.step === context.step);
+      selector.value = String(requested >= 0 ? requested : 0);
+      const details = document.createElement('div'); area.append(selector, details);
+      const reload = text('button', 'Reload Q data'); reload.type = 'button';
+      reload.addEventListener('click', event => { L.DomEvent.stop(event); cache.delete(key); area.remove(); clear(); inspect({id, edges, box, context, popup}); });
+      area.append(reload);
+      function update() {
+        layer.clearLayers(); details.replaceChildren();
+        const {state, visit} = choices[Number(selector.value)];
+        const rows = qDebugActions(data, state, visit, edges, nodes);
+        if (visit) details.append(text('p', `Distance before step: ${visit.distance_m.toFixed(2)} m`));
+        const note = text('p', visit ? 'Saved evaluation mask · Best Q among available actions (ties possible).' : 'Stored state only · episode history and dynamic mask unknown.');
+        note.style.color = '#475569';
+        const table = document.createElement('table'), head = document.createElement('tr'), body = document.createElement('tbody');
+        table.className = 'q-value-table';
+        table.style.cssText = 'width:100%;border-collapse:collapse;white-space:nowrap';
+        for (const title of ['To node / key', 'Q-value', 'Status']) { const th = text('th', title); th.style.cssText = 'padding:5px;text-align:left;border-bottom:1px solid #cbd5e1'; head.append(th); }
+        const thead = document.createElement('thead'); thead.append(head); table.append(thead, body);
+        const max = Math.max(1e-9, ...rows.filter(row => !row.reason).map(row => Math.abs(row.value)));
+        for (const row of rows) {
+          const tr = document.createElement('tr');
+          const status = [row.chosen ? 'Chosen' : '', row.reason ? `Masked: ${row.reason}` : row.legal === true ? 'Available' : 'Mask unknown', row.best ? 'Best Q (legal)' : ''].filter(Boolean).join(' · ');
+          const q = `${row.value.toLocaleString('en-US', {maximumFractionDigits: 6})}${row.stored ? '' : ' · unrecorded'}`;
+          for (const value of [`${row.edge.to} / ${row.edge.key}`, q, status]) { const td = text('td', value); td.style.cssText = 'padding:5px;border-bottom:1px solid #e2e8f0'; tr.append(td); }
+          if (row.chosen) tr.style.background = 'rgba(239,246,255,.75)'; body.append(tr);
+          const color = row.reason ? '#94a3b8' : row.value === 0 ? '#64748b' : row.value > 0 ? '#15803d' : '#dc2626';
+          const line = L.polyline([point(id), point(row.edge.to)], {renderer, color, weight: row.chosen ? 11 : 7, opacity: row.reason ? 0.5 : 0.55 + Math.abs(row.value) / max * 0.4, dashArray: row.reason ? '5 5' : null});
+          line.bindTooltip(() => text('span', `${id} → ${row.edge.to} / key ${row.edge.key} · Q ${q} · ${status}`), {sticky: true}).addTo(layer);
+        }
+        const scroll = document.createElement('div'); scroll.style.cssText = 'overflow:auto;max-height:220px'; scroll.append(table); details.append(scroll, note);
+        details.append(text('p', 'Green/red: positive/negative Q · gray: zero · dashed: masked. Unrecorded Q=0. Q estimates future reward, not comfort.'));
+        popup.update();
+      }
+      selector.addEventListener('change', update); update();
+    } catch (error) {
+      if (token !== serial || error.name === 'AbortError') return;
+      status.textContent = `Q-values unavailable: ${error.message}`; status.style.color = '#b42318'; popup.update();
+    }
+  }
+  layer.on('remove', clear);
+  return {layer, inspect, clear};
+}
+</script>
+{{end}}

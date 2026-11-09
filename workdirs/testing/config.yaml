@@ -1,8 +1,22 @@
 schema_version: 1
 
 map:
-  latitude: -7.281518
-  longitude: 112.710178
+  # lat long training (dekat tempat tinggal)
+  # latitude: -7.282187
+  # longitude: 112.709282
+
+  # depan gang
+  latitude: -7.2816034
+  longitude: 112.7101655
+
+  # depan WK
+  # latitude: -7.281885
+  # longitude: 112.711476
+
+  # depan indomaret
+  # latitude: -7.275646
+  # longitude: 112.710049
+
   radius_m: 3025
   timeout_sec: 90
 
@@ -12,7 +26,7 @@ cache_dir: cache
 qlearning:
   environment:
     target_distance_m: 5000
-    distance_tolerance: 0.10
+    distance_tolerance: 0.20
     progress_bins: 25
     max_steps: 500
     allow_revisit: true
@@ -21,15 +35,16 @@ qlearning:
     max_snap_distance_m: 100
   reward:
     road:
-      highway: {weight: 0.55, priority: 1.0, other: -1.0, missing: -0.5}
+      highway: {weight: 0.55, priority: 1.0, secondary_priority: 0.5, other: -10.0, missing: -2}
       surface: {weight: 0.30, priority: 1.0, other: -1.0, missing: -0.5}
       width: {weight: 0.15, priority: 1.0, other: -1.0, missing: -0.5}
       width_threshold_m: 3.0
     return_phase_ratio: 0.50
-    outward_penalty_scale: 0.60
+    # outward_penalty_scale: 0.60
+    outward_penalty_scale: 0
     return_reward_scale: 1.20
     permissive_penalty_per_100m: -0.10
-    revisit_penalty: -5.0
+    revisit_penalty: -10.0
     success_bonus: 100.0
     over_distance_penalty: -50.0
     no_action_penalty: -50.0
@@ -44,51 +59,51 @@ qlearning:
     runs: 5
     max_workers: 5
     profiles:
-      - name: a-dynamic-150000
-        scenario: A
-        episodes: 150000
-        epsilon_decay_episodes: null
-      - name: a-dynamic-300000
-        scenario: A
-        episodes: 300000
-        epsilon_decay_episodes: null
-      - name: a-horizon-100000-total-150000
-        scenario: A
-        episodes: 150000
-        epsilon_decay_episodes: 100000
-      - name: a-horizon-100000-total-300000
-        scenario: A
-        episodes: 300000
-        epsilon_decay_episodes: 100000
-      - name: b-dynamic-150000
-        scenario: B
-        episodes: 150000
-        epsilon_decay_episodes: null
+      # - name: a-dynamic-150000
+      #   scenario: A
+      #   episodes: 150000
+      #   epsilon_decay_episodes: null
+      # - name: a-dynamic-300000
+      #   scenario: A
+      #   episodes: 300000
+      #   epsilon_decay_episodes: null
+      # - name: a-horizon-100000-total-150000
+      #   scenario: A
+      #   episodes: 150000
+      #   epsilon_decay_episodes: 100000
+      # - name: a-horizon-100000-total-300000
+      #   scenario: A
+      #   episodes: 300000
+      #   epsilon_decay_episodes: 100000
+      # - name: b-dynamic-150000
+      #   scenario: B
+      #   episodes: 150000
+      #   epsilon_decay_episodes: null
       - name: b-dynamic-300000
         scenario: B
         episodes: 300000
         epsilon_decay_episodes: null
-      - name: b-horizon-100000-total-150000
-        scenario: B
-        episodes: 150000
-        epsilon_decay_episodes: 100000
+      # - name: b-horizon-100000-total-150000
+      #   scenario: B
+      #   episodes: 150000
+      #   epsilon_decay_episodes: 100000
       - name: b-horizon-100000-total-300000
         scenario: B
         episodes: 300000
         epsilon_decay_episodes: 100000
-      - name: c-dynamic-150000
-        scenario: C
-        episodes: 150000
-        epsilon_decay_episodes: null
-      - name: c-dynamic-300000
-        scenario: C
-        episodes: 300000
-        epsilon_decay_episodes: null
-      - name: c-horizon-100000-total-150000
-        scenario: C
-        episodes: 150000
-        epsilon_decay_episodes: 100000
-      - name: c-horizon-100000-total-300000
-        scenario: C
-        episodes: 300000
-        epsilon_decay_episodes: 100000
+      # - name: c-dynamic-150000
+      #   scenario: C
+      #   episodes: 150000
+      #   epsilon_decay_episodes: null
+      # - name: c-dynamic-300000
+      #   scenario: C
+      #   episodes: 300000
+      #   epsilon_decay_episodes: null
+      # - name: c-horizon-100000-total-150000
+      #   scenario: C
+      #   episodes: 150000
+      #   epsilon_decay_episodes: 100000
+      # - name: c-horizon-100000-total-300000
+      #   scenario: C
+      #   episodes: 300000
+      #   epsilon_decay_episodes: 100000

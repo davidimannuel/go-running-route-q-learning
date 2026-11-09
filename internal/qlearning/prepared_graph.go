@@ -62,6 +62,11 @@ func NewPreparedGraph(graph *osm.Graph, startNode int, reward RewardConfig) (*Pr
 	if access := start.Tags.Get("access"); !AccessAllowed(access) {
 		return nil, fmt.Errorf("prepare training: start node %d has disallowed access %q", startNode, access)
 	}
+	// Keep a private value so later config edits cannot change the cached reward.
+	if reward.Road.Highway.SecondaryPriority != nil {
+		score := *reward.Road.Highway.SecondaryPriority
+		reward.Road.Highway.SecondaryPriority = &score
+	}
 	p := &PreparedGraph{graph: graph, reward: reward, startNode: startNode, actions: NewActions(graph),
 		distances: make(map[int]float64, len(graph.Nodes)), edges: make(map[*osm.OSMEdge]edgeData)}
 	for id, node := range graph.Nodes {

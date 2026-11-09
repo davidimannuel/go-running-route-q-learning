@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -115,7 +116,18 @@ func QTableToCSV(w io.Writer, table qlearning.QTable) error {
 // training again. Node/action zero remain valid; blank action fields mean an
 // empty state entry, never a synthetic action (0,0).
 func ReadQTable(r io.Reader) (qlearning.QTable, error) {
+	return readQTable(context.Background(), r, nil)
+}
+
+// ReadNodeQTable streams the CSV and retains only one node's states/actions.
+// It does not assume row ordering or load the other nodes into memory.
+func ReadNodeQTable(ctx context.Context, r io.Reader, node int) (qlearning.QTable, error) {
+	return readQTable(ctx, r, &node)
+}
+
+func readQTable(ctx context.Context, r io.Reader, node *int) (qlearning.QTable, error) {
 	reader := csv.NewReader(r)
+	reader.ReuseRecord = true
 	header, err := reader.Read()
 	if err != nil {
 		return nil, fmt.Errorf("read Q-table header: %w", err)
@@ -124,13 +136,23 @@ func ReadQTable(r io.Reader) (qlearning.QTable, error) {
 		return nil, fmt.Errorf("read Q-table: unexpected columns")
 	}
 	table := make(qlearning.QTable)
+	nodeText := ""
+	if node != nil {
+		nodeText = strconv.Itoa(*node)
+	}
 	for rowNumber := 2; ; rowNumber++ {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		row, err := reader.Read()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return nil, fmt.Errorf("read Q-table row %d: %w", rowNumber, err)
+		}
+		if node != nil && row[1] != nodeText {
+			continue
 		}
 		state := qlearning.State{Scenario: qlearning.Scenario(row[0])}
 		if err := state.Scenario.Validate(); err != nil {

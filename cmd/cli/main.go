@@ -57,7 +57,7 @@ Commands:
             Each seed also has metadata.json. Profiles share the resolved seed list.
   serve     Browse HTML maps and recorded settings on 127.0.0.1.
             Defaults: --dir . --port 8080. Open the printed URL; Ctrl+C stops the server.
-            CSV/JSON/YAML files, hidden entries, and symlinks are not served directly.
+            Q-values load per node on demand. Raw CSV/JSON/YAML, hidden paths, and symlinks stay private.
 
 Examples (from the repository root):
   go run ./cmd/cli download --workdir workdirs/training

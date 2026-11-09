@@ -94,3 +94,40 @@ func TestScoresRespectParsedWidthValidity(t *testing.T) {
 		checkScores(t, ScoreRoad("residential", "asphalt", width, true), RoadScores{1, 1, -0.5, 0.775})
 	}
 }
+
+func TestSecondaryHighwayPriority(t *testing.T) {
+	cfg := DefaultRewardConfig().Road
+	priority := 0.5
+	cfg.Highway.SecondaryPriority = &priority
+	for _, tc := range []struct {
+		highway string
+		want    RoadScores
+	}{
+		{"secondary", RoadScores{0.5, -0.5, -0.5, 0.05}},
+		{" Secondary ", RoadScores{0.5, -0.5, -0.5, 0.05}},
+		{"residential", RoadScores{1, -0.5, -0.5, 0.325}},
+		{"tertiary", RoadScores{1, -0.5, -0.5, 0.325}},
+		{"service", RoadScores{-1, -0.5, -0.5, -0.775}},
+		{"secondary_link", RoadScores{-1, -0.5, -0.5, -0.775}},
+		{"", RoadScores{-0.5, -0.5, -0.5, -0.5}},
+		{"residential;secondary", RoadScores{0.5, -0.5, -0.5, 0.05}},
+		{"secondary;service", RoadScores{-1, -0.5, -0.5, -0.775}},
+		{"['residential', 'secondary']", RoadScores{0.5, -0.5, -0.5, 0.05}},
+	} {
+		t.Run(tc.highway, func(t *testing.T) {
+			checkScores(t, cfg.ScoreRoad(tc.highway, "", 0, false), tc.want)
+		})
+	}
+	// Only highway=secondary receives this preference, not a surface tag.
+	checkScores(t, cfg.ScoreRoad("secondary", "secondary", 0, false), RoadScores{0.5, -1, -0.5, -0.1})
+	checkScores(t, cfg.ScoreRoad("secondary", "asphalt", 3, true), RoadScores{0.5, 1, 1, 0.725})
+}
+
+func TestSecondaryHighwayLegacyFallbackAndZero(t *testing.T) {
+	cfg := DefaultRewardConfig().Road
+	cfg.Highway.Other = -2
+	checkScores(t, cfg.ScoreRoad("secondary", "", 0, false), RoadScores{-2, -0.5, -0.5, -1.325})
+	zero := 0.0
+	cfg.Highway.SecondaryPriority = &zero
+	checkScores(t, cfg.ScoreRoad("secondary", "", 0, false), RoadScores{0, -0.5, -0.5, -0.225})
+}

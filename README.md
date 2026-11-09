@@ -48,8 +48,8 @@ Tidak perlu mengaktifkan environment secara manual. Pilih kernel
 
 ## Command utama
 
-Workdir penelitian menggunakan koordinat `-7.282187, 112.709282`. Workdir testing
-menggunakan `-7.281518, 112.710178`. Lokasi dan radius dapat diubah di config.
+Config penelitian saat ini menggunakan `-7.282187, 112.709282`; testing
+menggunakan `-7.2816034, 112.7101655`. Lokasi dan radius masing-masing dapat diubah di config.
 Semua command berikut dijalankan dari root repository. Jika `osm.json` sudah
 tersedia, lanjutkan dengan `analyze` atau `train` sesuai kebutuhan.
 
@@ -95,7 +95,9 @@ go build -o bin/route-cli ./cmd/cli
 
 Buka **http://127.0.0.1:8080/**. Pilih peta dari daftar, gunakan pencarian atau
 filter jenis hasil, lalu pilih **Recorded settings** untuk melihat konfigurasi
-hasil tersebut. Peta ditampilkan di panel sebelah daftar sehingga navigasi tetap
+hasil tersebut. Pencarian `training/` atau `testing/` membatasi workdir;
+contoh `training/ b-horizon` juga menyaring profil. Nama workdir yang cocok
+tidak dicocokkan ke folder internal `output/training/` atau teks tombol. Peta ditampilkan di panel sebelah daftar sehingga navigasi tetap
 tersedia. **Open separately** membuka hasil pada tab lain. Pemilihan hasil
 dan **Refresh results** memuat ulang iframe dengan URL baru; server mengirim
 HTML tanpa cache. Setelah mengubah kode Go/template server, hentikan `serve`
@@ -152,12 +154,12 @@ qlearning:
     max_snap_distance_m: 100
   reward:
     road:
-      highway: {weight: 0.55, priority: 1.0, other: -1.0, missing: -0.5}
+      highway: {weight: 0.55, priority: 1.0, secondary_priority: 0.5, other: -1.0, missing: -0.5}
       surface: {weight: 0.30, priority: 1.0, other: -1.0, missing: -0.5}
       width: {weight: 0.15, priority: 1.0, other: -1.0, missing: -0.5}
       width_threshold_m: 3.0
     return_phase_ratio: 0.50
-    outward_penalty_scale: 0.60
+    outward_penalty_scale: 0.0
     return_reward_scale: 1.20
     permissive_penalty_per_100m: -0.10
     revisit_penalty: -5.0
@@ -210,6 +212,18 @@ evaluasi, serta skor CSV/peta yang dibuat oleh `analyze` berikutnya. Jalankan
 ulang `analyze` setelah mengubah parameter scoring agar peta analisis diperbarui.
 Kategori prioritas highway/surface dan kebijakan akses tetap berada di kode.
 
+`highway.secondary_priority` hanya berlaku untuk tag `highway=secondary`.
+Kedua workdir menetapkan `0.5`: prioritas utama tetap `+1`, service/kategori lain
+`−1`, dan tag kosong `−0.5`. `secondary_link` tetap memakai `other`. Dengan
+surface/width kosong, skor gabungan secondary adalah `0.05`, dibanding service
+`−0.775`. Aturan ini preferensi penelitian lokal, bukan penilaian keamanan.
+Jika parameter dihilangkan atau null, secondary memakai `other` seperti versi
+lama; angka `0` merupakan override yang sah. Default core tetap kompatibel dengan
+aturan lama. Nilai eksplisit ikut direkam pada config/road_score metadata dan
+halaman Recorded settings. CSV, peta analisis, peta rute, dan reward training
+memakai pemetaan yang sama; hasil tersimpan tidak berubah sebelum command terkait
+dijalankan ulang.
+
 Config lama dengan `qlearning.scenario` dan tanpa profil masih dapat dibaca.
 Profil lama tanpa `scenario` mewarisi nilai itu; config aktif memakai scenario
 pada setiap profil. Field YAML yang tidak dikenal ditolak.
@@ -239,8 +253,119 @@ kebijakan berbeda. Periksa CSV/metadata setiap profil sebelum membandingkan.
 Audit/replay di atas dilakukan sebelum perubahan mask. Pisahkan output baru agar
 baseline tidak tertimpa; command `train` tetap mengganti hasil di output tujuan.
 
-Snapshot final memiliki **26.345 node dan 58.020 edge terarah**, dengan start node
-`9620836306`. SHA-256 snapshot:
+**Pembanding workdir training — 9 November 2026, selesai 14.31 WIB (`highway.other=-1`).**
+Seluruh12 profil/lima seed sudah memakai `edge_and_endpoint_whitelist_v1`:
+akses way serta kedua endpoint. Config reward, snapshot, start, dan seed sama
+antar A/B/C. Evaluasi akhir greedy menghasilkan **9/60 loop valid**:
+
+| Konfigurasi | A | B | C |
+|---|---:|---:|---:|
+| Dinamis 150k | 0/5 | 2/5 | 1/5 |
+| Dinamis 300k | 0/5 | 0/5 | 0/5 |
+| Horizon 100k, total 150k | 0/5 | 1/5 | 1/5 |
+| Horizon 100k, total 300k | 0/5 | 2/5 | 2/5 |
+
+Ada44 over_distance dan7 no_available_action; tidak ada step_limit (maksimum285
+langkah). Seluruh kegagalan tidak pernah memiliki closing action legal menurut
+metrik tersimpan. Sembilan loop merupakan delapan urutan edge unik; panjang
+4.526,24–5.307,47m. Overlap rata-rata rute valid B5,33% (n=5), C4,09% (n=4);
+ini hanya subset berhasil, bukan seluruh evaluasi. Pada10.000 episode terakhir,
+keberhasilan training horizon-total300k adalah B26,45%/C18,37%; evaluasi tetap
+2/5 pada keduanya. Training bereksplorasi dengan epsilon0,05, evaluasi memakai0.
+
+Pemeriksaan membaca13.500.000 baris history dan mencocokkan60 evaluasi dengan
+trace untuk langkah, panjang, reward, comfort, serta overlap; tidak ada lintasan
+ke node/way yang ditolak whitelist snapshot. Ini belum replay seluruh Q-table
+atau validasi lapangan. Angka31/60 di atas dan audit/diagram dalam `analysis/`
+bertanggal7 November adalah riwayat sebelum mask node, bukan hasil batch ini.
+Jalankan ulang notebook analisis untuk memperbarui tabel/grafik turunan.
+
+**Pembanding — 9 November 2026, selesai 15.41 WIB (`highway.other=-2`).**
+Pengguna melatih ulang seluruh 12 profil/60 seed-run (13.500.000 episode).
+Perubahan config hanya `highway.other`, dari −1 menjadi −2; snapshot, start,
+seed, mask endpoint, dan parameter lain sama dengan pembanding 14.31 WIB.
+Greedy valid turun **9/60 → 4/60**: A 0/20, B 0/20, C 4/20. Urutan
+konfigurasi pada tabel di atas: A=0/0/0/0, B=0/0/0/0, C=1/0/1/2 (per lima seed).
+Jumlah keberhasilan C sama, tetapi seed dan rutenya berubah. Kegagalan terbaru:
+47 over_distance dan 9 no_available_action, tanpa step_limit (maksimum246 langkah).
+
+Seluruh empat loop valid masih melewati 93,55m service pada way `160013981`
+dan `160014008`; penalti lebih besar belum menghindarkan lintasan TPU yang
+sedang ditinjau. `other` juga mencakup secondary dan kategori nonprioritas lain,
+bukan hanya service. Pada 10.000 episode terakhir per seed, keberhasilan training
+horizon-total300k turun B26,45%→6,24% dan C18,37%→13,28%. Seluruh13,5juta baris
+history dibaca; ini belum replay penuh Q-table atau validasi lapangan.
+
+**Pembanding — 9 November 2026, selesai 16.10 WIB (secondary `+0.5`, start lama).**
+Pengguna menyelesaikan seluruh 12 profil/60 run/13.500.000 episode dengan
+`highway.other=-1` dan `secondary_priority=0.5`; parameter lain, snapshot, start,
+seed, dan mask endpoint sama dengan pembanding 14.31 WIB. Greedy valid menjadi
+**3/60: A2/20, B1/20, C0/20**. Urutan dinamis150k/300k dan horizon-total150k/300k:
+A=1/0/0/1, B=0/0/0/1, C=0/0/0/0 (per lima seed). Ada52 over_distance dan5 buntu,
+tanpa step_limit; maksimum258 langkah. Dua loop A tanpa service, satu loop B
+masih melewati93,55m service pada way160013981/160014008. Keberhasilan training
+10.000 episode terakhir horizon-total300k B15,20%/C8,84%, dibanding26,45%/18,37%
+pada pembanding −1 tanpa tier secondary.
+
+Pemeriksaan13,5juta history dan60 trace tidak menemukan ketidakcocokan total
+langkah/jarak/reward atau lintasan akses terlarang. Reward ruas pada1.062 lintasan
+secondary cocok dengan hitungan independen. Ini belum full Q-table replay atau
+validasi lapangan. Skor secondary dengan asphalt dan width>=3m adalah0,725;
+menaikkan preferensi ruas belum memperbaiki kemampuan menutup loop.
+
+Diagnosis jarak pulang memakai Dijkstra pada graf dengan whitelist way/endpoint,
+khusus pemeriksaan hasil; belum menjadi bagian training. Jarak ini mengabaikan
+riwayat kunjungan, sehingga merupakan batas bawah optimistis. Contoh B horizon300k
+seed0 langkah83: sudah3.519,11m, Haversine ke start1.361,02m, tetapi jalan legal
+terpendek2.026,88m. Total minimal5.545,99m sudah melampaui5.500m. Semua57 evaluasi
+gagal memasuki kondisi serupa sebelum melewati batas jarak. Reward arah saat ini
+tetap Haversine; penggunaan jarak graf untuk reward baru usulan yang perlu dibahas.
+Jangan mengubah config/mask atau menjalankan training otomatis. Gunakan metadata
+artefak agar hasil3/60 tidak tercampur dengan pembanding4/60 atau9/60.
+
+**Pembanding — 9 November 2026, selesai 16.29 WIB (start depan gang).**
+Pengguna memakai input `-7.281518, 112.710178`, snap ke node `311432306`.
+Snapshot SHA-256, reward secondary+0,5/other−1, environment, profil dan seed0–4
+sama dengan batch16.10 WIB. Greedy valid naik3/60→**38/60 (A0 B18 C20)**.
+Urutan dinamis150k/300k dan horizon-total150k/300k: A=0/0/0/0, B=3/5/5/5,
+C=5/5/5/5 (per lima seed);12 over_distance/10 buntu. Ringkasan ini membaca
+metadata,60 evaluasi dan trace, belum audit seluruh history/replay Q-table baru.
+Start lama memiliki1 outgoing edge legal dari2; start baru4 dari4. Jadi koneksi
+lokal start berpengaruh besar pada hasil snapshot ini. Testing35/60 pada start
+`9645488767` memakai snapshot serta seed acak berbeda; bukan pembanding satu faktor.
+
+Pengguna meninjau bias aturan arah: sebelum2.500m, mendekat mendapat penalti
+sedangkan menjauh mendapat0; sesudahnya reward mendekat/penalti menjauh.
+Loop dapat memerlukan langkah mendekat di fase awal. Percobaan berikutnya
+menonaktifkan penalti awal; Dijkstra tetap diagnosis saja, belum digunakan training.
+
+**Hasil terbaru training — 9 November 2026, selesai 16.54 WIB (outward `0`).**
+Input kembali ke `-7.282187, 112.709282`, start `9620836306`; reward secondary+0,5,
+return1,20, seed0–4 dan snapshot tetap. Greedy **12/60 (A0 B9 C3)**, dibanding
+3/60 pada start yang sama dengan outward0,60. Urutan profil A=0/0/0/0,
+B=0/1/3/5, C=0/1/1/1 (per lima seed);40 over_distance/8 buntu, tanpa step_limit,
+maks252 langkah. Angka38/60 memakai start berbeda sehingga bukan pembanding satu
+faktor. Metadata60 evaluasi/trace diperiksa, belum audit history/full Q replay baru.
+
+Tujuh dari12 loop valid tanpa service. B horizon-total300k berhasil5/5;
+seed0/1/3 tanpa service, sedangkan seed2/4 melewati dua way TPU yang ditinjau
+(`160013981`, `160014008`). Dari seluruh20 evaluasi per skenario, B5 dan C17
+melewati dua way itu; hitungan ini bukan semua lintasan yang sekadar mendekati TPU.
+Pemeriksaan konektivitas sementara tanpa dua way tersebut tetap menjangkau24.633
+node dari start (semula24.638). Hanya5 node hilang dari jangkauan; ini diagnosis,
+bukan perubahan graf/action mask atau pembuktian semua loop bebas TPU tersedia.
+
+Contoh B/C horizon300k seed0:43 langkah pertama sama, kemudian node1720772306
+bin9 memilih arah berbeda. B memilih1720772195 (Q3,9216 vs3,4646 untuk9570022203)
+dan berhasil5.429,85m tanpa service. C dengan previous1720772406 memilih9570022203
+(Q5,7619 vs5,5095 untuk1720772195), melewati93,55m way TPU dan gagal over_distance.
+Kedua alternatif legal pada prefix ini. Ini contoh perbedaan kebijakan yang
+tersimpan, belum penjelasan lengkap penyebab pembelajaran C. Jangan mengubah
+reward/config/training otomatis. Config testing juga outward0, tetapi hasil
+terakhirnya35/60 masih batch16.24 WIB dengan outward0,60 dan seed/snapshot berbeda.
+
+Snapshot training memiliki **26.345 node dan 58.020 edge terarah**; start aktif
+`9620836306` (start percobaan depan gang `311432306`). SHA-256 snapshot:
 `f0a5885db46c2f9cd962674aaeaa82f7d5c69579d5ba5d80641f727b6e20f964`.
 CSV, Q-table, peta hasil, serta cache merupakan artefak lokal yang tidak masuk
 Git. Unduhan OSM baru dapat mengubah graf dan hasil, meskipun seed sama.
@@ -306,6 +431,30 @@ ruas yang aksesnya ditolak; ini bukan daftar action legal pada suatu step.
 Edge paralel tetap terpisah per key, sedangkan jumlah tetangga memakai ID unik.
 Peta analisis memakai inspeksi node yang sama.
 
+**Q-values** pada kontrol layer menampilkan nilai Q untuk outgoing action node
+terpilih, bukan agregat seluruh state. Aktifkan layer, lalu klik node atau tombol
+**Inspect node** pada popup ruas. **Inspect node ID** juga dapat mencari ID tertentu.
+Pada rute, pilih **Visit / step** untuk memakai
+progress bin dan previous node saat evaluasi; pada node lain pilih **Stored state**.
+Popup memakai latar putih dengan opasitas 86% dengan teks tetap solid dan jarak ringkas
+agar peta di belakangnya masih terlihat. Detail node/koneksi tetap dapat dibuka.
+Popup menampilkan Q per `(next_node, key)`, action terpilih, mask, dan best Q legal
+(termasuk tie sesuai toleransi agen). Action tanpa entri memakai `0 · unrecorded`;
+state tersimpan tanpa riwayat tidak diberi klaim mask dinamis atau pilihan greedy.
+Mask debug direkonstruksi dari prefix trace, config, dan versi akses hasil tersebut;
+filter node terbaru tidak dipaksakan pada arsip dengan kebijakan way saja.
+
+Q-table belum dibaca saat membuka peta atau ketika Q-values mati. Endpoint khusus
+`/q-values` membaca satu CSV seed secara streaming ketika node diinspeksi dan
+mengirim hanya state/action node tersebut beserta konteks kunjungannya. Browser
+menyimpan maksimum100 pasangan seed/node per halaman; pindah bin/previous node
+memakai data itu. **Reload Q data** membuang cache node terpilih. Hasil di server
+tidak dicache, sehingga pembacaan node baru dapat memerlukan jeda; popup mencatat
+waktu baca server. Membuka ulang halaman membuang cache browser. Mode ini memerlukan
+CLI `serve` terbaru; file CSV/JSON lain tetap tidak dapat diunduh langsung.
+Peta dan trace yang berbeda atau Q pengamatan yang tidak cocok ditolak, tanpa
+training ulang atau perubahan Q-table/rute/metrik tersimpan.
+
 Nilai metrik yang tidak terdefinisi disimpan sebagai NaN pada CSV dan null pada JSON.
 
 Training menyiapkan satu direktori sementara lalu memublikasikannya setelah
@@ -342,7 +491,8 @@ tujuan dan key. Setiap edge tetap terpisah pada CSV, termasuk arah balik dan
 edge paralel. Panjang memakai Haversine, radius bumi 6.371.009 m.
 
 Atribut reward adalah highway, surface, width. Highway prioritas: footway,
-pedestrian, living_street, residential, tertiary. Surface prioritas: asphalt,
+pedestrian, living_street, residential, tertiary. Secondary memakai prioritas
+kedua bila `secondary_priority` diisi; service tetap `other`. Surface prioritas: asphalt,
 concrete, paving_stones, paved. Width diparse sekali ketika load: angka tunggal,
 koma desimal, dan satuan meter didukung; gabungan/invalid mendapat skor missing.
 Tag asli tetap tersedia pada CSV/popup. Access scalar kosong/yes/permissive

@@ -26,7 +26,32 @@
   const state=new URL(location.href);state.searchParams.set('file',link.getAttribute('href'));history.replaceState(null,'',state);
  }
  for(const row of rows){row.querySelector('.result').addEventListener('click',event=>{if(event.ctrlKey||event.metaKey||event.shiftKey)return;event.preventDefault();select(row,event.currentTarget.href);});row.querySelector('.details')?.addEventListener('click',event=>{if(event.ctrlKey||event.metaKey||event.shiftKey)return;event.preventDefault();select(row,event.currentTarget.href);});}
- const filter=()=>{const text=document.getElementById('search').value.toLowerCase(),kind=document.getElementById('kind').value;let count=0;for(const row of rows){row.hidden=!row.textContent.toLowerCase().includes(text)||(kind!=='all'&&row.dataset.kind!==kind);if(!row.hidden)count++;}document.getElementById('count').textContent=count;};
+ // Search result fields only; action labels such as "Training / analysis
+ // details" would otherwise match every result, including testing workdirs.
+ const searchable=rows.map(row=>{
+  const name=row.querySelector('.path').textContent.toLowerCase();
+  const output=name.indexOf('/output/');
+  const workdir=output<0?'':name.slice(0,output).split('/').at(-1);
+  const text=[name,row.querySelector('.result').textContent,row.querySelector('.summary')?.textContent||''].join(' ').toLowerCase();
+  return {row,workdir,text};
+ });
+ const workdirs=new Set(searchable.map(item=>item.workdir).filter(Boolean));
+ const filter=()=>{
+  const words=document.getElementById('search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const kind=document.getElementById('kind').value;
+  let count=0;
+  for(const item of searchable){
+   const matches=words.every(word=>{
+    // An exact workdir name scopes the search. Do not confuse the workdir
+    // with the nested output/training directory shared by all route results.
+    const workdir=word.replace(/^\/+|\/+$/g,'').replace(/^workdirs\//,'');
+    return workdirs.has(workdir)?item.workdir===workdir:item.text.includes(word);
+   });
+   item.row.hidden=!matches||(kind!=='all'&&item.row.dataset.kind!==kind);
+   if(!item.row.hidden)count++;
+  }
+  document.getElementById('count').textContent=count;
+ };
  if(rows.some(row=>row.dataset.kind==='map'))document.getElementById('kind').value='map';filter();
  document.getElementById('search').addEventListener('input',filter);document.getElementById('kind').addEventListener('change',filter);document.getElementById('refresh').addEventListener('click',()=>location.reload());
  frame.addEventListener('load',()=>{try{if(frame.contentWindow.location.href!=='about:blank')open.href=frame.contentWindow.location.href;}catch{}});

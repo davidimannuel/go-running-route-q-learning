@@ -13,7 +13,7 @@ import (
 
 //go:embed routes.gohtml
 var routesHTML string
-var routesTemplate = template.Must(template.New("routes").Parse(routesHTML + nodeAccessHTML + nodeInspectionHTML))
+var routesTemplate = template.Must(template.New("routes").Parse(routesHTML + nodeAccessHTML + nodeInspectionHTML + qValuesHTML))
 
 type RouteTrial struct {
 	Metrics qlearning.Metrics

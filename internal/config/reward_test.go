@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -41,6 +42,35 @@ func TestRewardOverridesPreserveDefaultsAndAllowZero(t *testing.T) {
 		text := validYAML + "qlearning:\n  training:\n    profiles: [{name: missing" + scenario + ", episodes: 3}]\n"
 		if _, err := loadYAML(t, text); err == nil || !strings.Contains(err.Error(), "scenario") {
 			t.Fatalf("invalid scenario accepted: %s %v", text, err)
+		}
+	}
+}
+
+func TestSecondaryPriorityConfig(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  float64
+	}{
+		{"", -2}, {", secondary_priority: 0.5", 0.5}, {", secondary_priority: 0", 0},
+	} {
+		cfg, err := loadYAML(t, validYAML+fmt.Sprintf("qlearning:\n  reward:\n    road:\n      highway: {other: -2%s}\n", tc.value))
+		if err != nil {
+			t.Fatal(err)
+		}
+		score := cfg.QLearning.Reward.Road.ScoreRoad("secondary", "", 0, false)
+		if score.HighwayScore != tc.want || cfg.QLearning.Reward.Road.Highway.Weight != 0.55 {
+			t.Fatalf("secondary override %q: %+v", tc.value, cfg.QLearning.Reward.Road.Highway)
+		}
+	}
+	for _, field := range []string{
+		"highway: {secondary_priority: .nan}",
+		"highway: {secondary_priority: .inf}",
+		"highway: {secondary_priority: -.inf}",
+		"surface: {secondary_priority: 0.5}",
+		"width: {secondary_priority: 0.5}",
+	} {
+		if _, err := loadYAML(t, validYAML+"qlearning:\n  reward:\n    road:\n      "+field+"\n"); err == nil {
+			t.Fatalf("invalid secondary preference accepted: %s", field)
 		}
 	}
 }

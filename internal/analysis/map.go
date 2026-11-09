@@ -22,6 +22,9 @@ var nodeAccessHTML string
 //go:embed node-inspection.gohtml
 var nodeInspectionHTML string
 
+//go:embed q-values.gohtml
+var qValuesHTML string
+
 var roadAnalysisTemplate = template.Must(template.New("road-analysis").Parse(roadAnalysisHTML + nodeAccessHTML + nodeInspectionHTML))
 
 type mapNode struct {

@@ -48,6 +48,10 @@ func TestReferenceWorkdirConfigurations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	highway := cfg.QLearning.Reward.Road.Highway
+	if highway.SecondaryPriority == nil || *highway.SecondaryPriority != 0.5 || highway.Other != -1 {
+		t.Fatalf("workdir highway preferences mismatch: %+v", highway)
+	}
 	training := cfg.QLearning.Training
 	if cfg.QLearning.Scenario != "" || fmt.Sprint(training.Seeds) != "[0 1 2 3 4]" || training.MaxWorkers != 5 || len(training.Profiles) != 3*len(expected) {
 		t.Fatalf("shared settings mismatch: %+v", training)
@@ -74,7 +78,7 @@ func TestReferenceWorkdirConfigurations(t *testing.T) {
 	if !reflect.DeepEqual(testTraining.Profiles, training.Profiles) {
 		t.Fatal("testing must use the same twelve profile definitions as training")
 	}
-	if testing.QLearning.Environment != cfg.QLearning.Environment || testing.QLearning.Reward != cfg.QLearning.Reward {
+	if testing.QLearning.Environment != cfg.QLearning.Environment || !testing.QLearning.Reward.Equal(cfg.QLearning.Reward) {
 		t.Fatal("testing environment and reward must match training")
 	}
 

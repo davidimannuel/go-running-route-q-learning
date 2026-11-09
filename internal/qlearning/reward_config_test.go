@@ -2,6 +2,7 @@ package qlearning
 
 import (
 	"context"
+	"encoding/json"
 	"math/rand/v2"
 	"testing"
 )
@@ -93,4 +94,92 @@ func TestConfiguredTerminalAndDeadEndRewards(t *testing.T) {
 		t.Fatal(err)
 	}
 	near(t, terminal.Components.Terminal, -11)
+}
+
+func TestSecondaryRewardJSONCompatibility(t *testing.T) {
+	for _, tc := range []struct {
+		body string
+		want float64
+	}{
+		{`{"road":{"highway":{"other":-2}}}`, -2},
+		{`{"road":{"highway":{"other":-1,"secondary_priority":0.5}}}`, 0.5},
+		{`{"road":{"highway":{"other":-1,"secondary_priority":0}}}`, 0},
+	} {
+		cfg := DefaultRewardConfig()
+		if err := json.Unmarshal([]byte(tc.body), &cfg); err != nil {
+			t.Fatal(err)
+		}
+		near(t, cfg.Road.ScoreRoad("secondary", "", 0, false).HighwayScore, tc.want)
+		body, err := json.Marshal(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var restored RewardConfig
+		if err := json.Unmarshal(body, &restored); err != nil {
+			t.Fatal(err)
+		}
+		if !cfg.Equal(restored) {
+			t.Fatal("JSON round trip changed effective reward")
+		}
+	}
+}
+
+func TestSecondaryRewardReachesBellmanAndCacheCheck(t *testing.T) {
+	p := testPreparedGraph(t, [][3]int{{0, 1, 100}, {1, 2, 100}})
+	edge := &p.graph.OutgoingEdges(0)[0]
+	edge.Highway, edge.Surface = "secondary", ""
+	edge.Width, edge.WidthValid = 0, false
+	cfg := DefaultConfig()
+	cfg.Scenario = ScenarioB
+	priority := 0.5
+	cfg.Reward.Road.Highway.SecondaryPriority = &priority
+	var err error
+	p, err = NewPreparedGraph(p.graph, 0, cfg.Reward)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := testEnvironment(t, p, ScenarioB)
+	id := ActionID{1, 0}
+	step, err := TrainStep(env, make(QTable), rand.New(rand.NewPCG(1, 0)), cfg.Training, 0, &id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 100m: .55*.5 + .30*(-.5) + .15*(-.5) = .05.
+	// Moving away from start adds no direction reward. Next Q=0; .15*.05=.0075.
+	near(t, step.Components.Edge, 0.05)
+	near(t, step.Reward, 0.05)
+	near(t, step.QAfter, 0.0075)
+
+	// A separately decoded config has different pointers but identical scores.
+	body, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored Config
+	if err := json.Unmarshal(body, &restored); err != nil {
+		t.Fatal(err)
+	}
+	restored.Training.Episodes = 2
+	if _, err := Train(context.Background(), p, restored, 0, nil); err != nil {
+		t.Fatalf("equivalent decoded reward rejected: %v", err)
+	}
+	if _, _, err := Evaluate(context.Background(), p, restored, 0, make(QTable)); err != nil {
+		t.Fatalf("equivalent decoded evaluation rejected: %v", err)
+	}
+	// Editing the caller's optional value must not mutate the prepared snapshot.
+	priority = 0.25
+	near(t, p.reward.Road.Highway.secondaryScore(), 0.5)
+	if _, err := Train(context.Background(), p, cfg, 0, nil); err == nil {
+		t.Fatal("changed secondary score accepted with stale prepared rewards")
+	}
+	if _, _, err := Evaluate(context.Background(), p, cfg, 0, make(QTable)); err == nil {
+		t.Fatal("changed secondary score accepted by evaluation")
+	}
+	legacy := DefaultRewardConfig()
+	explicit := legacy
+	fallback := legacy.Road.Highway.Other
+	explicit.Road.Highway.SecondaryPriority = &fallback
+	if !legacy.Equal(explicit) {
+		t.Fatal("explicit legacy score should match an omitted secondary score")
+	}
 }

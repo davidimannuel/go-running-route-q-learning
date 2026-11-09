@@ -54,6 +54,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if r.URL.Path == "/q-values" {
+		h.serveQValues(w, r)
+		return
+	}
 	if r.URL.Path == "/details" {
 		h.serveDetails(w, r)
 		return
