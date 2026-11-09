@@ -16,12 +16,21 @@ import (
 //go:embed road-analysis.gohtml
 var roadAnalysisHTML string
 
-var roadAnalysisTemplate = template.Must(template.New("road-analysis").Parse(roadAnalysisHTML))
+//go:embed node-access.gohtml
+var nodeAccessHTML string
+
+//go:embed node-inspection.gohtml
+var nodeInspectionHTML string
+
+var roadAnalysisTemplate = template.Must(template.New("road-analysis").Parse(roadAnalysisHTML + nodeAccessHTML + nodeInspectionHTML))
 
 type mapNode struct {
-	ID        string  `json:"id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	ID            string  `json:"id"`
+	Latitude      float64 `json:"latitude"`
+	Longitude     float64 `json:"longitude"`
+	Access        string  `json:"access,omitempty"`
+	Barrier       string  `json:"barrier,omitempty"`
+	AccessAllowed bool    `json:"access_allowed"`
 }
 
 type mapEdge struct {
@@ -98,7 +107,11 @@ func prepareMapData(g *osm.Graph, latitude, longitude float64, scores qlearning.
 		if err := validateCoordinates(node.Lat, node.Lon); err != nil {
 			return mapData{}, fmt.Errorf("export map: node %d: %w", id, err)
 		}
-		data.Nodes = append(data.Nodes, mapNode{ID: strconv.Itoa(id), Latitude: node.Lat, Longitude: node.Lon})
+		data.Nodes = append(data.Nodes, mapNode{
+			ID: strconv.Itoa(id), Latitude: node.Lat, Longitude: node.Lon,
+			Access: node.Tags.Get("access"), Barrier: node.Tags.Get("barrier"),
+			AccessAllowed: qlearning.AccessAllowed(node.Tags.Get("access")),
+		})
 	}
 	segmentIndex := make(map[[2]int]int)
 	for _, edge := range sortedEdges(g) {

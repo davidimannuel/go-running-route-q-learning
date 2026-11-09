@@ -15,7 +15,8 @@ type Actions struct {
 	byNode map[int][]*osm.OSMEdge
 }
 
-// NewActions filters the graph once by access and positive finite length.
+// NewActions checks way and endpoint access once, plus positive finite length.
+// A gate/barrier tag alone does not block a node; its access value does.
 // It stores pointers to the original edges, preserving parallel
 // (To, Key) identities without duplicating edge attributes or tags. The graph
 // must be non-nil and read-only while these actions are used. Rebuild Actions
@@ -23,7 +24,10 @@ type Actions struct {
 // Reference: rute_lari_core.py, build_actions (static candidate filtering).
 func NewActions(graph *osm.Graph) *Actions {
 	actions := &Actions{byNode: make(map[int][]*osm.OSMEdge, len(graph.Nodes))}
-	for nodeID := range graph.Nodes {
+	for nodeID, node := range graph.Nodes {
+		if !AccessAllowed(node.Tags.Get("access")) {
+			continue
+		}
 		var candidates []*osm.OSMEdge
 		edges := graph.OutgoingEdges(nodeID)
 		for i := range edges {
@@ -32,7 +36,8 @@ func NewActions(graph *osm.Graph) *Actions {
 			if edge.LengthM <= 0 || math.IsNaN(edge.LengthM) || math.IsInf(edge.LengthM, 0) {
 				continue
 			}
-			if AccessAllowed(edge.Access) {
+			to := graph.Nodes[edge.To]
+			if AccessAllowed(edge.Access) && AccessAllowed(to.Tags.Get("access")) {
 				candidates = append(candidates, edge)
 			}
 		}

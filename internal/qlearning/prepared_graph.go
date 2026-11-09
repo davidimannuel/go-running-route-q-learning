@@ -27,7 +27,7 @@ type PreparedGraph struct {
 
 // NearestStart considers all graph nodes, like the reference nearest-node snap.
 // Ties use the smaller ID, avoiding randomized Go map iteration. A nearest node
-// with no legal outgoing edges is rejected by the CLI rather than silently
+// with disallowed access or no legal outgoing edges is rejected rather than silently
 // selecting a different node.
 func NearestStart(graph *osm.Graph, lat, lon float64) (int, float64, error) {
 	if graph == nil || len(graph.Nodes) == 0 {
@@ -58,6 +58,9 @@ func NewPreparedGraph(graph *osm.Graph, startNode int, reward RewardConfig) (*Pr
 	start, ok := graph.Nodes[startNode]
 	if !ok {
 		return nil, fmt.Errorf("prepare training: start node %d is missing", startNode)
+	}
+	if access := start.Tags.Get("access"); !AccessAllowed(access) {
+		return nil, fmt.Errorf("prepare training: start node %d has disallowed access %q", startNode, access)
 	}
 	p := &PreparedGraph{graph: graph, reward: reward, startNode: startNode, actions: NewActions(graph),
 		distances: make(map[int]float64, len(graph.Nodes)), edges: make(map[*osm.OSMEdge]edgeData)}

@@ -46,7 +46,7 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 	if err := graph.LoadOSM(osm.OSMData{Version: 0.6, Elements: []osm.Element{
 		{Type: osm.TypeNode, ID: 0, Lat: 0, Lon: 0}, {Type: osm.TypeNode, ID: 1, Lat: 0, Lon: 0.01},
 		{Type: osm.TypeWay, ID: 10, Nodes: []int{0, 1}, Tags: osm.Tags{"name": hostile}},
-		{Type: osm.TypeNode, ID: 2, Lat: 0.01, Lon: 0.01},
+		{Type: osm.TypeNode, ID: 2, Lat: 0.01, Lon: 0.01, Tags: osm.Tags{"access": "no", "barrier": "gate"}},
 		{Type: osm.TypeWay, ID: 20, Nodes: []int{1, 2}, Tags: osm.Tags{"access": "private"}},
 	}}); err != nil {
 		t.Fatal(err)
@@ -82,6 +82,9 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 	}
 	if len(payload.Graph.Nodes) != 3 || len(payload.Graph.Edges) != 4 || len(payload.Graph.Segments) != 2 {
 		t.Fatalf("route inspection must include the surrounding graph: %+v", payload.Graph)
+	}
+	if node := payload.Graph.Nodes[2]; node.Access != "no" || node.Barrier != "gate" || node.AccessAllowed {
+		t.Fatalf("route map must retain blocked node tags: %+v", node)
 	}
 	privateEdges := 0
 	for _, edge := range payload.Graph.Edges {

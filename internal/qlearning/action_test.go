@@ -171,3 +171,44 @@ func BenchmarkNewActions(b *testing.B) {
 		}
 	}
 }
+
+func TestActionsCheckNodeAccessWithoutRemovingGraphData(t *testing.T) {
+	for _, tc := range []struct {
+		access  string
+		allowed bool
+	}{
+		{"", true}, {"yes", true}, {" permissive ", true},
+		{"no", false}, {" NO ", false}, {"private", false},
+		{"unknown", false}, {"yes;permissive", false},
+	} {
+		t.Run(tc.access, func(t *testing.T) {
+			graph := actionTestGraph(t)
+			node := graph.Nodes[2]
+			node.Tags = osm.Tags{"access": tc.access, "barrier": "gate", "foot": "yes"}
+			graph.Nodes[2] = node
+			actions := NewActions(graph)
+			want := 0
+			if tc.allowed {
+				want = 2 // Both parallel ways and their reverse actions survive.
+			}
+			if got := len(actions.Available(2)); got != want {
+				t.Fatalf("outgoing actions at gate=%d; want %d", got, want)
+			}
+			incoming := 0
+			for _, edge := range actions.Available(1) {
+				if edge.To == 2 {
+					incoming++
+				}
+			}
+			if incoming != want {
+				t.Fatalf("incoming actions at gate=%d; want %d", incoming, want)
+			}
+			if got := actions.Available(3); len(got) != 1 || got[0].To != 1 {
+				t.Fatal("node access filtering removed an unrelated legal action")
+			}
+			if len(graph.Nodes) != 5 || len(graph.OutgoingEdges(2)) != 2 || !reflect.DeepEqual(graph.Nodes[2].Tags, node.Tags) {
+				t.Fatal("node access filtering changed the source graph")
+			}
+		})
+	}
+}

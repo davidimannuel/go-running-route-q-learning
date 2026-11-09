@@ -80,7 +80,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	http.ServeContent(w, r, path.Base(name), info.ModTime(), file)
+	// Local artifacts are overwritten in place; always send the current HTML,
+	// even when a regenerated file keeps its previous modification timestamp.
+	w.Header().Set("Cache-Control", "no-store")
+	http.ServeContent(w, r, path.Base(name), time.Time{}, file)
 }
 
 // allowedPath rejects traversal and hidden entries before touching the filesystem.

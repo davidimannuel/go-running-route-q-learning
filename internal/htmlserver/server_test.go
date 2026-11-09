@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func writeFixture(t *testing.T, root, name, content string) {
@@ -202,5 +203,38 @@ func TestLocalHTTPNavigation(t *testing.T) {
 	content, err := io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode != http.StatusOK || !strings.Contains(string(content), "Local map") {
 		t.Fatalf("status=%d, body=%q, error=%v", resp.StatusCode, content, err)
+	}
+}
+
+func TestHTMLRefreshIgnoresOldModificationTime(t *testing.T) {
+	root := t.TempDir()
+	h := newHandler(t, root)
+	writeFixture(t, root, "map.html", "old map")
+	modified := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	file := filepath.Join(root, "map.html")
+	if err := os.Chtimes(file, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	if got := request(h, http.MethodGet, "/files/map.html"); got.Code != http.StatusOK || got.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("HTML must not be cached: %d, %v", got.Code, got.Header())
+	}
+	writeFixture(t, root, "map.html", "new map with node access")
+	if err := os.Chtimes(file, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	for _, method := range []string{http.MethodGet, http.MethodHead} {
+		req := httptest.NewRequest(method, "/files/map.html", nil)
+		req.Header.Set("If-Modified-Since", modified.Format(http.TimeFormat))
+		response := httptest.NewRecorder()
+		h.ServeHTTP(response, req)
+		if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != "no-store" {
+			t.Fatalf("%s returned stale conditional response: %d, %v", method, response.Code, response.Header())
+		}
+		if method == http.MethodGet && response.Body.String() != "new map with node access" {
+			t.Fatal("regenerated HTML was not served")
+		}
+		if method == http.MethodHead && response.Body.Len() != 0 {
+			t.Fatal("HEAD must not send HTML body")
+		}
 	}
 }

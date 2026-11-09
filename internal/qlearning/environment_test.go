@@ -393,3 +393,36 @@ func TestActionsNumericDestinationAndKeyOrder(t *testing.T) {
 		t.Fatal("sorting candidates reordered graph storage")
 	}
 }
+
+func TestNodeAccessMaskAppliesToPolicyStepAndBootstrap(t *testing.T) {
+	p := testPreparedGraph(t, [][3]int{{0, 1, 100}, {0, 2, 100}, {1, 2, 100}, {1, 3, 100}, {3, 4, 100}})
+	node := p.graph.Nodes[2]
+	node.Tags = osm.Tags{"access": "no", "barrier": "gate"}
+	p.graph.Nodes[2] = node
+	var err error
+	p, err = NewPreparedGraph(p.graph, 0, DefaultRewardConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, epsilon := range []float64{0, 1} {
+		e := testEnvironment(t, p, ScenarioB)
+		q := make(QTable)
+		q[e.State()] = map[ActionID]float64{{NextNode: 2}: 1000}
+		rng := rand.New(rand.NewPCG(0, 0))
+		id, ok := chooseAction(e, q, rng, epsilon)
+		if !ok || id.NextNode != 1 {
+			t.Fatalf("epsilon=%v chose blocked node: %v", epsilon, id)
+		}
+		before := e.State()
+		if _, err := e.Step(ActionID{NextNode: 2}); err == nil || e.State() != before {
+			t.Fatal("explicit blocked action must be rejected without changing state")
+		}
+		next := State{Scenario: ScenarioB, CurrentNode: 1, PreviousNode: -1}
+		q[next] = map[ActionID]float64{{NextNode: 2}: 1000, {NextNode: 3}: 4}
+		step, err := TrainStep(e, q, rng, DefaultConfig().Training, epsilon, &id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		near(t, step.MaxNextQ, 4)
+	}
+}

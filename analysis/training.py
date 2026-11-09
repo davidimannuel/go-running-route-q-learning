@@ -6,12 +6,10 @@ project. Histories are read in chunks; seed IDs retain uint64 precision as text.
 
 from pathlib import Path
 import json
-from html import escape
-from urllib.parse import quote
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from IPython.display import HTML, display
+from IPython.display import display
 
 from .common import PROJECT_ROOT, positive_integer, read_workdir, resolve_workdir, show_environment
 
@@ -581,17 +579,3 @@ class TrainingAnalysis:
             cross_summary = pd.DataFrame(cross_rows)
             display(cross_summary.round(4))
             cross_summary.to_csv(self.analysis_dir / "state_comparison.csv", index=False)
-
-    def show_maps(self, server_root=PROJECT_ROOT / "workdirs", server_base="http://127.0.0.1:8080"):
-        self._require_loaded()
-        server_root = resolve_workdir(server_root)
-        for result in self.results:
-            path = result["directory"] / "routes.html"
-            try:
-                relative = path.resolve().relative_to(server_root.resolve()).as_posix()
-                url = f"{server_base.rstrip('/')}/?file={quote('/files/' + relative, safe='')}"
-                display(HTML(f'<a href="{escape(url, quote=True)}" target="_blank" rel="noopener">'
-                             f'Peta {escape(result["scenario"])} / {escape(result["name"])}</a>'))
-            except ValueError:
-                print("Peta berada di luar SERVER_ROOT:", path)
-        print("Tabel dan diagram turunan:", self.analysis_dir)

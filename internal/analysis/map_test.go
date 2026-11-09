@@ -76,7 +76,7 @@ func TestMapEscapesOSMTextAndPreservesLargeIDs(t *testing.T) {
 	const attack = `</script><script>alert("OSM")</script><img onerror=alert(1)>`
 	g := osm.NewGraph()
 	if err := g.LoadOSM(osm.OSMData{Elements: []osm.Element{
-		{Type: osm.TypeNode, ID: id, Lat: 1, Lon: 2}, {Type: osm.TypeNode, ID: id + 1, Lat: 1, Lon: 2.01},
+		{Type: osm.TypeNode, ID: id, Lat: 1, Lon: 2, Tags: osm.Tags{"access": attack, "barrier": attack}}, {Type: osm.TypeNode, ID: id + 1, Lat: 1, Lon: 2.01},
 		{Type: osm.TypeWay, ID: 12, Nodes: []int{id, id + 1}, Tags: osm.Tags{"name": attack, "width": attack}},
 	}}); err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func TestMapEscapesOSMTextAndPreservesLargeIDs(t *testing.T) {
 		t.Fatal("OSM text can escape the embedded script")
 	}
 	data := readMapData(t, out.String())
-	if data.Nodes[0].ID != "9007199254740993" || data.Edges[0].Name != attack || data.Edges[0].Width != attack {
+	if data.Nodes[0].ID != "9007199254740993" || data.Edges[0].Name != attack || data.Edges[0].Width != attack || data.Nodes[0].Access != attack || data.Nodes[0].Barrier != attack || data.Nodes[0].AccessAllowed {
 		t.Fatal("source text or ID precision was lost")
 	}
 }
@@ -152,6 +152,35 @@ func checkScores(t *testing.T, got, want qlearning.RoadScores) {
 	} {
 		if math.IsNaN(pair[0]) || math.Abs(pair[0]-pair[1]) > 1e-12 {
 			t.Fatalf("scores=%+v; want %+v", got, want)
+		}
+	}
+}
+
+func TestMapNodeAccessMatchesActionPolicy(t *testing.T) {
+	graph := analysisTestGraph(t)
+	for id, tags := range map[int]osm.Tags{
+		1: {"access": "no", "barrier": "gate"},
+		2: {"access": " YES ", "barrier": "gate"},
+		3: {"barrier": "gate"},
+		4: {"access": "private"},
+	} {
+		node := graph.Nodes[id]
+		node.Tags = tags
+		graph.Nodes[id] = node
+	}
+	var out bytes.Buffer
+	if err := MapToHTML(&out, graph, 0, 0, qlearning.DefaultRewardConfig().Road); err != nil {
+		t.Fatal(err)
+	}
+	data := readMapData(t, out.String())
+	for _, node := range data.Nodes {
+		id, err := strconv.Atoi(node.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tags := graph.Nodes[id].Tags
+		if node.Access != tags.Get("access") || node.Barrier != tags.Get("barrier") || node.AccessAllowed != (id == 2 || id == 3) {
+			t.Fatalf("node attributes or policy lost: %+v", node)
 		}
 	}
 }

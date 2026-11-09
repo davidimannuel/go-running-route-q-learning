@@ -51,17 +51,21 @@
     </select>
     <label><input id="show-nodes" type="checkbox"> Show nodes</label>
     <small id="node-status">Nodes are hidden.</small>
+    <label><input id="show-node-access" type="checkbox"> Node access / barriers</label>
+    <small>Show tagged access/barrier nodes at any zoom. Click a colored marker for its access value.</small>
     <button id="fit" type="button">Show entire graph</button>
     <strong id="legend-title">Highway</strong>
     <ul id="legend"></ul>
     <small>Legend counts refer to displayed line groups. Click a road to inspect every directed edge it represents.</small>
-    <small>Colors and comfort scores express research preferences, not measured safety or runner comfort. Access colors show source tags, not an action mask decision.</small>
+    <small>Colors and comfort scores express research preferences, not measured safety or runner comfort. Road Access colors show way tags. Use Node access / barriers above to inspect tagged nodes separately.</small>
     <small>The green START (input) marker shows the configured coordinate. The agent start node has not been selected. Background tiles may contain newer edits than this snapshot.</small>
   </aside>
 
   <!-- Go serializes and escapes this typed payload. No local JSON fetch is needed. -->
   <script id="road-data" type="application/json">{{.}}</script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  {{template "node-inspection"}}
+  {{template "node-access"}}
   <script>
     const data = JSON.parse(document.getElementById("road-data").textContent);
     if (typeof L === "undefined") {
@@ -76,9 +80,20 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     const renderer = L.canvas({ padding: 0.3 });
+    const nodeInspector = createNodeInspector(map, data);
+    const nodeAccess = createNodeAccessLayer(map, data.nodes, nodeInspector);
+    const accessToggle = document.getElementById("show-node-access");
+    accessToggle.addEventListener("change", () => {
+      if (accessToggle.checked) nodeAccess.addTo(map);
+      else map.removeLayer(nodeAccess);
+    });
+    // Keep the single panel checkbox aligned with layer visibility.
+    nodeAccess.on("add remove", () => { accessToggle.checked = map.hasLayer(nodeAccess); });
     const coordinates = new Map(data.nodes.map(node => [node.id, [node.latitude, node.longitude]]));
     const roads = L.featureGroup().addTo(map);
-    const nodeLayer = L.layerGroup().addTo(map);
+    const nodeLayer = createGraphNodeLayer(map, data.nodes, nodeInspector, status => {
+      document.getElementById("node-status").textContent = status;
+    });
     const themeSelect = document.getElementById("theme");
     const nodeToggle = document.getElementById("show-nodes");
     const roadLayers = [];
@@ -225,29 +240,6 @@
       }
     }
 
-    // Draw nodes only at close zoom and inside the viewport. This keeps tens of
-    // thousands of raw geometry nodes from obscuring the road overlay.
-    function updateNodes() {
-      nodeLayer.clearLayers();
-      const status = document.getElementById("node-status");
-      if (!nodeToggle.checked) { status.textContent = "Nodes are hidden."; return; }
-      if (map.getZoom() < 17) { status.textContent = "Zoom to level 17 or closer to show nodes."; return; }
-      const bounds = map.getBounds();
-      let count = 0;
-      let limited = false;
-      for (const node of data.nodes) {
-        const point = coordinates.get(node.id);
-        if (!bounds.contains(point)) continue;
-        if (count === 2000) { limited = true; break; }
-        L.circleMarker(point, { renderer, radius: 4, color: "#172033", fillColor: "white", fillOpacity: 1, weight: 1.5 })
-          .addTo(nodeLayer)
-          .bindTooltip(() => textElement("span", "Node " + node.id))
-          .bindPopup(() => textElement("pre", "Node: " + node.id + "\nLatitude: " + node.latitude + "\nLongitude: " + node.longitude, "details"));
-        count++;
-      }
-      status.textContent = count.toLocaleString() + " visible nodes" + (limited ? " (limit reached; zoom in)." : ".");
-    }
-
     function startPopup() {
       const container = document.createElement("div");
       const heading = textElement("div", "", "start-popup-heading");
@@ -287,9 +279,11 @@
     }
     document.getElementById("summary").textContent = data.nodes.length.toLocaleString() + " nodes · " + data.edges.length.toLocaleString() + " directed edges · " + data.segments.length.toLocaleString() + " displayed line groups";
     themeSelect.addEventListener("change", applyTheme);
-    nodeToggle.addEventListener("change", updateNodes);
+    nodeToggle.addEventListener("change", () => {
+      if (nodeToggle.checked) nodeLayer.addTo(map);
+      else map.removeLayer(nodeLayer);
+    });
     document.getElementById("fit").addEventListener("click", fitGraph);
-    map.on("moveend", updateNodes);
     applyTheme();
     fitGraph();
     // References: https://leafletjs.com/reference-1.9.4.html

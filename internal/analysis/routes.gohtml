@@ -17,16 +17,20 @@
 <label for="kilometer">Route distance</label><select id="kilometer"><option value="all">All kilometers</option></select>
 <label class="check"><input type="checkbox" id="show-overlap">Highlight repeated roads</label>
 <label class="check"><input type="checkbox" id="show-directions">Direction arrows</label>
+<label class="check"><input type="checkbox" id="show-graph-nodes">Show graph nodes</label>
+<div class="muted" id="node-status">Nodes are hidden.</div>
 <div class="muted" id="route-view" aria-live="polite"></div>
 <div class="muted" id="overlap-help" hidden><span class="repeat-key"></span>Dashed outlines mark roads traversed more than once in the entire route. Click a road to inspect each traversal.</div>
 </div>
 <div class="legend" id="legend"></div>
 <div class="muted">Colors follow traveled distance, with kilometer boundaries interpolated within road segments. A kilometer view keeps the rest of the route faint for context. Click a road for its attributes and reward.</div>
 <div id="road-legend" hidden><strong id="road-legend-title"></strong><div class="legend" id="road-legend-items"></div></div>
-<div class="muted foot">Use the map layers to inspect comfort scores or access tags on surrounding roads. Hide Selected route to inspect roads beneath it. Counts refer to displayed line groups; access tags are not permission decisions.</div>
+<div class="muted foot">Use the map layers to inspect comfort scores or access tags on surrounding roads. Hide Selected route to inspect roads beneath it. Road counts refer to displayed line groups. Enable Node access for tagged nodes and their current policy status; saved routes may use an earlier access policy (see Training details).</div>
 <div class="muted foot">Comfort is a research preference, not a safety assessment. Overlap counts repeated physical-road traversals. A failed route is shown for inspection.</div>
 <div class="muted foot" id="snap"></div><div id="error" role="alert"></div></aside>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+{{template "node-inspection"}}
+{{template "node-access"}}
 <script>
 const routeData = {{.}};
 (() => {
@@ -60,7 +64,11 @@ const roadLayers={comfort:L.layerGroup(),access:L.layerGroup()};
 const roadCounts={};
 map.createPane('inspectionRoads').style.zIndex=350;
 const roadRenderer=L.canvas({pane:'inspectionRoads',padding:.3});
-L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access},{'Selected route':layer},{position:'bottomright',collapsed:false}).addTo(map);
+const nodeInspector=createNodeInspector(map,routeData.Graph);
+const nodeAccess=createNodeAccessLayer(map,routeData.Graph.nodes,nodeInspector);
+const graphNodes=createGraphNodeLayer(map,routeData.Graph.nodes,nodeInspector,status=>{document.getElementById('node-status').textContent=status;});
+document.getElementById('show-graph-nodes').addEventListener('change',event=>{if(event.target.checked)graphNodes.addTo(map);else map.removeLayer(graphNodes);});
+L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access},{'Selected route':layer,'Node access':nodeAccess},{position:'bottomright',collapsed:false}).addTo(map);
 
 function roadCategory(edge,theme){
  if(theme==='comfort'){
@@ -89,6 +97,7 @@ function graphRoadPopup(segment){
   details.replaceChildren(popup(edge.name||'Unnamed road',[
    ['Action',`${edge.from} → ${edge.to}, key ${edge.key}`],['Way ID',edge.way_id],['Highway',edge.highway],['Surface',edge.surface],['Width',edge.width],['Access',edge.access],['Length',`${fmt(edge.length_m)} m`],['Highway score',fmt(edge.highway_score,4)],['Surface score',fmt(edge.surface_score,4)],['Width score',fmt(edge.width_score,4)],['Comfort score',fmt(edge.comfort_score,4)]
   ]));
+  details.append(nodeInspector.button(edge.from,`Inspect node ${edge.from}`),nodeInspector.button(edge.to,`Inspect node ${edge.to}`));
  }
  selector.addEventListener('change',update);box.append(selector,details);update();L.DomEvent.disableClickPropagation(box);return box;
 }
@@ -162,6 +171,7 @@ function routeRoadPopup(traversals,selected){
    ['Step',segment.Step],['Road traversals',traversals.length],['Distance interval',`${fmt(segment.BeforeM/1000,3)}–${fmt(segment.AfterM/1000,3)} km`],
    ['Action',`${segment.From} → ${segment.To}, key ${segment.Key}`],['Way ID',segment.WayID],['Highway',segment.Highway],['Surface',segment.Surface],['Width',segment.Width],['Access',segment.Access],['Length',`${fmt(segment.LengthM)} m`],['Cumulative',`${fmt(segment.AfterM)} m`],['Comfort',fmt(segment.Scores.comfort_score,4)],['Road reward',fmt(c.Edge,4)],['Access reward',fmt(c.Access,4)],['Direction reward',fmt(c.Direction,4)],['Revisit reward',fmt(c.Revisit,4)],['Terminal reward',fmt(c.Terminal,4)],['Dead-end reward',fmt(c.NoAction,4)],['Step total',fmt(segment.Reward,4)]
   ]));
+  details.append(nodeInspector.button(segment.From,`Inspect node ${segment.From}`),nodeInspector.button(segment.To,`Inspect node ${segment.To}`));
  }
  selector.addEventListener('change',update);box.append(selector,details);update();L.DomEvent.disableClickPropagation(box);return box;
 }
@@ -188,6 +198,7 @@ function drawDirectionArrows(fragment){
  }
 }
 function render(fit=true){
+ nodeInspector.clear();
  layer.clearLayers();const trial=routeData.Trials[Number(select.value)],status=document.getElementById('status');
  status.className='status'+(trial.IsLoop?'':' failed');status.textContent=trial.IsLoop?'Valid loop':`Failed · ${trial.Termination.replaceAll('_',' ')}`;
  const metrics=document.getElementById('metrics');metrics.replaceChildren();
@@ -236,7 +247,7 @@ function render(fit=true){
  }
  L.circleMarker(routeData.Input,{radius:5,color:'#2563eb',fillOpacity:.9}).bindPopup(popup('Input coordinate',[['Latitude',routeData.Input[0]],['Longitude',routeData.Input[1]]]),{minWidth:260}).addTo(layer);
  if(routeData.SnapM>0)L.polyline([routeData.Input,routeData.Start],{color:'#64748b',weight:2,dashArray:'4 5'}).addTo(layer);
- L.marker(routeData.Start,{icon:pin('#15803d'),zIndexOffset:500}).bindTooltip('START · KM 0').bindPopup(popup('START',[['Node',routeData.StartNode],['Latitude',routeData.Start[0]],['Longitude',routeData.Start[1]],['Snap distance',`${fmt(routeData.SnapM)} m`]]),{minWidth:260,maxWidth:320}).addTo(layer);
+ L.marker(routeData.Start,{icon:pin('#15803d'),zIndexOffset:500}).bindTooltip('START · KM 0').bindPopup(()=>{const box=popup('START',[['Node',routeData.StartNode],['Latitude',routeData.Start[0]],['Longitude',routeData.Start[1]],['Snap distance',`${fmt(routeData.SnapM)} m`]]);box.append(nodeInspector.button(routeData.StartNode));return box;},{minWidth:260,maxWidth:320}).addTo(layer);
  const end=trial.Segments.length?trial.Segments.at(-1).Coordinates[1]:routeData.Start;
  const finishIcon=pin(trial.IsLoop?'#7c3aed':'#dc2626',true);
  // Offset the icon, not the geographic endpoint, when start and finish coincide.

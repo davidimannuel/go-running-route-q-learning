@@ -116,6 +116,9 @@ func TestTrainCLIArtifactsParallelReproductionAndReload(t *testing.T) {
 		if metadata["status"] != "completed" || metadata["graph_simplified"] != false {
 			t.Fatalf("metadata=%v", metadata)
 		}
+		if metadata["access_policy_version"] != "edge_and_endpoint_whitelist_v1" {
+			t.Fatalf("node access policy missing from metadata: %v", metadata)
+		}
 		// Reload Q-table and reproduce the final route/reward, without training.
 		cfg, err := config.Load(workdir)
 		if err != nil {
@@ -266,5 +269,25 @@ func TestFailedAttemptStatusRecordsResolvedSeed(t *testing.T) {
 	}
 	if marker.Status != "failed" || len(marker.ResolvedSeeds) != 1 || marker.ResolvedSeeds[0] != 42 || marker.Error == "" {
 		t.Fatalf("marker=%+v", marker)
+	}
+}
+
+func TestTrainRejectsBlockedStartBeforeWritingResults(t *testing.T) {
+	workdir := newWorkdir(t, trainingYAML)
+	output := filepath.Join(workdir, "output")
+	snapshot := loopSnapshot()
+	snapshot.Elements[0].Tags = osm.Tags{"access": "no", "barrier": "gate"}
+	original := saveSnapshot(t, output, snapshot)
+	err := runTrain(context.Background(), []string{"--workdir", workdir}, io.Discard, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "start node 0 has disallowed access") {
+		t.Fatalf("blocked start error=%v", err)
+	}
+	for _, name := range []string{"training", "training-run.json"} {
+		if _, err := os.Stat(filepath.Join(output, name)); !os.IsNotExist(err) {
+			t.Fatalf("blocked start wrote %s: %v", name, err)
+		}
+	}
+	if !bytes.Equal(original, readFile(t, filepath.Join(output, "osm.json"))) {
+		t.Fatal("blocked start changed the snapshot")
 	}
 }

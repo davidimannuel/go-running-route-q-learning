@@ -1,0 +1,120 @@
+{{define "node-inspection"}}
+<script>
+// Inspect the exported graph, not an episode's legal-action mask. Preserve every
+// outgoing parallel edge; highlight each distinct destination only once.
+function createNodeInspector(map, graph) {
+  const nodes = new Map(graph.nodes.map(node => [node.id, node]));
+  const outgoing = new Map();
+  for (const edge of graph.edges) {
+    if (!outgoing.has(edge.from)) outgoing.set(edge.from, []);
+    outgoing.get(edge.from).push(edge);
+  }
+  map.createPane('nodeInspection').style.zIndex = 625;
+  // SVG leaves transparent space clickable, including markers beneath this pane.
+  const renderer = L.svg({pane: 'nodeInspection', padding: 0.3});
+  const highlights = L.layerGroup().addTo(map);
+  const point = node => [node.latitude, node.longitude];
+  const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
+  const clear = () => { map.closePopup(); highlights.clearLayers(); };
+  const button = (id, label = 'Inspect connected nodes') => {
+    const control = text('button', label);
+    control.type = 'button';
+    control.addEventListener('click', () => open(id));
+    return control;
+  };
+  function open(id) {
+    const node = nodes.get(id);
+    if (!node) return;
+    map.stop();
+    clear();
+    const edges = outgoing.get(id) || [];
+    const destinations = new Set(edges.map(edge => edge.to));
+    for (const nextID of destinations) {
+      const next = nodes.get(nextID);
+      L.polyline([point(node), point(next)], {renderer, color: '#0891b2', weight: 7, opacity: 0.9, interactive: false}).addTo(highlights);
+      if (nextID === id) continue;
+      L.circleMarker(point(next), {renderer, radius: 7, color: 'white', weight: 2, fillColor: '#0891b2', fillOpacity: 1, bubblingMouseEvents: false})
+        .bindTooltip(() => text('span', nextID), {permanent: true, direction: 'right'})
+        .on('click', () => open(nextID)).addTo(highlights);
+    }
+    L.circleMarker(point(node), {renderer, radius: 8, color: 'white', weight: 2, fillColor: '#f59e0b', fillOpacity: 1, interactive: false}).addTo(highlights);
+    const box = document.createElement('div');
+    box.append(text('strong', `Node ${id}`));
+    const details = text('div', `Access: ${node.access || '(missing)'}\nBarrier: ${node.barrier || '(missing)'}\nCurrent node policy: ${node.access_allowed ? 'Allowed' : 'Blocked'}\nLatitude: ${node.latitude}\nLongitude: ${node.longitude}`);
+    details.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0';
+    box.append(details, text('strong', `${destinations.size} connected node(s) · ${edges.length} outgoing edge(s)`));
+    const note = text('p', 'Raw graph connections, before access and revisit masks. Parallel keys remain separate. Click a destination ID to inspect it.');
+    note.style.cssText = 'font:12px/1.4 system-ui,sans-serif;color:#475569;margin:6px 0';
+    box.append(note);
+    if (!edges.length) box.append(text('p', 'No outgoing edges in this graph.'));
+    else {
+      const scroll = document.createElement('div'), table = document.createElement('table');
+      scroll.style.cssText = 'overflow:auto;max-height:180px';
+      table.style.cssText = 'border-collapse:collapse;font:12px/1.4 system-ui,sans-serif;width:100%';
+      const header = document.createElement('tr');
+      for (const title of ['To node', 'Key', 'Length (m)', 'Way access', 'Node access']) {
+        const cell = text('th', title);
+        cell.scope = 'col'; cell.style.cssText = 'text-align:left;padding:5px;border-bottom:1px solid #cbd5e1;white-space:nowrap';
+        header.append(cell);
+      }
+      const head = document.createElement('thead'), body = document.createElement('tbody');
+      head.append(header);
+      for (const edge of edges) {
+        const row = document.createElement('tr'), next = nodes.get(edge.to);
+        for (const [index, value] of [edge.to, String(edge.key), edge.length_m.toFixed(2), edge.access || '(missing)', next.access || '(missing)'].entries()) {
+          const cell = document.createElement('td');
+          cell.style.cssText = 'padding:5px;border-bottom:1px solid #e2e8f0;white-space:nowrap';
+          if (index === 0) {
+            const link = button(edge.to, edge.to);
+            link.style.cssText = 'font:inherit;padding:2px 4px;margin:0;cursor:pointer';
+            cell.append(link);
+          } else cell.textContent = value;
+          row.append(cell);
+        }
+        body.append(row);
+      }
+      table.append(head, body); scroll.append(table); box.append(scroll);
+    }
+    L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box);
+    // Reserve space for the sidebar so iframe popups remain fully readable.
+    const size = map.getSize();
+    const padding = size.x > 700 ? [365, 20] : [20, Math.min(size.y * 0.43 + 24, 320)];
+    const corner = map.getContainer().querySelector('.leaflet-bottom.leaflet-right');
+    const bottomPadding = Math.min((corner?.getBoundingClientRect().height || 0) + 16, Math.max(20, size.y - padding[1] - 180));
+    L.popup({minWidth: 240, maxWidth: Math.max(240, Math.min(520, size.x - padding[0] - 90)),
+      maxHeight: Math.max(100, Math.min(360, size.y - padding[1] - bottomPadding - 60)), keepInView: true,
+      autoPanPaddingTopLeft: padding, autoPanPaddingBottomRight: [50, bottomPadding]})
+      .setLatLng(point(node)).setContent(box).openOn(map);
+  }
+  map.on('popupclose', () => highlights.clearLayers());
+  return {open, clear, button};
+}
+
+// Draw raw nodes only when requested, at close zoom and within the viewport.
+// Both maps share the same limit and click behavior.
+function createGraphNodeLayer(map, nodes, inspector, status) {
+  const layer = L.layerGroup(), renderer = L.svg({padding: 0.3});
+  function render() {
+    if (!map.hasLayer(layer)) return;
+    layer.clearLayers();
+    if (map.getZoom() < 17) { status('Zoom to level 17 or closer to show nodes.'); return; }
+    const bounds = map.getBounds();
+    let count = 0, limited = false;
+    for (const node of nodes) {
+      const point = [node.latitude, node.longitude];
+      if (!bounds.contains(point)) continue;
+      if (count === 2000) { limited = true; break; }
+      L.circleMarker(point, {renderer, radius: 4, color: '#172033', fillColor: 'white', fillOpacity: 1, weight: 1.5, bubblingMouseEvents: false})
+        .bindTooltip(`Node ${node.id}`)
+        .on('click', () => inspector.open(node.id)).addTo(layer);
+      count++;
+    }
+    status(`${count.toLocaleString()} visible nodes${limited ? ' (limit reached; zoom in).' : '.'}`);
+  }
+  layer.on('add', render);
+  layer.on('remove', () => { layer.clearLayers(); status('Nodes are hidden.'); });
+  map.on('moveend', render);
+  return layer;
+}
+</script>
+{{end}}

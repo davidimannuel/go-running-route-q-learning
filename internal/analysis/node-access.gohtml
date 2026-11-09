@@ -1,0 +1,55 @@
+{{define "node-access"}}
+<script>
+// Shared by analysis and training maps. This overlay inspects snapshot nodes;
+// its policy status is supplied by Go, not inferred from a road's access tag.
+function createNodeAccessLayer(map, nodes, inspector) {
+  const tagged = nodes.filter(node => (node.access || '').trim() || (node.barrier || '').trim());
+  const styles = {
+    blocked: ['Blocked by node access', '#dc2626'],
+    allowed: ['Allowed node access', '#15803d'],
+    missing: ['Barrier, access not tagged', '#64748b']
+  };
+  const category = node => !node.access_allowed ? 'blocked' : (node.access || '').trim() ? 'allowed' : 'missing';
+  const counts = {blocked: 0, allowed: 0, missing: 0};
+  tagged.forEach(node => counts[category(node)]++);
+  map.createPane('nodeAccess').style.zIndex = 620;
+  const renderer = L.svg({pane: 'nodeAccess', padding: 0.3});
+  const layer = L.layerGroup();
+  const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
+  const legend = L.control({position: 'bottomright'});
+  legend.onAdd = () => {
+    const box = L.DomUtil.create('div', 'leaflet-control-layers');
+    box.style.cssText = 'padding:10px;max-width:230px;font:12px/1.5 system-ui,sans-serif';
+    box.append(text('strong', 'Node access · snapshot'));
+    for (const [key, [label, color]] of Object.entries(styles)) {
+      const row = document.createElement('div'), dot = document.createElement('span');
+      dot.style.cssText = `display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:6px`;
+      row.append(dot, document.createTextNode(`${label} (${counts[key].toLocaleString()})`));
+      box.append(row);
+    }
+    const note = text('div', 'Counts are tagged nodes in the entire graph. Node access alone does not determine whether an action is allowed.');
+    note.style.cssText = 'margin-top:6px;color:#475569';
+    box.append(note);
+    L.DomEvent.disableClickPropagation(box);
+    L.DomEvent.disableScrollPropagation(box);
+    return box;
+  };
+  let built = false;
+  layer.on('add', () => {
+    if (!built) {
+      for (const node of tagged) {
+        const color = styles[category(node)][1];
+        L.circleMarker([node.latitude, node.longitude], {renderer, radius: 6, color: 'white', weight: 2, fillColor: color, fillOpacity: 1})
+          .bindTooltip(() => text('span', `Node ${node.id} · access=${node.access || '(missing)'} · ${node.barrier || 'no barrier tag'}`))
+          .on('click', () => inspector.open(node.id))
+          .addTo(layer);
+      }
+      built = true;
+    }
+    legend.addTo(map);
+  });
+  layer.on('remove', () => legend.remove());
+  return layer; // Deliberately not added to the map: initially hidden.
+}
+</script>
+{{end}}

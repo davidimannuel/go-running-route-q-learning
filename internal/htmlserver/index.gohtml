@@ -13,12 +13,23 @@
 (()=>{
  const rows=[...document.querySelectorAll('#results li[data-kind]')],frame=document.getElementById('preview');
  const selected=document.getElementById('selection'),mapLink=document.getElementById('map-link'),details=document.getElementById('details-link'),open=document.getElementById('open-link');
- function select(row,url){const link=row.querySelector('.result');rows.forEach(r=>r.classList.toggle('selected',r===row));selected.textContent=row.querySelector('.path').textContent;mapLink.href=link.dataset.map;mapLink.hidden=!link.dataset.map;details.href=link.dataset.details;details.hidden=!link.dataset.details;open.href=url;open.hidden=false;frame.hidden=false;document.getElementById('empty').hidden=true;const state=new URL(location.href);state.searchParams.set('file',link.getAttribute('href'));history.replaceState(null,'',state);}
- for(const row of rows){row.querySelector('.result').addEventListener('click',event=>{if(event.ctrlKey||event.metaKey||event.shiftKey)return;select(row,event.currentTarget.href);});row.querySelector('.details')?.addEventListener('click',event=>select(row,event.currentTarget.href));}
+ function freshURL(url){const fresh=new URL(url,location.href);fresh.searchParams.set('_view',String(Date.now()));return fresh.href;}
+ function select(row,url){
+  const link=row.querySelector('.result');
+  rows.forEach(r=>r.classList.toggle('selected',r===row));
+  selected.textContent=row.querySelector('.path').textContent;
+  mapLink.href=link.dataset.map?freshURL(link.dataset.map):'';mapLink.hidden=!link.dataset.map;
+  details.href=link.dataset.details?freshURL(link.dataset.details):'';details.hidden=!link.dataset.details;
+  frame.hidden=false;document.getElementById('empty').hidden=true;
+  // Refresh the embedded artifact even if this exact path was opened before.
+  frame.src=freshURL(url);open.href=frame.src;open.hidden=false;
+  const state=new URL(location.href);state.searchParams.set('file',link.getAttribute('href'));history.replaceState(null,'',state);
+ }
+ for(const row of rows){row.querySelector('.result').addEventListener('click',event=>{if(event.ctrlKey||event.metaKey||event.shiftKey)return;event.preventDefault();select(row,event.currentTarget.href);});row.querySelector('.details')?.addEventListener('click',event=>{if(event.ctrlKey||event.metaKey||event.shiftKey)return;event.preventDefault();select(row,event.currentTarget.href);});}
  const filter=()=>{const text=document.getElementById('search').value.toLowerCase(),kind=document.getElementById('kind').value;let count=0;for(const row of rows){row.hidden=!row.textContent.toLowerCase().includes(text)||(kind!=='all'&&row.dataset.kind!==kind);if(!row.hidden)count++;}document.getElementById('count').textContent=count;};
  if(rows.some(row=>row.dataset.kind==='map'))document.getElementById('kind').value='map';filter();
  document.getElementById('search').addEventListener('input',filter);document.getElementById('kind').addEventListener('change',filter);document.getElementById('refresh').addEventListener('click',()=>location.reload());
  frame.addEventListener('load',()=>{try{if(frame.contentWindow.location.href!=='about:blank')open.href=frame.contentWindow.location.href;}catch{}});
- const requested=new URL(location.href).searchParams.get('file');const row=rows.find(r=>r.querySelector('.result').getAttribute('href')===requested);if(row){const link=row.querySelector('.result');select(row,link.href);frame.src=link.href;}
+ const requested=new URL(location.href).searchParams.get('file');const row=rows.find(r=>r.querySelector('.result').getAttribute('href')===requested);if(row){const link=row.querySelector('.result');select(row,link.href);}
 })();
 </script></body></html>

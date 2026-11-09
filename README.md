@@ -96,7 +96,10 @@ go build -o bin/route-cli ./cmd/cli
 Buka **http://127.0.0.1:8080/**. Pilih peta dari daftar, gunakan pencarian atau
 filter jenis hasil, lalu pilih **Recorded settings** untuk melihat konfigurasi
 hasil tersebut. Peta ditampilkan di panel sebelah daftar sehingga navigasi tetap
-tersedia. **Open separately** membuka hasil pada tab lain.
+tersedia. **Open separately** membuka hasil pada tab lain. Pemilihan hasil
+dan **Refresh results** memuat ulang iframe dengan URL baru; server mengirim
+HTML tanpa cache. Setelah mengubah kode Go/template server, hentikan `serve`
+dengan Ctrl+C lalu jalankan kembali agar server memakai versi kode terbaru.
 
 `train` tanpa `--profile` menjalankan seluruh profil secara berurutan.
 Kedua workdir memakai 12 profil × lima seed, total **13.500.000 episode per
@@ -229,7 +232,12 @@ kembali dari cache lokal. Pengguna menyelesaikan seluruh rancangan final pada
 Seluruh history diperiksa dan 60 evaluasi direproduksi dari Q-table tersimpan.
 Ringkasan audit ada di `workdirs/training/output/analysis/final-experiment-audit.json`.
 Hasil berlaku pada graf/start/seed yang diuji; bukan jaminan optimalitas atau
-validasi lapangan. Pertahankan konfigurasi dan hasil ini untuk analisis BAB IV.
+validasi lapangan. Hasil 7 November memakai filter akses way saja. Mulai
+9 November, action juga memeriksa akses node asal/tujuan. Angka di atas adalah
+checkpoint 7 November; output terbaru dapat sudah dilatih ulang dengan versi
+kebijakan berbeda. Periksa CSV/metadata setiap profil sebelum membandingkan.
+Audit/replay di atas dilakukan sebelum perubahan mask. Pisahkan output baru agar
+baseline tidak tertimpa; command `train` tetap mengganti hasil di output tujuan.
 
 Snapshot final memiliki **26.345 node dan 58.020 edge terarah**, dengan start node
 `9620836306`. SHA-256 snapshot:
@@ -288,6 +296,16 @@ endpoint yang sama digabung tanpa membedakan arah/key. Pilihan seed, metrik,
 marker input/start/finish/KM, serta layer Comfort score/Access tetap tersedia.
 Peta hasil final yang sudah ada telah diperbarui; tidak perlu training ulang.
 
+**Show graph nodes** menampilkan node sekitar viewport pada zoom17 ke atas
+(maksimum2.000 marker). Klik node biasa/marker akses untuk melihat node tujuan,
+key, panjang, serta access way/node tujuan. Garis sian dan label ID menandai
+tetangga; oranye menandai node terpilih. Klik ID/marker tetangga untuk berpindah;
+tutup popup untuk membersihkan sorotan. Popup jalan dan START juga memiliki
+tombol inspeksi node. Daftar memakai outgoing edge graf mentah, termasuk
+ruas yang aksesnya ditolak; ini bukan daftar action legal pada suatu step.
+Edge paralel tetap terpisah per key, sedangkan jumlah tetangga memakai ID unik.
+Peta analisis memakai inspeksi node yang sama.
+
 Nilai metrik yang tidak terdefinisi disimpan sebagai NaN pada CSV dan null pada JSON.
 
 Training menyiapkan satu direktori sementara lalu memublikasikannya setelah
@@ -328,7 +346,27 @@ pedestrian, living_street, residential, tertiary. Surface prioritas: asphalt,
 concrete, paving_stones, paved. Width diparse sekali ketika load: angka tunggal,
 koma desimal, dan satuan meter didukung; gabungan/invalid mendapat skor missing.
 Tag asli tetap tersedia pada CSV/popup. Access scalar kosong/yes/permissive
-lolos; `foot=yes` tidak override dan nilai gabungan tidak di-split.
+harus lolos pada way, node asal, dan node tujuan; `foot=yes` tidak override
+dan nilai gabungan tidak di-split. Node `access=no`/private/unknown tidak
+dapat dilalui, tetapi tetap tersimpan pada graf untuk inspeksi. `barrier=gate`
+tanpa pembatasan access tidak otomatis ditolak. CLI menolak start yang
+aksesnya tidak lolos tanpa memilih node lain. Penalti permissive tetap
+berdasarkan way, bukan node. Metadata baru mencatat
+`access_policy_version=edge_and_endpoint_whitelist_v1`. Warna Access jalan
+tetap berasal dari tag way. Peta analisis dan hasil training menyediakan
+checkbox **Node access / barriers** di panel analisis, tepat di bawah
+**Show nodes** (default mati), tanpa checkbox duplikat di kanan bawah.
+Pada peta training, gunakan kontrol **Node access** di kanan bawah.
+Overlay memuat node bertag access/barrier: merah ditolak whitelist, hijau
+diizinkan, abu-abu barrier tanpa access. Popup menampilkan ID, tag asli,
+koordinat, serta status aturan node saat HTML dibuat; ini bukan keputusan
+lengkap action atau perubahan terhadap rute tersimpan. Legenda menghitung
+node bertag pada seluruh graf, terpisah dari jumlah kelompok garis jalan.
+
+Diagram `analisa.ipynb` tetap berbasis edge terarah untuk panjang dan
+distribusi/kelengkapan atribut; node dipakai pada ringkasan struktur dan
+pemeriksaan koordinat/referensi. Distribusi akses node belum dibuat sebagai
+diagram tersendiri.
 
 State A memakai current node; B menambahkan progress bin; C menambahkan previous
 node. Mask akses, revisit, dan closing dipakai konsisten pada eksplorasi, greedy,
@@ -345,7 +383,8 @@ pada tabel ketersediaan. Jika belum ada hasil selesai, jalankan Go terlebih dahu
 
 Notebook hanya menyimpan pilihan data, pemanggilan, dan hasil. Implementasi
 analisis berada di `analysis/graph.py` dan `analysis/training.py`; Python tidak
-menjalankan training atau memperbarui Q-table. Analisis training memisahkan
+menjalankan training atau memperbarui Q-table. Notebook training berfokus pada
+tabel dan grafik; peta hasil dibuka melalui server CLI. Analisis training memisahkan
 perbandingan durasi berdasarkan scenario dan mencocokkan A/B/C berdasarkan
 jumlah episode serta horizon epsilon. Graf, seed, reward, dan parameter lain
 harus cocok sebelum grafik perbandingan state dibuat.
