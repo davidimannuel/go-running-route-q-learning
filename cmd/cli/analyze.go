@@ -78,7 +78,7 @@ func runAnalyze(ctx context.Context, args []string, out, logOut io.Writer) error
 			return analysis.EdgeToCSV(w, graph, cfg.QLearning.Reward.Road)
 		}},
 		{filename: "road-analysis.html", write: func(w io.Writer) error {
-			return analysis.MapToHTML(w, graph, cfg.Map.Latitude, cfg.Map.Longitude, cfg.QLearning.Reward.Road)
+			return analysis.MapToHTMLWithOptions(w, graph, cfg.Map.Latitude, cfg.Map.Longitude, cfg.QLearning.Reward.Road, analysis.HTMLOptions{MapMode: cfg.Export.Mode()})
 		}},
 	} {
 		path := filepath.Join(outputDir, export.filename)

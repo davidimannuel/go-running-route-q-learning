@@ -100,3 +100,19 @@ Q-values pada peta rute default mati; hanya outgoing action node/state terpilih,
 Jangan menyimpulkan optimalitas, generalisasi, atau validasi lapangan dari lima seed. Laporkan kegagalan dan jumlah sampel saat memakai rerata rute valid. Overlap rendah belum menjamin bentuk rute yang memuaskan. Jangan memakai angka arsip sebagai hasil baru atau mengubah metadata lama.
 
 Gunakan gofmt, `go test ./...`, `go vet ./...`, `go build ./...`; tambah `go test -race ./...` untuk perubahan konkurensi. Tes memakai fixture lokal dan expected Q/reward independen. Setelah perubahan Python, jalankan notebook terkait dari kernel bersih dan periksa grafik. Commit deskriptif; simpan notebook tanpa output dan jangan sertakan artefak lokal. Baca ulang file sebelum edit untuk menjaga perubahan sesi lain.
+
+## HTML export and seed navigation — 11 November
+
+`export.map_mode`: standard/advanced, omitted defaults advanced. Testing standard;
+training advanced. Standard retains all embedded graph/layers/metrics/reward popups,
+without Q inspection code or backend requests. Advanced uses CLI `/q-values`.
+`cli export --workdir ... [--profile ...]` regenerates `output/site/` from saved
+HTML payloads and recorded metadata, never today's training parameters. No training,
+source changes, or raw CSV/Q/YAML copying. Whole site replacement is staged; a
+selected profile replaces the package with only that profile. Preserve failed seeds
+and old analysis dates/scores. `export.json` records source hashes and export mode.
+Relative navigation/report/index is static; Leaflet CDN and OSM tiles remain external.
+Advanced site QSource resolves to the original result; serve a common parent root.
+Seed arrows stop at boundaries; full uint64 seed stays text. Source fixed/random
+comes from recorded automatic_seeds, not current YAML. Seed links and catalog Copy
+link preserve selection. Existing outputs are not regenerated automatically.

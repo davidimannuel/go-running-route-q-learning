@@ -41,6 +41,7 @@ type routeTrialData struct {
 }
 
 type routeMapData struct {
+	HTML         HTMLOptions
 	Graph        mapData
 	Scenario     qlearning.Scenario
 	Input, Start [2]float64
@@ -57,6 +58,14 @@ type routeMapData struct {
 // Data is embedded with html/template escaping; OSM text is inserted through
 // DOM textContent rather than interpreted as popup HTML.
 func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM float64, trials []RouteTrial, scores qlearning.RoadScoreConfig) error {
+	return RoutesToHTMLWithOptions(w, graph, startNode, lat, lon, snapM, trials, scores, HTMLOptions{})
+}
+
+// RoutesToHTMLWithOptions keeps the same data and selects optional debug tools.
+func RoutesToHTMLWithOptions(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM float64, trials []RouteTrial, scores qlearning.RoadScoreConfig, options HTMLOptions) error {
+	if err := options.normalize(); err != nil {
+		return err
+	}
 	if err := scores.Validate(); err != nil {
 		return err
 	}
@@ -78,7 +87,7 @@ func RoutesToHTML(w io.Writer, graph *osm.Graph, startNode int, lat, lon, snapM 
 	if err != nil {
 		return err
 	}
-	data := routeMapData{Graph: graphData, Scenario: trials[0].Metrics.Scenario, Input: [2]float64{lat, lon}, Start: [2]float64{start.Lat, start.Lon}, StartNode: strconv.Itoa(startNode), SnapM: snapM}
+	data := routeMapData{HTML: options, Graph: graphData, Scenario: trials[0].Metrics.Scenario, Input: [2]float64{lat, lon}, Start: [2]float64{start.Lat, start.Lon}, StartNode: strconv.Itoa(startNode), SnapM: snapM}
 	rows := make([]qlearning.Metrics, 0, len(trials))
 	for _, trial := range trials {
 		m := trial.Metrics

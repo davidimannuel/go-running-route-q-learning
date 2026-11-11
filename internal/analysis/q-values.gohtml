@@ -70,8 +70,10 @@ function createQValueInspector(map, routeData, seedSelect) {
       let data = cache.get(key), cached = !!data;
       if (!data) {
         controller?.abort(); controller = new AbortController();
+        const source = new URL(routeData.HTML.QSource || location.href, location.href);
+        if (!source.pathname.startsWith('/files/')) throw new Error('Open this map through CLI serve to inspect Q-values.');
         const url = new URL('/q-values', location.origin);
-        url.search = new URLSearchParams({file: location.pathname.slice('/files/'.length).split('/').map(decodeURIComponent).join('/'), seed: trial.Seed, node: id});
+        url.search = new URLSearchParams({file: source.pathname.slice('/files/'.length).split('/').map(decodeURIComponent).join('/'), seed: trial.Seed, node: id});
         const response = await fetch(url, {signal: controller.signal, cache: 'no-store'});
         if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
         data = await response.json();

@@ -59,6 +59,7 @@ type mapSegment struct {
 }
 
 type mapData struct {
+	HTML     HTMLOptions  `json:"html"`
 	Center   [2]float64   `json:"center"`
 	Nodes    []mapNode    `json:"nodes"`
 	Edges    []mapEdge    `json:"edges"`
@@ -71,10 +72,19 @@ type mapData struct {
 // network request, or training is performed. Leaflet/OSM assets load in-browser.
 // IDs are strings because JavaScript numbers cannot represent all Go integers.
 func MapToHTML(w io.Writer, g *osm.Graph, latitude, longitude float64, scores qlearning.RoadScoreConfig) error {
+	return MapToHTMLWithOptions(w, g, latitude, longitude, scores, HTMLOptions{})
+}
+
+// MapToHTMLWithOptions sets portable navigation without changing graph data.
+func MapToHTMLWithOptions(w io.Writer, g *osm.Graph, latitude, longitude float64, scores qlearning.RoadScoreConfig, options HTMLOptions) error {
+	if err := options.normalize(); err != nil {
+		return err
+	}
 	data, err := prepareMapData(g, latitude, longitude, scores)
 	if err != nil {
 		return err
 	}
+	data.HTML = options
 	// html/template serializes this typed value as JSON in script context and
 	// escapes <, >, and &. Original OSM strings cannot terminate the data script.
 	if err := roadAnalysisTemplate.Execute(w, data); err != nil {

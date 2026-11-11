@@ -23,6 +23,9 @@ map:
 output_dir: output
 cache_dir: cache
 
+export:
+  map_mode: standard
+
 qlearning:
   environment:
     target_distance_m: 5000

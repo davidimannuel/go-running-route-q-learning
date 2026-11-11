@@ -83,6 +83,10 @@ go run ./cmd/cli train --workdir workdirs/testing
 go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
 go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
 
+# Buat ulang HTML dari hasil tersimpan, tanpa training ulang.
+go run ./cmd/cli export --workdir workdirs/training
+go run ./cmd/cli export --workdir workdirs/testing
+
 # Navigasi peta dan informasi training.
 go run ./cmd/cli serve --dir workdirs --port 8080
 
@@ -683,3 +687,64 @@ menyimpulkan kualitas dari reward atau satu loop berhasil saja.
 - [Integrasi uv dan Jupyter](https://docs.astral.sh/uv/guides/integration/jupyter/).
 - [Model graf jaringan OSMnx](https://osmnx.readthedocs.io/en/stable/getting-started.html#modeling-a-network).
 - [Perhitungan jarak OSMnx/Haversine](https://github.com/gboeing/osmnx/blob/v2.1.1/osmnx/distance.py#L68-L112).
+
+## Ekspor HTML dan katalog statis
+
+Pengaturan workdir hanya memengaruhi tampilan:
+
+```yaml
+export:
+  map_mode: standard  # standard | advanced; default jika dihilangkan: advanced
+```
+
+`testing` memakai `standard`, `training` memakai `advanced`. Keduanya mempertahankan
+seluruh seed, metrik, graf sekitar, popup atribut/reward, akses jalan/node, comfort,
+penanda KM, pilihan per-KM, panah arah, dan sorotan overlap. `standard` tidak
+menyertakan UI/kode pemanggil Q-values. `advanced` menambahkan inspeksi Q-values
+melalui CLI server. Leaflet dari CDN dan tile OSM tetap memerlukan internet.
+Seluruh graf masih tertanam; mode standard tidak otomatis memperkecil HTML.
+
+Sesudah training, regenerasi presentasi dari hasil tersimpan:
+
+```bash
+go run ./cmd/cli export --workdir workdirs/training
+go run ./cmd/cli export --workdir workdirs/testing
+
+# Opsional: katalog hanya berisi satu profil tersimpan.
+go run ./cmd/cli export --workdir workdirs/training \
+  --profile b-horizon-100000-total-300000
+
+go run ./cmd/cli serve --dir workdirs --port 8080
+```
+
+Buka katalog baru (bukan HTML rute lama):
+
+- Training: `http://127.0.0.1:8080/files/training/output/site/index.html`
+- Testing: `http://127.0.0.1:8080/files/testing/output/site/index.html`
+
+Command `export` tidak melakukan unduhan/training atau mengubah HTML/CSV/Q-table/
+metadata sumber. Data graf, skor, rute, dan reward dibaca dari payload HTML lama;
+konfigurasi dan sumber seed dibaca dari metadata hasil tersebut, bukan parameter
+training di YAML saat ini. Hasil analisis yang lama tetap memakai skor dan tanggal
+lamanya; jalankan `analyze` dahulu bila memang ingin menghitung analisis baru.
+Format HTML tanpa payload yang didukung atau metadata yang tidak cocok ditolak.
+
+Setiap ekspor mengganti seluruh `<output_dir>/site/` sebagai satu paket. Dengan
+`--profile`, profil lain dan analisis tidak ikut dalam paket baru. Tanpa flag itu,
+semua profil tersimpan serta analisis yang tersedia disertakan, termasuk rute gagal.
+Filter katalog dapat menampilkan profil yang memiliki loop valid; semua seed tetap
+tersedia untuk pemeriksaan. Jika ekspor gagal, paket sebelumnya dipertahankan.
+
+Paket berisi `index.html`, peta, halaman detail lengkap, serta `export.json` yang
+mencatat mode, tanggal ekspor, tanggal hasil, dan SHA-256 HTML sumber. CSV/Q-table,
+snapshot, dan YAML tidak disalin. Katalog standard dapat diunggah sebagai folder
+statis dengan tautan relatif, termasuk di subfolder hosting. Untuk Q-values pada
+katalog advanced, pertahankan hasil asli dan jalankan CLI server dengan root yang
+mencakup `site` serta hasil aslinya seperti command di atas.
+
+Tombol ←/→ berpindah antar-run tanpa membungkus dari akhir ke awal; tombol dinonaktifkan
+pada batas daftar. Dropdown memakai nomor run agar seed panjang tidak terpotong;
+seed uint64 lengkap ditampilkan di bawahnya. Buka **seed information** untuk sumber
+seed tetap/acak, arti run independen, dan alasan pemilihan representative. Seed
+representative bukan jaminan rute terbaik di lapangan. Tautan `routes.html?seed=...`
+memilih seed tertentu; **Copy link** pada katalog menyimpan profil dan seed terpilih.

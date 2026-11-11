@@ -17,15 +17,20 @@ var reportTemplate = template.Must(template.New("report").Parse(reportHTML))
 type reportField struct{ Name, Value string }
 type reportEvaluation struct{ Seed, Scenario, Result, Distance, Error, Reward, Comfort, Overlap string }
 type reportData struct {
-	Title, Kind, JSON, MapURL string
-	ConfigJSON                string
-	Evaluations               []reportEvaluation
-	Fields                    []reportField
+	Title, Kind, JSON, MapURL, IndexURL string
+	ConfigJSON                          string
+	Evaluations                         []reportEvaluation
+	Fields                              []reportField
 }
 
 // ReportToHTML keeps a readable, self-contained copy of the recorded metadata.
 // JSON numbers are preserved as text so 64-bit seeds do not lose precision in JS.
 func ReportToHTML(w io.Writer, title, kind string, metadata any) error {
+	return ReportToHTMLWithIndex(w, title, kind, metadata, "/")
+}
+
+// ReportToHTMLWithIndex also supports a relative static-catalog link.
+func ReportToHTMLWithIndex(w io.Writer, title, kind string, metadata any, indexURL string) error {
 	body, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {
 		return fmt.Errorf("report metadata: %w", err)
@@ -36,7 +41,7 @@ func ReportToHTML(w io.Writer, title, kind string, metadata any) error {
 	if err := decoder.Decode(&document); err != nil {
 		return err
 	}
-	data := reportData{Title: title, Kind: kind, JSON: string(body), MapURL: "routes.html"}
+	data := reportData{IndexURL: indexURL, Title: title, Kind: kind, JSON: string(body), MapURL: "routes.html"}
 	if kind == "analysis" {
 		data.MapURL = "road-analysis.html"
 	}

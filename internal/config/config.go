@@ -20,7 +20,27 @@ type Config struct {
 	Map           MapConfig        `json:"map"`
 	OutputDir     string           `json:"output_dir"`
 	CacheDir      string           `json:"cache_dir"`
+	Export        ExportConfig     `json:"export"`
 	QLearning     qlearning.Config `json:"qlearning"`
+}
+
+// ExportConfig affects presentation only; it never changes training rules.
+type ExportConfig struct {
+	MapMode string `json:"map_mode" yaml:"map_mode"`
+}
+
+func (e ExportConfig) Mode() string {
+	if e.MapMode == "" {
+		return "advanced"
+	}
+	return e.MapMode
+}
+
+func (e ExportConfig) Validate() error {
+	if e.Mode() != "standard" && e.Mode() != "advanced" {
+		return fmt.Errorf("config: export.map_mode must be standard or advanced")
+	}
+	return nil
 }
 
 type MapConfig struct {
@@ -41,6 +61,7 @@ type configFile struct {
 	OutputDir     *string           `yaml:"output_dir"`
 	CacheDir      *string           `yaml:"cache_dir"`
 	QLearning     *qlearning.Config `yaml:"qlearning"`
+	Export        ExportConfig      `yaml:"export"`
 }
 
 type mapFile struct {
@@ -105,8 +126,12 @@ func Load(workdir string) (Config, error) {
 			RadiusM:    *raw.Map.RadiusM,
 			TimeoutSec: *raw.Map.TimeoutSec,
 		},
+		Export:    raw.Export,
 		OutputDir: "output",
 		CacheDir:  "cache",
+	}
+	if err := cfg.Export.Validate(); err != nil {
+		return Config{}, err
 	}
 	cfg.QLearning = defaults
 	if raw.QLearning != nil {

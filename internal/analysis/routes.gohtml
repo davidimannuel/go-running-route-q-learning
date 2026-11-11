@@ -5,13 +5,14 @@
 <title>Running routes — Scenario {{.Scenario}}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
-*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}.leaflet-control-layers{max-width:230px;font:13px/1.5 system-ui,sans-serif}.leaflet-control-layers label{font-weight:400;margin:4px 0}.leaflet-control-layers input{margin-right:5px}.route-options{border-top:1px solid #e8edf2;margin-top:12px;padding-top:2px}.route-options .check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;margin:10px 0}.route-options input{margin:0;accent-color:#2457f5}.route-options .muted{margin:8px 0}.route-arrow{pointer-events:none!important}.route-arrow svg{width:20px;height:20px;display:block;filter:drop-shadow(0 1px 2px #0005)}.traversal-select{margin-bottom:10px}.repeat-key{display:inline-block;width:22px;border-top:4px dashed #be123c;vertical-align:middle;margin-right:5px}
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;min-width:0;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}.leaflet-control-layers{max-width:230px;font:13px/1.5 system-ui,sans-serif}.leaflet-control-layers label{font-weight:400;margin:4px 0}.leaflet-control-layers input{margin-right:5px}.route-options{border-top:1px solid #e8edf2;margin-top:12px;padding-top:2px}.route-options .check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;margin:10px 0}.route-options input{margin:0;accent-color:#2457f5}.route-options .muted{margin:8px 0}.route-arrow{pointer-events:none!important}.route-arrow svg{width:20px;height:20px;display:block;filter:drop-shadow(0 1px 2px #0005)}.traversal-select{margin-bottom:10px}.repeat-key{display:inline-block;width:22px;border-top:4px dashed #be123c;vertical-align:middle;margin-right:5px}
+.seed-nav{display:grid;grid-template-columns:38px minmax(0,1fr) 38px;gap:6px;align-items:center}.seed-nav button{height:38px;font-size:20px;padding:0}.seed-nav button:disabled{opacity:.35;cursor:default}.seed-id{display:block;font-size:12px;overflow-wrap:anywhere;margin:7px 0 4px}#seed-info{margin:0 0 10px}
 @media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}.leaflet-control-zoom{display:none}}
 </style>
 </head>
 <body><div id="map"></div>
-<aside class="panel"><nav style="display:flex;gap:16px;margin-bottom:12px"><a href="/" target="_top">All results</a><a href="report.html">Training details</a></nav><h1>Running routes · {{.Scenario}}</h1><div class="muted">Final greedy evaluation · epsilon = 0</div>
-<label for="seed">Training seed</label><select id="seed"></select><div id="status" class="status"></div><dl id="metrics"></dl>
+<aside class="panel"><nav style="display:flex;gap:16px;margin-bottom:12px"><a href="{{.HTML.IndexURL}}" target="_top">All results</a><a href="report.html">Training details</a></nav><h1>Running routes · {{.Scenario}}</h1><div class="muted">Final greedy evaluation · epsilon = 0</div>
+<label for="seed">Training seed</label><div class="seed-nav"><button id="seed-prev" type="button" aria-label="Previous seed" title="Previous seed">←</button><select id="seed" aria-describedby="seed-id seed-info"></select><button id="seed-next" type="button" aria-label="Next seed" title="Next seed">→</button></div><code id="seed-id" class="seed-id"></code><details class="muted"><summary id="seed-summary">About this seed</summary><div id="seed-info" aria-live="polite"></div></details><div id="status" class="status"></div><dl id="metrics"></dl>
 <button id="fit">Fit selected route</button>
 <div class="route-options">
 <label for="kilometer">Route distance</label><select id="kilometer"><option value="all">All kilometers</option></select>
@@ -19,20 +20,20 @@
 <label class="check"><input type="checkbox" id="show-directions">Direction arrows</label>
 <label class="check"><input type="checkbox" id="show-graph-nodes">Show graph nodes</label>
 <div class="muted" id="node-status">Nodes are hidden.</div>
-<div id="q-node-tools" hidden><label for="q-node-id">Inspect node ID</label><div style="display:flex;gap:6px"><input id="q-node-id" inputmode="numeric" placeholder="OSM node ID" style="width:100%;min-width:0;padding:7px;border:1px solid #c4ced8;border-radius:6px"><button id="q-inspect">Inspect</button></div><div class="muted" id="q-node-help">Click a map node or enter its ID.</div></div>
-<div class="muted" id="route-view" aria-live="polite"></div>
+{{if eq .HTML.MapMode "advanced"}}<div id="q-node-tools" hidden><label for="q-node-id">Inspect node ID</label><div style="display:flex;gap:6px"><input id="q-node-id" inputmode="numeric" placeholder="OSM node ID" style="width:100%;min-width:0;padding:7px;border:1px solid #c4ced8;border-radius:6px"><button id="q-inspect">Inspect</button></div><div class="muted" id="q-node-help">Click a map node or enter its ID.</div></div>
+{{end}}<div class="muted" id="route-view" aria-live="polite"></div>
 <div class="muted" id="overlap-help" hidden><span class="repeat-key"></span>Dashed outlines mark roads traversed more than once in the entire route. Click a road to inspect each traversal.</div>
 </div>
 <div class="legend" id="legend"></div>
 <div class="muted">Colors follow traveled distance, with kilometer boundaries interpolated within road segments. A kilometer view keeps the rest of the route faint for context. Click a road for its attributes and reward.</div>
 <div id="road-legend" hidden><strong id="road-legend-title"></strong><div class="legend" id="road-legend-items"></div></div>
-<div class="muted foot">Use the map layers to inspect comfort scores, access tags, or Q-values. Q-values colors only the selected node’s outgoing actions for one state; click a node or use Inspect node on a road popup. Q data loads on demand through CLI serve. Hide Selected route to inspect roads beneath it. Road counts refer to displayed line groups. Enable Node access for tagged nodes and their current policy status; saved routes may use an earlier access policy (see Training details).</div>
+<div class="muted foot">Use the map layers to inspect comfort scores and access tags.{{if eq .HTML.MapMode "advanced"}} Q-values colors only the selected node’s outgoing actions for one state; click a node or use Inspect node on a road popup. Q data loads on demand through CLI serve.{{end}} Hide Selected route to inspect roads beneath it. Road counts refer to displayed line groups. Enable Node access for tagged nodes and their current policy status; saved routes may use an earlier access policy (see Training details).</div>
 <div class="muted foot">Comfort is a research preference, not a safety assessment. Overlap counts repeated physical-road traversals. A failed route is shown for inspection.</div>
 <div class="muted foot" id="snap"></div><div id="error" role="alert"></div></aside>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 {{template "node-inspection"}}
 {{template "node-access"}}
-{{template "q-values"}}
+{{if eq .HTML.MapMode "advanced"}}{{template "q-values"}}{{end}}
 <script>
 const routeData = {{.}};
 (() => {
@@ -51,8 +52,28 @@ const fmt=(value,digits=2)=>Number.isFinite(Number(value))?Number(value).toLocal
 const popup=(title,rows)=>{const box=document.createElement('div'),heading=document.createElement('div'),list=document.createElement('dl');heading.className='popup-title';heading.textContent=title;list.className='popup-table';for(const [key,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=key;dd.textContent=value===''?'Not tagged':String(value);list.append(dt,dd);}box.append(heading,list);return box;};
 const pin=(color,finish=false)=>L.divIcon({className:'route-pin',html:`<div class="pin" style="background:${color}"><svg viewBox="0 0 24 24">${finish?'<path d="M5 2h2v2h12l-3 5 3 5H7v8H5z"/>':'<path d="M8 4v16l13-8z"/>'}</svg></div>`,iconSize:[34,42],iconAnchor:[17,42]});
 const bounds=()=>{const trial=routeData.Trials[Number(select.value)],points=kilometer.value==='all'?[routeData.Start,...trial.Segments.flatMap(s=>s.Coordinates)]:visibleFragments.flatMap(f=>f.Coordinates);map.fitBounds(L.latLngBounds(points.length?points:[routeData.Start]),{paddingTopLeft:window.innerWidth>600?[340,30]:[25,Math.min(window.innerHeight*.43+24,320)],paddingBottomRight:[30,35],maxZoom:17});};
-routeData.Trials.forEach((trial,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=`Seed ${trial.Seed}${i===routeData.Selected?' · representative':''}`;select.append(option);});
-select.value=String(routeData.Selected);
+routeData.Trials.forEach((trial,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=`Run ${i+1} / ${routeData.Trials.length}${i===routeData.Selected?' · representative':''}`;select.append(option);});
+const requestedSeed=new URL(location.href).searchParams.get('seed');
+const requestedIndex=routeData.Trials.findIndex(trial=>trial.Seed===requestedSeed);
+select.value=String(requestedIndex>=0?requestedIndex:routeData.Selected);
+const previousSeed=document.getElementById('seed-prev'),nextSeed=document.getElementById('seed-next');
+function updateSeedInfo(){
+ const index=Number(select.value),trial=routeData.Trials[index];
+ previousSeed.disabled=index===0;nextSeed.disabled=index===routeData.Trials.length-1;
+ document.getElementById('seed-id').textContent=`Seed ${trial.Seed}`;
+ document.getElementById('seed-summary').textContent=`Run ${index+1} / ${routeData.Trials.length} · ${index===routeData.Selected?'representative · ':''}seed information`;
+ document.getElementById('seed-info').textContent=[
+  routeData.HTML.SeedSource||'Seed source was not recorded in this map.',
+  'Each seed starts an independent training run; final evaluation uses epsilon 0. Reproduction also requires the same graph, configuration, and implementation.',
+  index===routeData.Selected?'Representative: valid loops first, then smallest target error; ties use end distance for failed routes, then comfort, return progress, and seed.':''
+ ].filter(Boolean).join(' ');
+}
+function moveSeed(offset){
+ const index=Number(select.value)+offset;
+ if(index<0||index>=routeData.Trials.length)return;
+ select.value=String(index);select.dispatchEvent(new Event('change'));
+}
+previousSeed.addEventListener('click',()=>moveSeed(-1));nextSeed.addEventListener('click',()=>moveSeed(1));
 
 document.getElementById('snap').textContent=`Start node ${routeData.StartNode} · ${fmt(routeData.SnapM,1)} m from input. Distances use Haversine; the graph is not simplified.`;
 // Keep the inspection palette and bins aligned with road-analysis.html.
@@ -66,11 +87,12 @@ const roadLayers={comfort:L.layerGroup(),access:L.layerGroup()};
 const roadCounts={};
 map.createPane('inspectionRoads').style.zIndex=350;
 const roadRenderer=L.canvas({pane:'inspectionRoads',padding:.3});
-const qView=createQValueInspector(map,routeData,select);
-const nodeInspector=createNodeInspector(map,routeData.Graph,{inspect:qView.inspect,clear:qView.clear,connectionsVisible:()=>!map.hasLayer(qView.layer)});
+{{if eq .HTML.MapMode "advanced"}}const qView=createQValueInspector(map,routeData,select);
+{{end}}
+const nodeInspector=createNodeInspector(map,routeData.Graph{{if eq .HTML.MapMode "advanced"}},{inspect:qView.inspect,clear:qView.clear,connectionsVisible:()=>!map.hasLayer(qView.layer)}{{end}});
 const nodeAccess=createNodeAccessLayer(map,routeData.Graph.nodes,nodeInspector);
 const graphNodes=createGraphNodeLayer(map,routeData.Graph.nodes,nodeInspector,status=>{document.getElementById('node-status').textContent=status;});
-function inspectQNode(){
+{{if eq .HTML.MapMode "advanced"}}function inspectQNode(){
  const id=document.getElementById('q-node-id').value.trim();
  const node=routeData.Graph.nodes.find(node=>node.id===id),exists=!!node;
  document.getElementById('q-node-help').textContent=exists?'Select a visit or stored state in the node popup.':'Node ID not found in this graph.';
@@ -78,8 +100,8 @@ function inspectQNode(){
 }
 document.getElementById('q-inspect').addEventListener('click',inspectQNode);
 document.getElementById('q-node-id').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();inspectQNode();}});
-document.getElementById('show-graph-nodes').addEventListener('change',event=>{if(event.target.checked)graphNodes.addTo(map);else map.removeLayer(graphNodes);});
-L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access,'Q-values':qView.layer},{'Selected route':layer,'Node access':nodeAccess},{position:'bottomright',collapsed:false}).addTo(map);
+{{end}}document.getElementById('show-graph-nodes').addEventListener('change',event=>{if(event.target.checked)graphNodes.addTo(map);else map.removeLayer(graphNodes);});
+L.control.layers({'Roads hidden':hiddenRoads,'Comfort score':roadLayers.comfort,'Access':roadLayers.access{{if eq .HTML.MapMode "advanced"}},'Q-values':qView.layer{{end}}},{'Selected route':layer,'Node access':nodeAccess},{position:'bottomright',collapsed:false}).addTo(map);
 
 function roadCategory(edge,theme){
  if(theme==='comfort'){
@@ -140,7 +162,7 @@ map.on('baselayerchange',event=>{
  const theme=Object.keys(roadLayers).find(key=>roadLayers[key]===event.layer);
  if(theme)buildRoadLayer(theme);
  showRoadLegend(theme);
- document.getElementById('q-node-tools').hidden=!map.hasLayer(qView.layer);
+ {{if eq .HTML.MapMode "advanced"}}document.getElementById('q-node-tools').hidden=!map.hasLayer(qView.layer);{{end}}
  nodeInspector.refresh();
 });
 
@@ -211,6 +233,7 @@ function drawDirectionArrows(fragment){
  }
 }
 function render(fit=true){
+ updateSeedInfo();
  nodeInspector.clear();
  layer.clearLayers();const trial=routeData.Trials[Number(select.value)],status=document.getElementById('status');
  status.className='status'+(trial.IsLoop?'':' failed');status.textContent=trial.IsLoop?'Valid loop':`Failed · ${trial.Termination.replaceAll('_',' ')}`;
@@ -268,7 +291,7 @@ function render(fit=true){
  L.marker(end,{icon:finishIcon,zIndexOffset:600}).bindTooltip(trial.IsLoop?'FINISH · same node as START':'END · unsuccessful route').bindPopup(popup(trial.IsLoop?'FINISH':'END',[['Result',trial.IsLoop?'Valid loop':trial.Termination],['Distance',`${fmt(trial.DistanceM)} m`],['Latitude',end[0]],['Longitude',end[1]]]),{minWidth:260,maxWidth:320}).addTo(layer);
  if(fit)bounds();
 }
-select.addEventListener('change',()=>{kilometer.value='all';render();});
+select.addEventListener('change',()=>{const url=new URL(location.href);url.searchParams.set('seed',routeData.Trials[Number(select.value)].Seed);history.replaceState(null,'',url);kilometer.value='all';render();});
 kilometer.addEventListener('change',()=>render());
 showOverlap.addEventListener('change',()=>render(false));
 showDirections.addEventListener('change',()=>render(false));

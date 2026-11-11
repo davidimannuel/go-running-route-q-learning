@@ -31,6 +31,8 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 		return runAnalyze(ctx, args[1:], out, logOut)
 	case "train":
 		return runTrain(ctx, args[1:], out, logOut)
+	case "export":
+		return runExport(ctx, args[1:], out, logOut)
 	case "serve":
 		return runServe(ctx, args[1:], out, logOut)
 	case "help", "--help", "-h":
@@ -45,6 +47,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprint(out, `Usage: cli download --workdir <directory> [--force] [--debug]
        cli analyze --workdir <directory> [--debug]
        cli train --workdir <directory> [--snapshot <osm.json>] [--profile <name>] [--debug]
+       cli export --workdir <directory> [--profile <name>] [--debug]
        cli serve [--dir <directory>] [--port <port>] [--debug]
 
 Commands:
@@ -55,6 +58,10 @@ Commands:
             Save histories, greedy evaluations, Q-tables, maps, and recorded settings.
             Profile outputs: <output_dir>/training/<profile>/{routes.html,report.html,metadata.json}.
             Each seed also has metadata.json. Profiles share the resolved seed list.
+  export    Read saved HTML and metadata; regenerate a portable catalog in <output_dir>/site/.
+            Uses export.map_mode (standard or advanced). No training/download or source changes.
+            --profile exports only that saved profile; each export replaces the whole site.
+            Standard supports static hosting; advanced Q-values require the original output and CLI serve.
   serve     Browse HTML maps and recorded settings on 127.0.0.1.
             Defaults: --dir . --port 8080. Open the printed URL; Ctrl+C stops the server.
             Q-values load per node on demand. Raw CSV/JSON/YAML, hidden paths, and symlinks stay private.
@@ -70,13 +77,15 @@ Examples (from the repository root):
   go run ./cmd/cli download --workdir workdirs/testing
   go run ./cmd/cli analyze --workdir workdirs/testing
   go run ./cmd/cli train --workdir workdirs/testing
-  go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-150000
   go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
-  go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-150000
   go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
+  go run ./cmd/cli export --workdir workdirs/training
+  go run ./cmd/cli export --workdir workdirs/testing
   go run ./cmd/cli serve --dir workdirs --port 8080
 
-Both workdirs have 12 A/B/C profiles: 150k/300k, dynamic or horizon 100k.
+Training has 12 A/B/C profiles; testing currently selects two B/300k profiles.
+Export preserves every saved seed and evaluation, including failed routes.
+Share a map seed with ?seed=<actual-seed>; catalog links preserve result and seed.
 Training uses seeds 0-4; testing resolves five random seeds once for all selected profiles.
 Select a scenario through --profile, not a separate --scenario flag.
 With an existing osm.json, run analyze/train directly; no download is needed.
