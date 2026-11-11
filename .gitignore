@@ -11,3 +11,7 @@ __pycache__/
 /bin/
 
 /playground
+
+# Temporary catalog publication and interactive-add lock.
+/.web-catalog-*
+/.web-catalog.lock

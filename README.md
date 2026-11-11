@@ -23,6 +23,7 @@ workdirs/training/   analisis dan 12 profil penelitian A/B/C
 workdirs/testing/    profil aktif pilihan dengan lima seed acak untuk uji parameter
 analisa.ipynb        pilihan parameter dan laporan analisis graf
 training.ipynb       pilihan profil, laporan training, dan perbandingan state
+web-catalog/         situs katalog statis untuk GitHub Pages
 playground/          pemeriksaan manual lokal; diabaikan Git
 ```
 
@@ -49,12 +50,21 @@ Tidak perlu mengaktifkan environment secara manual. Pilih kernel
 
 ## Command utama
 
-Config penelitian saat ini menggunakan `-7.281518, 112.710178`; testing
-menggunakan `-7.281885, 112.711476`. Lokasi dan radius masing-masing dapat diubah di config.
+Koordinat dan radius aktif mengikuti `map` di config masing-masing workdir.
+Penelitian memakai acuan `-7.281518, 112.710178`; testing dapat memakai lokasi
+pilihanmu. Setelah mengubah lokasi/radius, gunakan `run` agar snapshot sesuai.
 Semua command berikut dijalankan dari root repository. Jika `osm.json` sudah
 tersedia, lanjutkan dengan `analyze` atau `train` sesuai kebutuhan.
 
 ```bash
+# Download → analyze → train dalam satu command (semua profil aktif).
+go run ./cmd/cli run --workdir workdirs/testing
+go run ./cmd/cli run --workdir workdirs/training
+
+# Atau hanya satu profil training, setelah download dan analyze.
+go run ./cmd/cli run --workdir workdirs/testing \
+  --profile b-horizon-100000-total-300000
+
 # Snapshot dan analisis penelitian.
 go run ./cmd/cli download --workdir workdirs/training
 go run ./cmd/cli analyze --workdir workdirs/training
@@ -106,6 +116,21 @@ dan **Refresh results** memuat ulang iframe dengan URL baru; server mengirim
 HTML tanpa cache. Setelah mengubah kode Go/template server, hentikan `serve`
 dengan Ctrl+C lalu jalankan kembali agar server memakai versi kode terbaru.
 
+`run` selalu menjalankan download → analyze → train secara berurutan dan berhenti
+pada tahap pertama yang gagal atau dibatalkan. Setelah mengubah `map.latitude`,
+`map.longitude`, atau `map.radius_m`, gunakan command ini agar snapshot disiapkan
+untuk query terbaru. Cache dipilih berdasarkan query; tambahkan `--force` bila
+perlu mengambil data baru dari Overpass walaupun cache tersedia. `--debug` juga
+didukung. Config dan nama profil diperiksa sebelum download; tidak ada opsi
+`--snapshot` pada `run`. Jangan mengedit config selama command berjalan.
+
+Hasil tahap yang sudah selesai tetap tersimpan jika tahap berikutnya gagal;
+ini bukan transaksi untuk seluruh output. Hasil training profil lain yang tidak
+dipilih tetap dipertahankan sesuai perilaku `train`; periksa metadata saat
+membandingkan hasil dari lokasi berbeda. Gunakan `output_dir` berbeda jika ingin
+menyimpan hasil percobaan sebelumnya. `run` tidak menjalankan notebook, export,
+atau menambahkan rute ke katalog.
+
 `train` tanpa `--profile` menjalankan seluruh profil secara berurutan.
 Rancangan penuh memakai 12 profil × lima seed, total **13.500.000 episode**.
 Profil aktif mengikuti YAML; testing saat ini memilih dua profil B total 300k
@@ -126,7 +151,7 @@ Profil yang tersedia untuk `--profile`:
 Keempat konfigurasi ada di `workdirs/training`; testing saat ini mengaktifkan
 hanya `b-dynamic-300000` dan `b-horizon-100000-total-300000`. Scenario dipilih melalui profil di YAML. Tidak ada flag
 `--scenario`. Jalankan `go run ./cmd/cli --help` untuk ringkasan command dan contoh
-terbaru; `download --help`, `analyze --help`, `train --help`, dan `serve --help`
+terbaru; `run --help`, `download --help`, `analyze --help`, `train --help`, dan `serve --help`
 menampilkan panduan yang sama.
 
 Tambahkan `--debug` untuk log rinci. Tampilan training default hanya parameter,
@@ -704,6 +729,13 @@ menyertakan UI/kode pemanggil Q-values. `advanced` menambahkan inspeksi Q-values
 melalui CLI server. Leaflet dari CDN dan tile OSM tetap memerlukan internet.
 Seluruh graf masih tertanam; mode standard tidak otomatis memperkecil HTML.
 
+Panel informasi peta rute dan analisis memiliki tombol **Minimize / Show details**.
+Pada layar HP atau landscape pendek, panel mulai ringkas; saat dibuka tingginya
+dibatasi dan isinya bisa digulir. Pilihan seed, KM dan layer tetap tersimpan ketika
+panel ditutup. Menu layer rute juga mulai ringkas pada layar kecil; kontrol zoom
+berada di kiri bawah. Tata letak memakai tinggi viewport dinamis. Perubahan
+template berlaku pada HTML yang dibuat/diekspor berikutnya, tanpa training ulang.
+
 Sesudah training, regenerasi presentasi dari hasil tersimpan:
 
 ```bash
@@ -748,3 +780,138 @@ seed uint64 lengkap ditampilkan di bawahnya. Buka **seed information** untuk sum
 seed tetap/acak, arti run independen, dan alasan pemilihan representative. Seed
 representative bukan jaminan rute terbaik di lapangan. Tautan `routes.html?seed=...`
 memilih seed tertentu; **Copy link** pada katalog menyimpan profil dan seed terpilih.
+
+## Menambahkan rute pilihan ke web-catalog
+
+Alur untuk mencoba lokasi baru sampai publikasi:
+
+1. Ubah `map.latitude`/`map.longitude` (dan radius bila perlu) pada config workdir.
+2. Jalankan `go run ./cmd/cli run --workdir workdirs/testing` untuk download → analyze → train.
+3. Periksa peta dan metrik hasil; pilih profil serta seed loop yang ingin disimpan.
+4. Jalankan `catalog add` di bawah, lalu isi ID dan deskripsi rute.
+5. Periksa katalog lokal, kemudian commit/push untuk menjalankan publikasi Pages.
+
+`catalog add` **hanya membuat HTML/detail/metadata dari hasil training tersimpan**;
+tidak menjalankan download, analyze atau training ulang. Tidak perlu menjalankan
+`export` terlebih dahulu. Tambahkan seed pilihan sebelum hasil sumber ditimpa
+percobaan lokasi berikutnya. Command add tidak melakukan commit/push/deployment.
+
+Pilih profil dan **seed aktual** dari hasil testing/training yang sudah kamu
+periksa. Ganti `12345` di contoh ini dengan seed dari peta atau metadata hasil:
+
+```bash
+go run ./cmd/cli catalog add \
+  --workdir workdirs/testing \
+  --profile b-horizon-100000-total-300000 \
+  --seed 12345
+```
+
+CLI kemudian meminta dua input:
+
+```text
+Route ID: depan-kampus
+Route description: Rute dari depan kampus, melewati permukiman dan jalan utama.
+```
+
+ID berupa 1–64 huruf kecil/angka, dengan tanda hubung di tengah bila diperlukan.
+ID yang sudah terdaftar meminta input ulang; tidak menimpa rute sebelumnya.
+Deskripsi wajib 1–1.000 karakter pada satu baris, ditampilkan di daftar dan peta.
+`--dir <folder>` opsional mengganti tujuan; default `web-catalog` relatif terhadap
+folder terminal saat command dijalankan. Jalankan dari root proyek untuk default.
+Tidak ada config katalog khusus, input koordinat, atau prompt nama rute.
+
+Command membaca HTML dan metadata sumber, memeriksa skenario/seed/graf/start,
+metrik evaluasi serta lintasan loop dan jaraknya terhadap aturan yang tercatat.
+Hanya seed loop berhasil yang dapat ditambahkan. Parameter YAML sekarang hanya
+untuk menemukan output_dir; lokasi/reward/training berasal dari metadata hasil.
+Tidak mengunduh data atau melatih ulang. Seluruh graf sekitar, skor, atribut,
+popup reward, KM, arah, overlap dan akses node tetap disertakan. Hanya satu seed
+pilihan masuk peta katalog; labelnya catalog selection, bukan representative baru.
+
+Katalog **selalu standard**, termasuk bila workdir sumber memakai advanced.
+Tidak ada UI/request Q-values atau endpoint metadata. Halaman details.html
+menampilkan evaluasi seed pilihan dan konfigurasi sumber; JSON lengkap tetap
+menyimpan catatan batch asal. Mode presentasi standard dicatat pada bagian
+catalog terpisah tanpa mengganti konfigurasi training asli.
+
+```text
+web-catalog/
+  index.html                 indeks, pencarian, navigasi dan tautan berbagi
+  catalog.json               daftar rute beserta deskripsi dan asal hasil
+  .nojekyll
+  routes/<id>/
+    index.html               peta satu seed pilihan, data graf/rute tertanam
+    details.html             informasi lengkap dan metrik seed terpilih
+    metadata.json            metadata sumber + identitas katalog/hash HTML sumber
+```
+
+Rute lain dipertahankan saat penambahan. Seluruh paket disalin ke staging lalu
+dipublikasikan setelah selesai; kesalahan input/validasi/penulisan mempertahankan
+katalog sebelumnya. Lock sementara mencegah dua command add menulis bersamaan;
+Ctrl+C membatalkan prompt. Snapshot, Q-table dan CSV tidak disalin. Katalog awal
+kosong; data uji sintetis tidak dimasukkan ke situs proyek.
+
+Untuk menghapus **satu rute** berdasarkan ID:
+
+```bash
+go run ./cmd/cli catalog rm gang-sebelah-toko-9
+# Jika memakai folder lain, letakkan flag sebelum ID:
+go run ./cmd/cli catalog rm --dir web-catalog gang-sebelah-toko-9
+```
+
+`rm` menghapus folder rute pilihan, menghapus entri manifest dan memperbarui
+indeks. Rute lain serta hasil training sumber tetap tersimpan. Tidak memerlukan
+workdir/seed atau prompt tambahan; ID yang tidak ditemukan menghasilkan error
+sebelum ada perubahan. Menghapus rute terakhir menyisakan katalog kosong yang
+bisa diisi kembali. Untuk katalog yang rusak/terhapus sebagian, gunakan clear.
+
+Untuk menghapus **semua rute katalog** dan mulai dari katalog kosong:
+
+```bash
+go run ./cmd/cli catalog clear
+# Untuk katalog di folder lain:
+go run ./cmd/cli catalog clear --dir web-catalog
+```
+
+`clear` mengganti katalog dengan `index.html`, `catalog.json` berisi daftar kosong,
+`.nojekyll`, dan folder `routes/` kosong. Bisa dipakai jika manifest atau peta
+terhapus sebagian. Tidak memerlukan workdir/seed; hasil download, analisis dan
+training tetap tersimpan. Sesudah clear, jalankan `catalog add` seperti biasa.
+Perintah ini langsung menghapus semua pilihan katalog tanpa prompt tambahan.
+Folder yang mengandung file di luar struktur katalog atau symlink ditolak.
+Add, rm dan clear memakai lock yang sama; pembuatan indeks kosong diselesaikan dahulu
+sebelum mengganti katalog lama. Jangan menghapus isi katalog secara manual.
+Clear hanya lokal; situs publik berubah setelah commit/push dan deployment.
+
+Untuk melihat situs lokal:
+
+```bash
+go run ./cmd/cli serve --dir web-catalog --port 8081
+```
+
+Buka `http://127.0.0.1:8081/files/index.html`. Prefix `/files/` hanya milik server
+preview Go. Saat dipublikasikan, tautan relatif bekerja di root/subfolder situs.
+
+### GitHub Pages
+
+Leaflet berjalan di browser dengan HTML/CSS/JavaScript; backend Go tidak diperlukan.
+Leaflet 1.9.4 dimuat lewat HTTPS dari CDN dan tile OSM lewat HTTPS. Attribution
+OSM tetap terlihat dan referrer normal dipertahankan. Internet tetap diperlukan;
+ini bukan peta offline. Ikuti [panduan Leaflet](https://leafletjs.com/examples/quick-start/)
+dan [kebijakan tile OSM](https://operations.osmfoundation.org/policies/tiles/).
+
+Workflow `.github/workflows/catalog-pages.yml` mengikuti
+[template statis resmi GitHub](https://github.com/actions/starter-workflows/blob/main/pages/static.yml).
+Workflow hanya mengunggah `web-catalog/`, tanpa training/unduhan/build Go di GitHub.
+
+1. Pada repositori GitHub, pilih **Settings → Pages → Source: GitHub Actions**.
+2. Commit perubahan kode/workflow dan folder web-catalog yang sudah kamu periksa.
+3. Push ke branch `main`; perubahan web-catalog/workflow memicu deployment.
+4. Lihat URL hasil pada tab Actions atau halaman Settings → Pages.
+
+Workflow juga dapat dijalankan manual melalui Actions. Proyek dengan GitHub Free
+menggunakan repositori publik; lihat [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
+Menyiapkan workflow di repo lokal belum berarti situs sudah dipublikasikan.
+Status pemeriksaan lapangan awalnya not_recorded; loop valid di graf bukan bukti
+kelayakan lapangan. Pemilihan seed untuk katalog terpisah dari sampel eksperimen
+A/B/C yang tetap dilaporkan seluruhnya.

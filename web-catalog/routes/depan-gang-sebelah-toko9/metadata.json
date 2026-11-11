@@ -1,0 +1,385 @@
+{
+  "access_policy": "way, source node, and destination node must each have blank, yes, or permissive access; normalized scalar values; foot does not override; combined values rejected; barrier alone does not block; permissive penalty uses way access only",
+  "access_policy_version": "edge_and_endpoint_whitelist_v1",
+  "action_identity": "(next_node, key); sorted numerically by (next_node, key)",
+  "action_mask": "fresh + permitted node revisits + valid closing; shared by exploration, greedy, and bootstrap",
+  "actual_workers": 5,
+  "artifacts": [
+    "history.csv",
+    "evaluation.csv",
+    "routes.html",
+    "report.html",
+    "metadata.json",
+    "seed-\u003cseed\u003e/qtable.csv",
+    "seed-\u003cseed\u003e/evaluation-steps.csv",
+    "seed-\u003cseed\u003e/metadata.json"
+  ],
+  "automatic_seeds": true,
+  "build": {
+    "go_version": "go1.27.2",
+    "module": "github.com/davidimannuel/go-running-route-q-learning",
+    "platform": "darwin/arm64"
+  },
+  "catalog": {
+    "id": "depan-gang-sebelah-toko9",
+    "description": "gang depan dekat rumah sebelah toko sembilan daerah Dukuh Kupang Barat",
+    "seed": "12226258565145578727",
+    "profile": "b-horizon-100000-total-300000",
+    "scenario": "B",
+    "distance_m": 5337.5560855745725,
+    "added_at": "2026-11-11T19:13:14.974973Z",
+    "source_completed_at": "2026-11-11T18:23:29.187474Z",
+    "source_html_sha256": "2f3b0004ca5fd89b14452ec4d7dbf76e624e060f114a700cb4e6717096de5862",
+    "map_mode": "standard",
+    "field_validation": "not_recorded"
+  },
+  "completed_at": "2026-11-11T18:23:29.187474Z",
+  "config": {
+    "environment": {
+      "allow_revisit": true,
+      "distance_tolerance": 0.2,
+      "max_node_visits": 2,
+      "max_snap_distance_m": 100,
+      "max_steps": 500,
+      "progress_bins": 25,
+      "revisit_after_ratio": 0.5,
+      "target_distance_m": 5000
+    },
+    "reward": {
+      "distance_error_penalty_per_100m": -5,
+      "no_action_penalty": -50,
+      "outward_penalty_scale": 0,
+      "over_distance_penalty": -50,
+      "permissive_penalty_per_100m": -0.1,
+      "return_phase_ratio": 0.5,
+      "return_reward_scale": 1.2,
+      "revisit_penalty": -10,
+      "road": {
+        "highway": {
+          "missing": -2,
+          "other": -10,
+          "priority": 1,
+          "secondary_priority": 0.5,
+          "weight": 0.55
+        },
+        "surface": {
+          "missing": -0.5,
+          "other": -1,
+          "priority": 1,
+          "weight": 0.3
+        },
+        "width": {
+          "missing": -0.5,
+          "other": -1,
+          "priority": 1,
+          "weight": 0.15
+        },
+        "width_threshold_m": 3
+      },
+      "step_limit_penalty": -50,
+      "success_bonus": 100
+    },
+    "scenario": "B",
+    "training": {
+      "alpha": 0.15,
+      "episodes": 300000,
+      "epsilon_decay_episodes": 100000,
+      "epsilon_end": 0.05,
+      "epsilon_start": 1,
+      "gamma": 0.95,
+      "max_workers": 5,
+      "runs": 5,
+      "seeds": null
+    }
+  },
+  "config_path": "/Users/david/development/go-running-route-q-learning/workdirs/testing/config.yaml",
+  "directed_edges": 59252,
+  "distance_error_reward": {
+    "application": "once at episode termination: success, over_distance, no_available_action, or step_limit",
+    "formula": "distance_error_penalty_per_100m * abs(total_distance_m - target_distance_m) / 100",
+    "fractional_100m": true,
+    "zero_disables": true
+  },
+  "epsilon_formula": "end + (start-end)*(1-min(episode_zero_based/max(1,horizon-1),1)); null horizon follows total episodes",
+  "evaluation_epsilon": 0,
+  "evaluation_seed_offset": 100000,
+  "evaluations": [
+    {
+      "absolute_distance_error_m": 256.38333527119084,
+      "closing_action_available": true,
+      "distance_to_start_at_end_m": 0,
+      "is_loop": true,
+      "mean_comfort": 0.9118890677937654,
+      "overlap_ratio": 0.013888888888888888,
+      "q_state_count": 128163,
+      "return_progress_ratio": 0.7951807228915663,
+      "revisit_count": 2,
+      "scenario": "B",
+      "seed": "3380026365276570648",
+      "steps": 144,
+      "termination_reason": "success",
+      "total_distance_m": 5256.383335271191,
+      "total_reward": 133.13312616183464
+    },
+    {
+      "absolute_distance_error_m": 337.55608557457253,
+      "closing_action_available": true,
+      "distance_to_start_at_end_m": 0,
+      "is_loop": true,
+      "mean_comfort": 0.8019107338598291,
+      "overlap_ratio": 0.006666666666666667,
+      "q_state_count": 134284,
+      "return_progress_ratio": 0.7835051546391752,
+      "revisit_count": 1,
+      "scenario": "B",
+      "seed": "12226258565145578727",
+      "steps": 150,
+      "termination_reason": "success",
+      "total_distance_m": 5337.5560855745725,
+      "total_reward": 131.6913946604703
+    },
+    {
+      "absolute_distance_error_m": 275.13452536237855,
+      "closing_action_available": true,
+      "distance_to_start_at_end_m": 0,
+      "is_loop": true,
+      "mean_comfort": 0.9163875171708636,
+      "overlap_ratio": 0.013422818791946308,
+      "q_state_count": 140782,
+      "return_progress_ratio": 0.7640449438202247,
+      "revisit_count": 2,
+      "scenario": "B",
+      "seed": "6109373691235652762",
+      "steps": 149,
+      "termination_reason": "success",
+      "total_distance_m": 5275.134525362379,
+      "total_reward": 131.42362020374838
+    },
+    {
+      "absolute_distance_error_m": 1007.0146511314751,
+      "closing_action_available": false,
+      "distance_to_start_at_end_m": 592.990499591329,
+      "is_loop": false,
+      "mean_comfort": 0.8205008741814739,
+      "overlap_ratio": 0.036036036036036036,
+      "q_state_count": 131786,
+      "return_progress_ratio": 0.6449704142011834,
+      "revisit_count": 8,
+      "scenario": "B",
+      "seed": "16939787545055730234",
+      "steps": 222,
+      "termination_reason": "over_distance",
+      "total_distance_m": 6007.014651131475,
+      "total_reward": -124.12774637037683
+    },
+    {
+      "absolute_distance_error_m": 254.22568876121386,
+      "closing_action_available": true,
+      "distance_to_start_at_end_m": 0,
+      "is_loop": true,
+      "mean_comfort": 0.8952835155082978,
+      "overlap_ratio": 0.013888888888888888,
+      "q_state_count": 133431,
+      "return_progress_ratio": 0.7951807228915663,
+      "revisit_count": 2,
+      "scenario": "B",
+      "seed": "13566377129452136587",
+      "steps": 144,
+      "termination_reason": "success",
+      "total_distance_m": 5254.225688761214,
+      "total_reward": 132.34883995074364
+    }
+  ],
+  "graph_simplified": false,
+  "map": {
+    "latitude": -7.2816034,
+    "longitude": 112.7101655,
+    "radius_m": 3025,
+    "timeout_sec": 90
+  },
+  "nodes": 26875,
+  "overlap_basis": "physical_road_traversal_count",
+  "overlap_formula": "(total traversals - unique physical roads) / total traversals; NaN if empty",
+  "physical_road_identity": "canonical straight-segment endpoint coordinates; reverse/identical parallel geometry share identity",
+  "q_formula": "Q \u003c- Q + alpha * (reward + gamma * max_legal_next_Q - Q); terminal bootstrap=0",
+  "reference": "rute_lari_core.py and scenario_A/B/C.ipynb (active November 2026 rules)",
+  "representative_seed": 13566377129452136587,
+  "representative_selection": "valid loops first; smallest absolute distance error, then higher comfort/return progress, then seed; failed ties also use end distance",
+  "reset_previous_node": -1,
+  "resolved_seeds": [
+    3380026365276570648,
+    12226258565145578727,
+    6109373691235652762,
+    16939787545055730234,
+    13566377129452136587
+  ],
+  "reward_constants": {
+    "distance_error_penalty_per_100m": -5,
+    "no_action_penalty": -50,
+    "outward_penalty_scale": 0,
+    "over_distance_penalty": -50,
+    "permissive_penalty_per_100m": -0.1,
+    "return_phase_ratio": 0.5,
+    "return_reward_scale": 1.2,
+    "revisit_penalty": -10,
+    "road": {
+      "highway": {
+        "missing": -2,
+        "other": -10,
+        "priority": 1,
+        "secondary_priority": 0.5,
+        "weight": 0.55
+      },
+      "surface": {
+        "missing": -0.5,
+        "other": -1,
+        "priority": 1,
+        "weight": 0.3
+      },
+      "width": {
+        "missing": -0.5,
+        "other": -1,
+        "priority": 1,
+        "weight": 0.15
+      },
+      "width_threshold_m": 3
+    },
+    "step_limit_penalty": -50,
+    "success_bonus": 100
+  },
+  "reward_scheme": "configurable_signed_unclipped_distance_error_v2",
+  "rng": "math/rand/v2 PCG(seed, 0); one independent RNG per seed; not NumPy-equivalent",
+  "road_score": {
+    "highway": {
+      "missing": -2,
+      "other": -10,
+      "priority": 1,
+      "secondary_priority": 0.5,
+      "weight": 0.55
+    },
+    "surface": {
+      "missing": -0.5,
+      "other": -1,
+      "priority": 1,
+      "weight": 0.3
+    },
+    "width": {
+      "missing": -0.5,
+      "other": -1,
+      "priority": 1,
+      "weight": 0.15
+    },
+    "width_threshold_m": 3
+  },
+  "schema_version": 1,
+  "snap_distance_m": 0,
+  "snapshot_path": "/Users/david/development/go-running-route-q-learning/workdirs/testing/output/osm.json",
+  "snapshot_sha256": "10578adb46b14a47e6d126da776c8a7988b1db8bdcf937928781f5509b3e4cd8",
+  "start_distance_method": "Haversine; mean Earth radius 6371009 m; precomputed once per node",
+  "start_node": 9645488767,
+  "start_selection": "nearest Haversine node; ties by smaller node ID",
+  "started_at": "2026-11-11T18:22:58.330412Z",
+  "state_fields": {
+    "A": [
+      "current_node"
+    ],
+    "B": [
+      "current_node",
+      "progress_bin"
+    ],
+    "C": [
+      "current_node",
+      "previous_node",
+      "progress_bin"
+    ]
+  },
+  "status": "completed",
+  "tie_break": "uniform among np.isclose-equivalent values; rtol=1e-5, atol=1e-8",
+  "training_profile": "b-horizon-100000-total-300000",
+  "workdir_config": {
+    "cache_dir": "cache",
+    "export": {
+      "map_mode": "standard"
+    },
+    "map": {
+      "latitude": -7.2816034,
+      "longitude": 112.7101655,
+      "radius_m": 3025,
+      "timeout_sec": 90
+    },
+    "output_dir": "output",
+    "qlearning": {
+      "environment": {
+        "allow_revisit": true,
+        "distance_tolerance": 0.2,
+        "max_node_visits": 2,
+        "max_snap_distance_m": 100,
+        "max_steps": 500,
+        "progress_bins": 25,
+        "revisit_after_ratio": 0.5,
+        "target_distance_m": 5000
+      },
+      "reward": {
+        "distance_error_penalty_per_100m": -5,
+        "no_action_penalty": -50,
+        "outward_penalty_scale": 0,
+        "over_distance_penalty": -50,
+        "permissive_penalty_per_100m": -0.1,
+        "return_phase_ratio": 0.5,
+        "return_reward_scale": 1.2,
+        "revisit_penalty": -10,
+        "road": {
+          "highway": {
+            "missing": -2,
+            "other": -10,
+            "priority": 1,
+            "secondary_priority": 0.5,
+            "weight": 0.55
+          },
+          "surface": {
+            "missing": -0.5,
+            "other": -1,
+            "priority": 1,
+            "weight": 0.3
+          },
+          "width": {
+            "missing": -0.5,
+            "other": -1,
+            "priority": 1,
+            "weight": 0.15
+          },
+          "width_threshold_m": 3
+        },
+        "step_limit_penalty": -50,
+        "success_bonus": 100
+      },
+      "scenario": "",
+      "training": {
+        "alpha": 0.15,
+        "episodes": 10000,
+        "epsilon_decay_episodes": null,
+        "epsilon_end": 0.05,
+        "epsilon_start": 1,
+        "gamma": 0.95,
+        "max_workers": 5,
+        "profiles": [
+          {
+            "episodes": 300000,
+            "epsilon_decay_episodes": null,
+            "name": "b-dynamic-300000",
+            "scenario": "B"
+          },
+          {
+            "episodes": 300000,
+            "epsilon_decay_episodes": 100000,
+            "name": "b-horizon-100000-total-300000",
+            "scenario": "B"
+          }
+        ],
+        "runs": 5,
+        "seeds": null
+      }
+    },
+    "schema_version": 1
+  }
+}

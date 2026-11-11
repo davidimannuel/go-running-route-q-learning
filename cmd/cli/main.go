@@ -25,12 +25,16 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 		return fmt.Errorf("a command is required; use cli --help")
 	}
 	switch args[0] {
+	case "run":
+		return runWorkflow(ctx, args[1:], out, logOut, fetcher)
 	case "download":
 		return runDownload(ctx, args[1:], out, logOut, fetcher)
 	case "analyze":
 		return runAnalyze(ctx, args[1:], out, logOut)
 	case "train":
 		return runTrain(ctx, args[1:], out, logOut)
+	case "catalog":
+		return runCatalog(ctx, args[1:], os.Stdin, out, logOut)
 	case "export":
 		return runExport(ctx, args[1:], out, logOut)
 	case "serve":
@@ -44,13 +48,20 @@ func run(ctx context.Context, args []string, out, logOut io.Writer, fetcher mapF
 }
 
 func printUsage(out io.Writer) {
-	fmt.Fprint(out, `Usage: cli download --workdir <directory> [--force] [--debug]
+	fmt.Fprint(out, `Usage: cli run --workdir <directory> [--profile <name>] [--force] [--debug]
+       cli download --workdir <directory> [--force] [--debug]
        cli analyze --workdir <directory> [--debug]
        cli train --workdir <directory> [--snapshot <osm.json>] [--profile <name>] [--debug]
+       cli catalog add --workdir <directory> --profile <name> --seed <seed> [--dir web-catalog] [--debug]
+       cli catalog rm [--dir web-catalog] [--debug] <id>
+       cli catalog clear [--dir web-catalog] [--debug]
        cli export --workdir <directory> [--profile <name>] [--debug]
        cli serve [--dir <directory>] [--port <port>] [--debug]
 
 Commands:
+  run       Download, analyze, then train using the same workdir. Stops on the first error.
+            Uses the current query cache; --force fetches fresh OSM data.
+            --profile selects training only; no --snapshot override.
   download  Read config.yaml; save osm.json and download.json. --force refreshes the cache.
   analyze   Read the saved snapshot; write nodes.csv, edges.csv, road-analysis.html,
             analysis.json, and analysis.html using the configured scoring parameters.
@@ -58,6 +69,12 @@ Commands:
             Save histories, greedy evaluations, Q-tables, maps, and recorded settings.
             Profile outputs: <output_dir>/training/<profile>/{routes.html,report.html,metadata.json}.
             Each seed also has metadata.json. Profiles share the resolved seed list.
+  catalog   Add one saved successful seed to web-catalog; prompt for route ID and description.
+            Always standard HTML; no download/training, Q endpoint, or source changes.
+            Existing catalog routes are retained; an existing ID cannot be overwritten.
+            rm <id> removes one route and updates the index; other catalog routes remain.
+            clear removes all catalog routes and rebuilds an empty index/manifest.
+            It repairs incomplete catalogs; download/training results are retained.
   export    Read saved HTML and metadata; regenerate a portable catalog in <output_dir>/site/.
             Uses export.map_mode (standard or advanced). No training/download or source changes.
             --profile exports only that saved profile; each export replaces the whole site.
@@ -67,6 +84,9 @@ Commands:
             Q-values load per node on demand. Raw CSV/JSON/YAML, hidden paths, and symlinks stay private.
 
 Examples (from the repository root):
+  go run ./cmd/cli run --workdir workdirs/testing
+  go run ./cmd/cli run --workdir workdirs/training
+  go run ./cmd/cli run --workdir workdirs/testing --profile b-horizon-100000-total-300000
   go run ./cmd/cli download --workdir workdirs/training
   go run ./cmd/cli analyze --workdir workdirs/training
   go run ./cmd/cli train --workdir workdirs/training
@@ -79,6 +99,7 @@ Examples (from the repository root):
   go run ./cmd/cli train --workdir workdirs/testing
   go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
   go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
+  go run ./cmd/cli catalog add --workdir workdirs/testing --profile b-horizon-100000-total-300000 --seed <saved-seed>
   go run ./cmd/cli export --workdir workdirs/training
   go run ./cmd/cli export --workdir workdirs/testing
   go run ./cmd/cli serve --dir workdirs --port 8080

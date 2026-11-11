@@ -35,10 +35,11 @@
     .start-marker svg { display: block; filter: drop-shadow(0 2px 3px #0005); }
     .start-label { color: #14532d; font-weight: 700; border-color: #bbf7d0; }
   </style>
+  {{template "map-panel-style"}}
 </head>
 <body>
   <div id="map"></div>
-  <aside class="panel" aria-label="Road analysis controls">
+  <aside class="panel" aria-label="Road analysis controls"><details id="map-panel" open><summary class="panel-heading"><span>Road analysis</span><span class="panel-toggle-label"><span class="panel-when-closed">Show details ＋</span><span class="panel-when-open">Minimize −</span></span></summary><div class="panel-body">
     <nav style="display:flex;gap:16px;margin-bottom:12px"><a href="{{.HTML.IndexURL}}" target="_top">All results</a><a href="analysis.html">Analysis details</a></nav><h1>Road Analysis</h1>
     <p id="summary">Loading graph…</p>
     <label for="theme">Road colors</label>
@@ -59,7 +60,8 @@
     <small>Legend counts refer to displayed line groups. Click a road to inspect every directed edge it represents.</small>
     <small>Colors and comfort scores express research preferences, not measured safety or runner comfort. Road Access colors show way tags. Use Node access / barriers above to inspect tagged nodes separately.</small>
     <small>The green START (input) marker shows the configured coordinate. The agent start node has not been selected. Background tiles may contain newer edits than this snapshot.</small>
-  </aside>
+  </div></details></aside>
+  {{template "map-panel-script"}}
 
   <!-- Go serializes and escapes this typed payload. No local JSON fetch is needed. -->
   <script id="road-data" type="application/json">{{.}}</script>
@@ -74,7 +76,8 @@
     }
 
     // Initialize the view before any vector layers; their renderer needs pixel bounds.
-    const map = L.map("map", { preferCanvas: true }).setView(data.center, 15);
+    const map = L.map("map", { preferCanvas: true, zoomControl: false }).setView(data.center, 15);
+    L.control.zoom({position: compactMapScreen.matches ? "bottomleft" : "topleft"}).addTo(map);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -274,7 +277,7 @@
       // Leaflet otherwise measures wrapped text too narrowly, splitting coordinates.
       .bindPopup(startPopup, { className: "start-popup", minWidth: 260, maxWidth: 300 });
     function fitGraph() {
-      if (data.nodes.length) map.fitBounds(L.latLngBounds([...coordinates.values()]), { padding: [40, 40], maxZoom: 17 });
+      if (data.nodes.length) map.fitBounds(L.latLngBounds([...coordinates.values()]), { paddingTopLeft: mapPanelPadding(), paddingBottomRight: [30, 40], maxZoom: 17 });
       else map.setView(data.center, 15);
     }
     document.getElementById("summary").textContent = data.nodes.length.toLocaleString() + " nodes · " + data.edges.length.toLocaleString() + " directed edges · " + data.segments.length.toLocaleString() + " displayed line groups";

@@ -1,0 +1,38 @@
+{{define "map-panel-style"}}
+<style>
+#map{height:100vh;height:100dvh}
+.panel{padding:0;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overscroll-behavior:contain;scrollbar-gutter:stable}
+.panel-heading{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:12px 16px;background:#fff;cursor:pointer;font-weight:650;list-style:none;border-radius:inherit}
+.panel-heading::-webkit-details-marker{display:none}
+.panel-heading:focus-visible{outline:3px solid #5389ef;outline-offset:-3px}
+.panel-toggle-label{font-size:12px;font-weight:500;color:#2351ba;white-space:nowrap}
+#map-panel[open] .panel-when-closed,#map-panel:not([open]) .panel-when-open{display:none}
+#map-panel[open]>.panel-heading{border-bottom:1px solid #e8edf2}
+.panel-body{padding:14px 18px 18px;overflow-wrap:anywhere}
+.panel-body nav{flex-wrap:wrap}
+.panel-body select{max-width:100%}
+.leaflet-control-layers-list{max-height:45vh;max-height:45dvh;overflow:auto;overscroll-behavior:contain}
+@media(max-width:600px),(max-height:480px){
+ .panel{top:12px;left:12px;width:calc(100% - 24px);max-width:380px;max-height:55vh;max-height:55dvh}
+ .panel-heading{padding:10px 12px;min-height:46px}
+ .panel-body{padding:12px}
+ .panel-body h1{font-size:16px}
+ .panel-body dl{grid-template-columns:minmax(0,1fr) auto;gap:6px 8px}
+ .panel-body button,.panel-body select{min-height:40px}
+ .leaflet-popup-content{max-width:calc(100vw - 60px);max-height:55vh;max-height:55dvh;overflow:auto}
+ .leaflet-control-layers{max-width:calc(100vw - 32px)}
+}
+@media(pointer:coarse){.panel-body select,.panel-body input:not([type=checkbox]){font-size:16px}.panel-body button{min-height:44px}}
+</style>
+{{end}}
+{{define "map-panel-script"}}
+<script>
+// Native details keeps every control mounted, preserving selected seeds/layers.
+const compactMapScreen=window.matchMedia('(max-width:600px), (max-height:480px)');
+document.getElementById('map-panel').open=!compactMapScreen.matches;
+function mapPanelPadding(){
+ const panel=document.querySelector('.panel').getBoundingClientRect();
+ return compactMapScreen.matches?[16,panel.bottom+12]:[panel.right+14,24];
+}
+</script>
+{{end}}

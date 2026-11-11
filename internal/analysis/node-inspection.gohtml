@@ -88,7 +88,7 @@ function createNodeInspector(map, graph, options = {}) {
     L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box);
     // Reserve space for the sidebar so iframe popups remain fully readable.
     const size = map.getSize();
-    const padding = size.x > 700 ? [365, 20] : [20, Math.min(size.y * 0.43 + 24, 320)];
+    const padding = mapPanelPadding();
     const corner = map.getContainer().querySelector('.leaflet-bottom.leaflet-right');
     const bottomPadding = Math.min((corner?.getBoundingClientRect().height || 0) + 16, Math.max(20, size.y - padding[1] - 180));
     const popup = L.popup({className: 'node-inspection-popup', minWidth: 240, maxWidth: Math.max(240, Math.min(480, size.x - padding[0] - 90)),

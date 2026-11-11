@@ -8,7 +8,7 @@ Proyek ini menulis ulang core TA rute lari dari Python ke Go. Chat berbahasa Ind
 
 ## Project Layout
 
-- `cmd/cli`: download, analyze, train, serve, dan penyimpanan hasil.
+- `cmd/cli`: run (download → analyze → train), command terpisah, dan penyimpanan hasil.
 - `internal/osm`: Overpass, cache, graf mentah, Haversine, parsing width.
 - `internal/qlearning`: scoring, state, mask, environment, reward, Q-table, metrik.
 - `internal/analysis`: CSV, HTML peta, Q-table, dan report metadata.
@@ -116,3 +116,52 @@ Advanced site QSource resolves to the original result; serve a common parent roo
 Seed arrows stop at boundaries; full uint64 seed stays text. Source fixed/random
 comes from recorded automatic_seeds, not current YAML. Seed links and catalog Copy
 link preserve selection. Existing outputs are not regenerated automatically.
+
+## Curated web catalog — 12 November
+
+`cli catalog add --workdir ... --profile ... --seed ... [--dir web-catalog]`
+prompts for ID and description (no route-name/coordinate/default-config prompt).
+Uses saved HTML/metadata; only a matching successful closed loop within recorded
+bounds can be added. Current YAML locates output_dir only. Catalog is ALWAYS
+standard, regardless of source mode. Full graph/map features remain, one selected
+seed, no Q inspector. Selection is labeled catalog selection, not representative.
+`web-catalog/` is tracked: root index/catalog.json/.nojekyll; routes/<id>/index.html,
+details.html,metadata.json. Metadata retains source batch/config and adds catalog
+provenance/hash/mode separately; report table filters selected seed. Never copy raw
+Q/CSV/OSM or run training. Interactive validation retries duplicate IDs; additions
+stage/copy previous catalog and publish as a batch under an exclusive sibling lock.
+Ctrl+C cancels input. Catalog starts empty; synthetic previews stay in /tmp.
+Pages workflow uploads web-catalog only, on main/path changes or manual dispatch.
+User must choose GitHub Actions as Pages source and push; do not claim deployment
+or field validation. All internal links relative; HTTPS Leaflet/OSM, normal referrer.
+Preview with serve --dir web-catalog --port 8081, then /files/index.html.
+Route/analysis panels use native Minimize/Show details; mobile/short landscape
+starts collapsed, scrollable at <=55dvh when open. Seed/KM/layer state persists.
+Mobile route layers collapse; zoom bottom-left; fit/popup padding measures panel.
+Template changes require HTML regeneration, never research retraining.
+Workflow: edit map coordinates → cli run → inspect/select saved profile/seed →
+catalog add → preview → user commit/push. Add only generates presentation from
+saved results; no download/analyze/train or prerequisite export. Add chosen routes
+before the next experiment overwrites their source results.
+`cli catalog rm [--dir web-catalog] [--debug] <id>` removes one selected route,
+updates index/manifest, keeps other routes and training results. Flags precede ID;
+no extra prompt. Unknown IDs fail unchanged; removing the last route leaves a
+usable empty site. Uses shared add/clear lock, directory validation and staging.
+`cli catalog clear [--dir web-catalog] [--debug]` resets all selected routes to
+an empty index/manifest/.nojekyll/routes, even if files are partly deleted. No
+extra prompt/workdir; source results remain. Shares add lock and stages publication;
+rejects symlinks/unexpected paths to protect non-catalog data. User requested and
+ran reset on12November, then added one route again: depan-gang-sebelah-toko9,
+seed12226258565145578727/profile B horizon100k-total300k. The checked-in catalog
+contains this selected result; original workdir outputs remain ignored. Source
+field_validation is not_recorded. No push/deployment performed.
+
+## Combined workflow — 12 November
+
+`cli run --workdir ... [--profile ...] [--force] [--debug]` validates training
+config/profile first, then reuses download → analyze → train sequentially.
+Always prepares the snapshot for the current map query, using its cache unless
+forced. Stops on failure/cancellation; completed stages remain saved. No snapshot
+override, notebook, export or catalog step. Do not edit config during a run.
+Existing outputs follow standalone overwrite rules; unselected profiles remain.
+No live download or research training was run when adding this command.

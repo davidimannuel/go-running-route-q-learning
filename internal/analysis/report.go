@@ -31,6 +31,15 @@ func ReportToHTML(w io.Writer, title, kind string, metadata any) error {
 
 // ReportToHTMLWithIndex also supports a relative static-catalog link.
 func ReportToHTMLWithIndex(w io.Writer, title, kind string, metadata any, indexURL string) error {
+	mapURL := "routes.html"
+	if kind == "analysis" {
+		mapURL = "road-analysis.html"
+	}
+	return ReportToHTMLWithLinks(w, title, kind, metadata, indexURL, mapURL)
+}
+
+// ReportToHTMLWithLinks supports portable catalog filenames and source metadata.
+func ReportToHTMLWithLinks(w io.Writer, title, kind string, metadata any, indexURL, mapURL string) error {
 	body, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {
 		return fmt.Errorf("report metadata: %w", err)
@@ -41,7 +50,7 @@ func ReportToHTMLWithIndex(w io.Writer, title, kind string, metadata any, indexU
 	if err := decoder.Decode(&document); err != nil {
 		return err
 	}
-	data := reportData{IndexURL: indexURL, Title: title, Kind: kind, JSON: string(body), MapURL: "routes.html"}
+	data := reportData{IndexURL: indexURL, Title: title, Kind: kind, JSON: string(body), MapURL: mapURL}
 	if kind == "analysis" {
 		data.MapURL = "road-analysis.html"
 	}
@@ -54,6 +63,12 @@ func ReportToHTMLWithIndex(w io.Writer, title, kind string, metadata any, indexU
 			row, ok := raw.(map[string]any)
 			if !ok {
 				continue
+			}
+			if kind == "catalog" {
+				selection, _ := document["catalog"].(map[string]any)
+				if fmt.Sprint(row["seed"]) != selection["seed"] {
+					continue
+				}
 			}
 			value := func(key string) string {
 				if row[key] == nil {
@@ -88,7 +103,7 @@ func ReportToHTMLWithIndex(w io.Writer, title, kind string, metadata any, indexU
 			}
 			value = object[key]
 		}
-		if value == nil && len(keys) > 0 && keys[len(keys)-1] == "epsilon_decay_episodes" && kind == "training" {
+		if value == nil && len(keys) > 0 && keys[len(keys)-1] == "epsilon_decay_episodes" && (kind == "training" || kind == "catalog") {
 			return "Dynamic (total episodes)"
 		}
 		if value == nil {
@@ -98,6 +113,13 @@ func ReportToHTMLWithIndex(w io.Writer, title, kind string, metadata any, indexU
 			return "—"
 		}
 		return fmt.Sprint(value)
+	}
+	if kind == "catalog" {
+		for _, field := range []struct{ name, key string }{
+			{"Route ID", "id"}, {"Route description", "description"}, {"Selected seed", "seed"}, {"Catalog map mode", "map_mode"}, {"Field validation", "field_validation"}, {"Added to catalog (UTC)", "added_at"}, {"Source HTML SHA-256", "source_html_sha256"},
+		} {
+			data.Fields = append(data.Fields, reportField{field.name, get("catalog", field.key)})
+		}
 	}
 	for _, field := range []struct {
 		name string

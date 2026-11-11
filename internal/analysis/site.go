@@ -14,6 +14,7 @@ type SiteSeed struct {
 
 type SiteEntry struct {
 	Name, Kind, Scenario, MapURL, DetailsURL, CompletedAt string
+	Description                                           string
 	Seeds                                                 []SiteSeed
 }
 
@@ -23,8 +24,18 @@ var siteHTML string
 var siteTemplate = template.Must(template.New("site").Parse(siteHTML))
 
 func SiteToHTML(w io.Writer, title, mode string, entries []SiteEntry) error {
+	return renderSite(w, title, mode, entries, false)
+}
+
+// CatalogToHTML reuses the static navigation with descriptions for curated routes.
+func CatalogToHTML(w io.Writer, entries []SiteEntry) error {
+	return renderSite(w, "Running route catalog", "standard", entries, true)
+}
+
+func renderSite(w io.Writer, title, mode string, entries []SiteEntry, catalog bool) error {
 	return siteTemplate.Execute(w, struct {
 		Title, Mode string
 		Entries     []SiteEntry
-	}{title, mode, entries})
+		Catalog     bool
+	}{title, mode, entries, catalog})
 }
