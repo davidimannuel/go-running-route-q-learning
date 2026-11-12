@@ -177,7 +177,7 @@ No automatic commit/push is implied by editing local catalog files.
 User chose THREE routes from THREE distinct starts, not five. Local catalog IDs:
 depan-gang-sebelah-toko9 (seed13916397716709765191,5151.87m),
 depan-indomaret-dkb (seed16261264761017114444,5298.84m),
-depan-uwika (seed9988407548480542851,5527.50m). All B/horizon100k/total300k,
+depan-wk (seed9988407548480542851,5527.50m). All B/horizon100k/total300k,
 matching effective Q-learning config; standard maps include GPX. All remain
 field_validation=not_recorded. Check loop, GPS-vs-graph distance, access/hazards
 and deviations; retain failed field checks. This is limited case validation,

@@ -860,7 +860,7 @@ Katalog lokal menyimpan pilihan berikut secara mandiri dari output testing:
 |---|---|---:|
 | `depan-gang-sebelah-toko9` | `13916397716709765191` | 5.151,87 m |
 | `depan-indomaret-dkb` | `16261264761017114444` | 5.298,84 m |
-| `depan-uwika` | `9988407548480542851` | 5.527,50 m |
+| `depan-wk` | `9988407548480542851` | 5.527,50 m |
 
 Ketiganya masih `field_validation=not_recorded`: kandidat yang akan diperiksa,
 bukan hasil validasi. Catat kesesuaian lintasan/loop, jarak aktivitas GPS dan
