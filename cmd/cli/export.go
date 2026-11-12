@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -27,8 +26,8 @@ type exportSource struct {
 	CompletedAt string `json:"completed_at"`
 }
 
-// runExport regenerates presentation from saved HTML/metadata. Today's training
-// parameters are deliberately not used to reconstruct old routes or scores.
+// runExport refreshes saved HTML in place. Recorded data, not today's training
+// parameters, supplies the routes, scores, and settings.
 func runExport(ctx context.Context, args []string, out, logOut io.Writer) error {
 	flags := flag.NewFlagSet("export", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -63,22 +62,22 @@ func runExport(ctx context.Context, args []string, out, logOut io.Writer) error 
 		return fmt.Errorf("export: open saved output: %w", err)
 	}
 	defer root.Close()
-	stage, err := os.MkdirTemp(output, ".site-*")
+	stage, err := os.MkdirTemp(output, ".export-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(stage)
-	var entries []analysis.SiteEntry
+	var results int
 	var sources []exportSource
 	logger.Info(ctx, "Exporting saved results", logger.String("map_mode", cfg.Export.Mode()))
 	add := func(directory, kind string) error {
-		entry, source, err := exportSavedResult(ctx, root, output, stage, directory, kind, cfg.Export.Mode())
+		source, err := exportSavedResult(ctx, root, stage, directory, kind, cfg.Export.Mode())
 		if err != nil {
 			return fmt.Errorf("export %s: %w", directory, err)
 		}
-		entries = append(entries, entry)
+		results++
 		sources = append(sources, source)
-		logger.Debug(ctx, "Exported saved result", logger.String("map", entry.MapURL))
+		logger.Debug(ctx, "Exported saved result", logger.String("map", source.File))
 		return nil
 	}
 	// Analysis is optional, and retains its own recorded scoring/date even if old.
@@ -133,19 +132,13 @@ func runExport(ctx context.Context, args []string, out, logOut io.Writer) error 
 			return err
 		}
 	}
-	if len(entries) == 0 {
+	if results == 0 {
 		return fmt.Errorf("export: no saved analysis or training results; run analyze/train first")
 	}
-	title := filepath.Base(workdir) + " · Route catalog"
-	if err := writeOutput(ctx, filepath.Join(stage, "index.html"), func(w io.Writer) error {
-		return analysis.SiteToHTML(w, title, cfg.Export.Mode(), entries)
-	}); err != nil {
-		return err
-	}
 	manifest := map[string]any{
-		"schema_version": 1, "command": "export", "generated_at": time.Now().UTC().Format(time.RFC3339Nano),
+		"schema_version": 2, "command": "export", "generated_at": time.Now().UTC().Format(time.RFC3339Nano),
 		"map_mode": cfg.Export.Mode(), "workdir": workdir, "sources": sources,
-		"training_rerun": false, "source_results_modified": false,
+		"training_rerun": false, "research_data_modified": false, "html_updated_in_place": true,
 		"external_assets":      []string{"Leaflet 1.9.4 via unpkg.com", "OpenStreetMap raster tiles"},
 		"q_values_require_cli": cfg.Export.Mode() == "advanced",
 	}
@@ -155,18 +148,22 @@ func runExport(ctx context.Context, args []string, out, logOut io.Writer) error 
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	target := filepath.Join(output, "site")
-	// Publish as one batch so a failed export leaves the previous site intact.
-	if err := publishTraining(stage, target); err != nil {
-		return fmt.Errorf("export: publish site: %w", err)
+	removeSite, err := legacyExportSite(output, workdir)
+	if err != nil {
+		return fmt.Errorf("export: inspect old site: %w", err)
 	}
-	logger.Info(ctx, "Saved HTML catalog", logger.Int("results", len(entries)), logger.String("path", filepath.Join(target, "index.html")))
-	_, err = fmt.Fprintf(out, "Exported %d saved result(s) to %s (map_mode=%s).\n", len(entries), target, cfg.Export.Mode())
+	if err := publishExport(ctx, output, stage, removeSite); err != nil {
+		return fmt.Errorf("export: publish HTML: %w", err)
+	}
+	if removeSite {
+		logger.Info(ctx, "Removed old duplicate HTML export", logger.String("path", filepath.Join(output, "site")))
+	}
+	logger.Info(ctx, "Updated saved HTML", logger.Int("results", results), logger.String("path", output))
+	_, err = fmt.Fprintf(out, "Updated %d saved result(s) in %s (map_mode=%s).\n", results, output, cfg.Export.Mode())
 	return err
 }
 
-func exportSavedResult(ctx context.Context, root *os.Root, output, stage, directory, kind, mode string) (analysis.SiteEntry, exportSource, error) {
-	var entry analysis.SiteEntry
+func exportSavedResult(ctx context.Context, root *os.Root, stage, directory, kind, mode string) (exportSource, error) {
 	var provenance exportSource
 	mapName, metadataName, reportName := "routes.html", "metadata.json", "report.html"
 	if kind == "analysis" {
@@ -174,38 +171,25 @@ func exportSavedResult(ctx context.Context, root *os.Root, output, stage, direct
 	}
 	details, err := readExportMetadata(root, filepath.Join(directory, metadataName))
 	if err != nil {
-		return entry, provenance, err
+		return provenance, err
 	}
 	if details["status"] != "completed" {
-		return entry, provenance, fmt.Errorf("saved result is not completed")
+		return provenance, fmt.Errorf("saved result is not completed")
 	}
 	sourceName := filepath.Join(directory, mapName)
 	source, err := root.Open(sourceName)
 	if err != nil {
-		return entry, provenance, err
+		return provenance, err
 	}
 	defer source.Close()
 	hash := sha256.New()
 	reader := io.TeeReader(source, hash)
-	indexURL, err := filepath.Rel(directory, "index.html")
-	if err != nil {
-		return entry, provenance, err
-	}
-	options := analysis.HTMLOptions{MapMode: mode, IndexURL: filepath.ToSlash(indexURL)}
+	// The CLI server supplies All results; Q inspection uses this same map URL.
+	options := analysis.HTMLOptions{MapMode: mode}
 	if automatic, ok := details["automatic_seeds"].(bool); ok {
 		options.SeedSource = analysis.SeedSource(automatic)
 	}
-	// An advanced exported page queries its original result, not a copied Q-table.
-	qSource, err := filepath.Rel(filepath.Join(output, "site", directory), filepath.Join(output, sourceName))
-	if err != nil {
-		return entry, provenance, err
-	}
-	options.QSource = filepath.ToSlash(qSource)
-	entry = analysis.SiteEntry{Name: filepath.Base(directory), Kind: kind, MapURL: filepath.ToSlash(sourceName), DetailsURL: filepath.ToSlash(filepath.Join(directory, reportName))}
-	entry.CompletedAt, _ = details["completed_at"].(string)
-	if kind == "analysis" {
-		entry.Name = "Road analysis"
-	}
+
 	err = writeOutput(ctx, filepath.Join(stage, sourceName), func(w io.Writer) error {
 		if kind == "analysis" {
 			return analysis.ReexportAnalysisToHTML(w, reader, options)
@@ -217,23 +201,19 @@ func exportSavedResult(ctx context.Context, root *os.Root, output, stage, direct
 		if err := verifyExportIdentity(summary, details); err != nil {
 			return err
 		}
-		entry.Scenario, entry.Seeds = summary.Scenario, summary.Trials
-		for i := range entry.Seeds {
-			link := url.URL{Path: entry.MapURL, RawQuery: url.Values{"seed": {entry.Seeds[i].ID}}.Encode()}
-			entry.Seeds[i].URL = link.String()
-		}
 		return nil
 	})
 	if err != nil {
-		return entry, provenance, err
+		return provenance, err
 	}
 	if err := writeOutput(ctx, filepath.Join(stage, directory, reportName), func(w io.Writer) error {
-		return analysis.ReportToHTMLWithIndex(w, "Recorded result details", kind, details, options.IndexURL)
+		return analysis.ReportToHTML(w, "Recorded result details", kind, details)
 	}); err != nil {
-		return entry, provenance, err
+		return provenance, err
 	}
-	provenance = exportSource{File: filepath.ToSlash(sourceName), SHA256: hex.EncodeToString(hash.Sum(nil)), CompletedAt: entry.CompletedAt}
-	return entry, provenance, nil
+	completedAt, _ := details["completed_at"].(string)
+	provenance = exportSource{File: filepath.ToSlash(sourceName), SHA256: hex.EncodeToString(hash.Sum(nil)), CompletedAt: completedAt}
+	return provenance, nil
 }
 
 func readExportMetadata(root *os.Root, name string) (map[string]any, error) {

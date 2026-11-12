@@ -26,7 +26,7 @@ Graf tetap mentah dan bidirectional; simplifikasi di luar lingkup saat ini. Sele
 
 ## Final Experiment
 
-Workdir `training`: A/B/C × dinamis150k/300k dan horizon100k-total150k/300k, 12 profil/60 training/13.500.000 episode. Seed tetap0–4, alpha0.15, gamma0.95, epsilon1→0.05, evaluasi greedy0. Setiap profil/seed mulai dari Q-table/RNG mandiri. `testing`: dua profil B300k aktif (dinamis/horizon100k), koordinat sendiri dan lima seed acak bersama per command; total3.000.000episode. Nama profil kedua workdir identik; jangan memakai alias lama a/b/c.
+Workdir `training`: A/B/C × dinamis150k/300k dan horizon100k-total150k/300k, 12 profil/60 training/13.500.000 episode. Seed tetap0–4, alpha0.15, gamma0.95, epsilon1→0.05, evaluasi greedy0. Setiap profil/seed mulai dari Q-table/RNG mandiri. `testing`: satu profil B horizon100k-total300k aktif, koordinat sendiri dan lima seed acak per command; total1.500.000episode. Nama profil kedua workdir identik; jangan memakai alias lama a/b/c.
 
 Parameter aktif: toleransi20%, 25 bin, max_steps500, max_workers5, outward0, return1.20, revisit−10; highway.other−10/missing−2. Penalti selisih jarak akhir−5/100m sudah dilatih pada batch22.18 WIB (22/60 valid). Reward lain ada di YAML. Jangan menambah variasi atau menjalankan training panjang tanpa permintaan. Pengguna masih mengevaluasi konfigurasi; jangan menetapkan final otomatis. Prioritas berikutnya analisis BAB IV dan penyesuaian Bab I–III.
 
@@ -106,13 +106,18 @@ Gunakan gofmt, `go test ./...`, `go vet ./...`, `go build ./...`; tambah `go tes
 `export.map_mode`: standard/advanced, omitted defaults advanced. Testing standard;
 training advanced. Standard retains all embedded graph/layers/metrics/reward popups,
 without Q inspection code or backend requests. Advanced uses CLI `/q-values`.
-`cli export --workdir ... [--profile ...]` regenerates `output/site/` from saved
-HTML payloads and recorded metadata, never today's training parameters. No training,
-source changes, or raw CSV/Q/YAML copying. Whole site replacement is staged; a
-selected profile replaces the package with only that profile. Preserve failed seeds
-and old analysis dates/scores. `export.json` records source hashes and export mode.
-Relative navigation/report/index is static; Leaflet CDN and OSM tiles remain external.
-Advanced site QSource resolves to the original result; serve a common parent root.
+`cli export --workdir ... [--profile ...]` now updates original maps/reports IN
+PLACE (12 November); no duplicate output/site or new static index. All results
+uses the CLI server index; advanced Q uses the map's own location. Profile flag
+updates only that profile; otherwise refresh saved analysis and all profiles.
+Use embedded payload/recorded metadata, never today's training parameters. CSV,
+Q-tables, metadata, YAML and snapshots stay byte-for-byte intact. Prepare all HTML
+first, roll back ordinary publish failures/cancellation. output/export.json schema2
+records latest refresh/source hashes. No crash-atomic guarantee or concurrent
+train/analyze/export on one workdir. A verified legacy site/schema1 is removed;
+unknown files, symlinks or mismatched manifests abort unchanged. The old testing
+site (8 generated files) was removed on user request; original HTML awaits the
+user's export command. Public catalog is separate and untouched. Leaflet CDN and OSM tiles remain external.
 Seed arrows stop at boundaries; full uint64 seed stays text. Source fixed/random
 comes from recorded automatic_seeds, not current YAML. Seed links and catalog Copy
 link preserve selection. Existing outputs are not regenerated automatically.
@@ -130,15 +135,23 @@ details.html,metadata.json. Metadata retains source batch/config and adds catalo
 provenance/hash/mode separately; report table filters selected seed. Never copy raw
 Q/CSV/OSM or run training. Interactive validation retries duplicate IDs; additions
 stage/copy previous catalog and publish as a batch under an exclusive sibling lock.
-Ctrl+C cancels input. Catalog starts empty; synthetic previews stay in /tmp.
+Ctrl+C cancels input. Catalog was initially empty; synthetic previews stay in /tmp.
 Pages workflow uploads web-catalog only, on main/path changes or manual dispatch.
-User must choose GitHub Actions as Pages source and push; do not claim deployment
-or field validation. All internal links relative; HTTPS Leaflet/OSM, normal referrer.
+Pages is enabled with GitHub Actions. Public site verified12November2026:
+[Running route catalog](https://davidimannuel.github.io/go-running-route-q-learning/).
+The public index had one route at that check; the local catalog now has three
+selected candidates pending the next push/deployment. Publication is not field validation.
+All internal links relative; HTTPS Leaflet/OSM, normal referrer.
 Preview with serve --dir web-catalog --port 8081, then /files/index.html.
 Route/analysis panels use native Minimize/Show details; mobile/short landscape
 starts collapsed, scrollable at <=55dvh when open. Seed/KM/layer state persists.
 Mobile route layers collapse; zoom bottom-left; fit/popup padding measures panel.
 Template changes require HTML regeneration, never research retraining.
+Route maps now include browser-only Download GPX for the selected seed, full
+traversal regardless of KM filter. GPX1.1 WGS84 track, N+1 points; preserve revisits,
+no fabricated time/elevation. Empty seed disables export; disconnected data fails.
+Contract/API references live in README Go. This is a utility outside thesis scope;
+user refreshes HTML with cli export; retraining is unnecessary. Do not regenerate outputs or publish automatically.
 Workflow: edit map coordinates → cli run → inspect/select saved profile/seed →
 catalog add → preview → user commit/push. Add only generates presentation from
 saved results; no download/analyze/train or prerequisite export. Add chosen routes
@@ -152,9 +165,23 @@ an empty index/manifest/.nojekyll/routes, even if files are partly deleted. No
 extra prompt/workdir; source results remain. Shares add lock and stages publication;
 rejects symlinks/unexpected paths to protect non-catalog data. User requested and
 ran reset on12November, then added one route again: depan-gang-sebelah-toko9,
-seed12226258565145578727/profile B horizon100k-total300k. The checked-in catalog
-contains this selected result; original workdir outputs remain ignored. Source
-field_validation is not_recorded. No push/deployment performed.
+seed12226258565145578727/profile B horizon100k-total300k at that checkpoint. That
+selection has since been replaced by the three candidates below; original workdir outputs remain ignored. Source
+field_validation is not_recorded. User pushed and deployed successfully after
+the initial Pages404 was resolved by enabling Actions and rerunning the workflow.
+Future web-catalog changes require commit/push; verify Actions and the live site.
+No automatic commit/push is implied by editing local catalog files.
+
+## Field validation candidates — 12 November
+
+User chose THREE routes from THREE distinct starts, not five. Local catalog IDs:
+depan-gang-sebelah-toko9 (seed13916397716709765191,5151.87m),
+depan-indomaret-dkb (seed16261264761017114444,5298.84m),
+depan-uwika (seed9988407548480542851,5527.50m). All B/horizon100k/total300k,
+matching effective Q-learning config; standard maps include GPX. All remain
+field_validation=not_recorded. Check loop, GPS-vs-graph distance, access/hazards
+and deviations; retain failed field checks. This is limited case validation,
+separate from the state-comparison experiment. Do not claim fieldwork completed.
 
 ## Combined workflow — 12 November
 

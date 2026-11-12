@@ -3,17 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/davidimannuel/go-running-route-q-learning/internal/analysis"
-	"github.com/davidimannuel/go-running-route-q-learning/internal/htmlserver"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/osm"
 	"github.com/davidimannuel/go-running-route-q-learning/internal/qlearning"
 )
@@ -60,103 +56,171 @@ func savedExportWorkdir(t *testing.T, mode string) string {
 	return workdir
 }
 
-func TestExportSavedResultsPortableAndNoSourceChanges(t *testing.T) {
+// Every non-HTML research file must retain its exact recorded bytes.
+func assertResearchUnchanged(t *testing.T, output string, before map[string][]byte) {
+	t.Helper()
+	for name, body := range before {
+		if filepath.Ext(name) != ".html" && !bytes.Equal(readFile(t, filepath.Join(output, name)), body) {
+			t.Fatalf("research data changed: %s", name)
+		}
+	}
+}
+
+func TestExportUpdatesOriginalHTMLAndPreservesResearch(t *testing.T) {
 	for _, mode := range []string{"standard", "advanced"} {
 		t.Run(mode, func(t *testing.T) {
 			workdir := savedExportWorkdir(t, mode)
-			original := filepath.Join(workdir, "output", "training", "b-saved", "routes.html")
-			before := string(readFile(t, original))
+			output := filepath.Join(workdir, "output")
+			before := treeFiles(t, output)
 			var out bytes.Buffer
-			if err := run(context.Background(), []string{"export", "--workdir", workdir}, &out, &out, nil); err != nil {
-				t.Fatal(err)
+			args := []string{"export", "--workdir", workdir}
+			for range 2 { // A refreshed map remains a valid source for the next export.
+				if err := run(context.Background(), args, &out, &out, nil); err != nil {
+					t.Fatal(err)
+				}
 			}
-			site := filepath.Join(workdir, "output", "site")
-			route := string(readFile(t, filepath.Join(site, "training", "b-saved", "routes.html")))
+			route := string(readFile(t, filepath.Join(output, "training", "b-saved", "routes.html")))
 			if strings.Contains(route, "fetch(") != (mode == "advanced") {
 				t.Fatalf("wrong dependency for %s", mode)
 			}
-			for _, want := range []string{`href="../../index.html"`, "18446744073709551615", "Random seed generated once", `id="seed-next"`} {
+			for _, want := range []string{`href="/"`, "18446744073709551615", "Random seed generated once", `id="seed-next"`, `id="download-gpx"`} {
 				if !strings.Contains(route, want) {
 					t.Fatalf("missing %q", want)
 				}
 			}
-			if string(readFile(t, original)) != before {
-				t.Fatal("original map changed")
+			if strings.Contains(route, `../../../training/`) || !strings.Contains(route, `"QSource":""`) {
+				t.Fatal("in-place map must use its own location for Q queries")
 			}
-			report := string(readFile(t, filepath.Join(site, "training", "b-saved", "report.html")))
-			if !strings.Contains(report, "150000") || !strings.Contains(report, "18446744073709551615") || strings.Contains(report, `href="/"`) {
-				t.Fatal("report did not preserve saved config and portable links")
+			report := string(readFile(t, filepath.Join(output, "training", "b-saved", "report.html")))
+			if !strings.Contains(report, "150000") || !strings.Contains(report, "18446744073709551615") {
+				t.Fatal("report did not preserve saved config and uint64 seeds")
 			}
-			for _, forbidden := range []string{"/q-values", "/details?", "/files/"} {
-				if strings.Contains(string(readFile(t, filepath.Join(site, "index.html"))), forbidden) {
-					t.Fatalf("static index references %s", forbidden)
-				}
-			}
-			if strings.Contains(string(readFile(t, filepath.Join(site, "analysis.html"))), "old saved scoring") == false {
+			if !strings.Contains(string(readFile(t, filepath.Join(output, "analysis.html"))), "old saved scoring") {
 				t.Fatal("analysis metadata recomputed")
 			}
-			if _, err := os.Stat(filepath.Join(site, "training", "b-saved", "qtable.csv")); !os.IsNotExist(err) {
-				t.Fatal("raw Q-table published")
-			}
-			// Standard pages work under a generic static server and a subpath.
-			h := http.StripPrefix("/catalog/", http.FileServer(http.Dir(site)))
-			for _, name := range []string{"", "road-analysis.html", "analysis.html", "training/b-saved/routes.html", "training/b-saved/report.html", "export.json"} {
-				w := httptest.NewRecorder()
-				h.ServeHTTP(w, httptest.NewRequest("GET", "/catalog/"+name, nil))
-				if w.Code != 200 {
-					t.Fatalf("static %s: %d", name, w.Code)
+			for _, name := range []string{"site", "index.html"} {
+				if _, err := os.Stat(filepath.Join(output, name)); !os.IsNotExist(err) {
+					t.Fatalf("unexpected duplicate presentation: %s", name)
 				}
 			}
-			if mode == "advanced" {
-				if !strings.Contains(route, `../../../training/b-saved/routes.html`) {
-					t.Fatal("advanced map lost original Q source")
-				}
-				// Resolve the actual exported-page source URL to its original result.
-				h, err := htmlserver.New(filepath.Join(workdir, "output"))
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer h.Close()
-				w := httptest.NewRecorder()
-				h.ServeHTTP(w, httptest.NewRequest("GET", "/files/site/training/b-saved/routes.html", nil))
-				if w.Code != 200 {
-					t.Fatal("advanced map not served")
-				}
-			}
+			assertResearchUnchanged(t, output, before)
 		})
 	}
 }
 
-func TestExportFailureKeepsPreviousSiteAndProfileSelection(t *testing.T) {
+func TestExportProfileSelectionAndFailurePreserveOtherResults(t *testing.T) {
 	workdir := savedExportWorkdir(t, "standard")
+	output := filepath.Join(workdir, "output")
+	before := treeFiles(t, output)
 	args := []string{"export", "--workdir", workdir, "--profile", "b-saved"}
 	if err := run(context.Background(), args, io.Discard, io.Discard, nil); err != nil {
 		t.Fatal(err)
 	}
-	index := filepath.Join(workdir, "output", "site", "index.html")
-	before := string(readFile(t, index))
-	if strings.Contains(before, "b-other") || strings.Contains(before, "Road analysis") {
-		t.Fatal("profile selection ignored")
+	for _, name := range []string{"training/b-other/routes.html", "road-analysis.html"} {
+		if !bytes.Equal(before[name], readFile(t, filepath.Join(output, name))) {
+			t.Fatalf("unselected map changed: %s", name)
+		}
 	}
-	meta := filepath.Join(workdir, "output", "training", "b-saved", "metadata.json")
+	assertResearchUnchanged(t, output, before)
+	meta := filepath.Join(output, "training", "b-saved", "metadata.json")
 	if err := os.WriteFile(meta, []byte(`{"status":"completed","config":{"scenario":"C"},"resolved_seeds":[18446744073709551615,0]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	unchanged := treeFiles(t, output)
 	if err := run(context.Background(), args, io.Discard, io.Discard, nil); err == nil {
 		t.Fatal("mismatched result accepted")
 	}
-	if string(readFile(t, index)) != before {
-		t.Fatal("failed export damaged previous site")
+	for name, body := range unchanged {
+		if !bytes.Equal(readFile(t, filepath.Join(output, name)), body) {
+			t.Fatalf("failed export changed %s", name)
+		}
 	}
 	for _, profile := range []string{"../escape", "/absolute", "missing"} {
 		if err := run(context.Background(), []string{"export", "--workdir", workdir, "--profile", profile}, io.Discard, io.Discard, nil); err == nil {
-			t.Fatal(fmt.Sprintf("invalid profile %s accepted", profile))
+			t.Fatalf("invalid profile %s accepted", profile)
 		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := run(ctx, args, io.Discard, io.Discard, nil); err == nil {
 		t.Fatal("cancellation ignored")
+	}
+}
+
+func legacySiteFixture(t *testing.T, workdir string) string {
+	t.Helper()
+	site := filepath.Join(workdir, "output", "site")
+	for _, name := range []string{"index.html", "training/b-saved/routes.html", "training/b-saved/report.html"} {
+		if err := writeOutput(context.Background(), filepath.Join(site, name), func(w io.Writer) error {
+			_, err := io.WriteString(w, "old exported HTML")
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writeJSON(context.Background(), filepath.Join(site, "export.json"), map[string]any{
+		"schema_version": 1, "command": "export", "workdir": workdir,
+		"sources": []map[string]string{{"file": "training/b-saved/routes.html"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return site
+}
+
+func TestExportCleansOnlyVerifiedLegacySite(t *testing.T) {
+	for _, unknown := range []bool{false, true} {
+		t.Run(map[bool]string{false: "generated", true: "user-file"}[unknown], func(t *testing.T) {
+			workdir := savedExportWorkdir(t, "standard")
+			site := legacySiteFixture(t, workdir)
+			if unknown {
+				if err := os.WriteFile(filepath.Join(site, "notes.txt"), []byte("keep this"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			output := filepath.Join(workdir, "output")
+			before := treeFiles(t, output)
+			err := run(context.Background(), []string{"export", "--workdir", workdir}, io.Discard, io.Discard, nil)
+			if unknown {
+				if err == nil {
+					t.Fatal("unrecognized site contents removed")
+				}
+				for name, body := range before {
+					if !bytes.Equal(body, readFile(t, filepath.Join(output, name))) {
+						t.Fatalf("failed cleanup changed %s", name)
+					}
+				}
+			} else {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := os.Stat(site); !os.IsNotExist(err) {
+					t.Fatal("old duplicate site remains")
+				}
+			}
+		})
+	}
+}
+
+func TestExportPublicationRollsBackHTMLAndSite(t *testing.T) {
+	workdir := savedExportWorkdir(t, "standard")
+	output := filepath.Join(workdir, "output")
+	legacySiteFixture(t, workdir)
+	// A directory in place of a report forces publication to fail after earlier
+	// files have been replaced. Both those files and the site must be restored.
+	if err := os.Mkdir(filepath.Join(output, "training", "b-saved", "report.html"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	before := treeFiles(t, output)
+	if err := run(context.Background(), []string{"export", "--workdir", workdir}, io.Discard, io.Discard, nil); err == nil {
+		t.Fatal("invalid destination accepted")
+	}
+	for name, body := range before {
+		if !bytes.Equal(body, readFile(t, filepath.Join(output, name))) {
+			t.Fatalf("rollback changed %s", name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(output, "export.json")); !os.IsNotExist(err) {
+		t.Fatal("failed export left a new manifest")
 	}
 }
 
@@ -176,7 +240,7 @@ func TestExportLegacySingleProfile(t *testing.T) {
 	if err := run(context.Background(), []string{"export", "--workdir", workdir}, io.Discard, io.Discard, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(workdir, "output", "site", "training", "routes.html")); err != nil {
+	if _, err := os.Stat(filepath.Join(training, "report.html")); err != nil {
 		t.Fatal(err)
 	}
 }

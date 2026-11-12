@@ -10,12 +10,12 @@ map:
   # longitude: 112.7101655
 
   # depan WK
-  latitude: -7.281885
-  longitude: 112.711476
+  # latitude: -7.281885
+  # longitude: 112.711476
 
   # depan indomaret
-  # latitude: -7.275646
-  # longitude: 112.710049
+  latitude: -7.275646
+  longitude: 112.710049
 
   radius_m: 3025
   timeout_sec: 90
@@ -64,51 +64,7 @@ qlearning:
     runs: 5
     max_workers: 5
     profiles:
-      # - name: a-dynamic-150000
-      #   scenario: A
-      #   episodes: 150000
-      #   epsilon_decay_episodes: null
-      # - name: a-dynamic-300000
-      #   scenario: A
-      #   episodes: 300000
-      #   epsilon_decay_episodes: null
-      # - name: a-horizon-100000-total-150000
-      #   scenario: A
-      #   episodes: 150000
-      #   epsilon_decay_episodes: 100000
-      # - name: a-horizon-100000-total-300000
-      #   scenario: A
-      #   episodes: 300000
-      #   epsilon_decay_episodes: 100000
-      # - name: b-dynamic-150000
-      #   scenario: B
-      #   episodes: 150000
-      #   epsilon_decay_episodes: null
-      - name: b-dynamic-300000
-        scenario: B
-        episodes: 300000
-        epsilon_decay_episodes: null
-      # - name: b-horizon-100000-total-150000
-      #   scenario: B
-      #   episodes: 150000
-      #   epsilon_decay_episodes: 100000
       - name: b-horizon-100000-total-300000
         scenario: B
         episodes: 300000
         epsilon_decay_episodes: 100000
-      # - name: c-dynamic-150000
-      #   scenario: C
-      #   episodes: 150000
-      #   epsilon_decay_episodes: null
-      # - name: c-dynamic-300000
-      #   scenario: C
-      #   episodes: 300000
-      #   epsilon_decay_episodes: null
-      # - name: c-horizon-100000-total-150000
-      #   scenario: C
-      #   episodes: 150000
-      #   epsilon_decay_episodes: 100000
-      # - name: c-horizon-100000-total-300000
-      #   scenario: C
-      #   episodes: 300000
-      #   epsilon_decay_episodes: 100000

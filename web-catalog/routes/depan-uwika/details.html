@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Route details · depan-uwika</title>
+<style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{font:15px/1.6 system-ui,sans-serif;margin:0;background:light-dark(#f4f6f9,#101720);color:light-dark(#182437,#e4eaf2)}main{max-width:1050px;margin:auto;padding:28px}nav{display:flex;gap:22px;flex-wrap:wrap}a{color:light-dark(#1d4ed8,#93b6ff)}h1{font-size:26px;margin:24px 0 4px}p{color:light-dark(#526174,#a7b5c8)}dl{display:grid;grid-template-columns:minmax(150px,240px) minmax(0,1fr);gap:8px 24px;padding:20px;background:light-dark(#fff,#192333);border-radius:10px}dt{color:light-dark(#526174,#a7b5c8)}dd{margin:0;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:20px;background:light-dark(#fff,#192333);border-radius:10px;font-size:13px}button{font:inherit;padding:7px 12px;border-radius:6px;border:1px solid light-dark(#becbdc,#4c607b);background:light-dark(#fff,#192333);color:inherit;cursor:pointer}h2{font-size:19px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;text-align:left;border-bottom:1px solid light-dark(#dce3ee,#344055)}summary{cursor:pointer}section{margin-top:28px}@media(max-width:540px){main{padding:18px}dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:12px}}
+</style></head><body><main>
+<nav><a href="../../index.html" target="_top">All results</a><a href="index.html">Open map</a></nav>
+<h1>Route details · depan-uwika</h1><p>These settings were recorded when this output was created. Editing config.yaml does not change an existing result.</p>
+<dl><dt>Route ID</dt><dd>depan-uwika</dd><dt>Route description</dt><dd>start depan Universitas Wijaya Kusuma</dd><dt>Selected seed</dt><dd>9988407548480542851</dd><dt>Catalog map mode</dt><dd>standard</dd><dt>Field validation</dt><dd>not_recorded</dd><dt>Added to catalog (UTC)</dt><dd>2026-11-12T09:44:38.402719Z</dd><dt>Source HTML SHA-256</dt><dd>7922ffd6f002597625bfba1035446d7c507e35d3241cd2b9fff8c71b0e24bb01</dd><dt>Status</dt><dd>completed</dd><dt>Latest attempt (when different)</dt><dd>—</dd><dt>Profile</dt><dd>b-horizon-100000-total-300000</dd><dt>Scenario</dt><dd>B</dd><dt>Episodes per seed</dt><dd>300000</dd><dt>Epsilon horizon (null = dynamic)</dt><dd>100000</dd><dt>Resolved seeds</dt><dd>[16026744465294737446 4278980482946739367 9988407548480542851 7360114982603736782 5346582512530713817]</dd><dt>Started (UTC)</dt><dd>2026-11-12T09:39:32.105197Z</dd><dt>Completed (UTC)</dt><dd>2026-11-12T09:40:00.746214Z</dd><dt>Graph nodes</dt><dd>27129</dd><dt>Directed edges</dt><dd>59848</dd><dt>Snapshot SHA-256</dt><dd>9d1f792175018fb07627ee42098793ed867fad7fd8240773d9c7ee29ea477a43</dd></dl>
+<section><h2>Greedy evaluation per seed</h2><p>Final evaluation uses epsilon = 0. Overlap is a ratio from 0 to 1.</p><div class="table-wrap"><table><thead><tr><th>Seed</th><th>Scenario</th><th>Termination</th><th>Distance (m)</th><th>Error (m)</th><th>Reward</th><th>Comfort</th><th>Overlap</th></tr></thead><tbody><tr><td>9988407548480542851</td><td>B</td><td>success</td><td>5527.50</td><td>527.50</td><td>138.227</td><td>0.9158</td><td>0.0000</td></tr></tbody></table></div></section>
+<section><h2>Effective Q-learning configuration</h2><pre>{
+  &#34;environment&#34;: {
+    &#34;allow_revisit&#34;: true,
+    &#34;distance_tolerance&#34;: 0.2,
+    &#34;max_node_visits&#34;: 2,
+    &#34;max_snap_distance_m&#34;: 100,
+    &#34;max_steps&#34;: 500,
+    &#34;progress_bins&#34;: 25,
+    &#34;revisit_after_ratio&#34;: 0.5,
+    &#34;target_distance_m&#34;: 5000
+  },
+  &#34;reward&#34;: {
+    &#34;distance_error_penalty_per_100m&#34;: -5,
+    &#34;no_action_penalty&#34;: -50,
+    &#34;outward_penalty_scale&#34;: 0,
+    &#34;over_distance_penalty&#34;: -50,
+    &#34;permissive_penalty_per_100m&#34;: -0.1,
+    &#34;return_phase_ratio&#34;: 0.5,
+    &#34;return_reward_scale&#34;: 1.2,
+    &#34;revisit_penalty&#34;: -10,
+    &#34;road&#34;: {
+      &#34;highway&#34;: {
+        &#34;missing&#34;: -2,
+        &#34;other&#34;: -10,
+        &#34;priority&#34;: 1,
+        &#34;secondary_priority&#34;: 0.5,
+        &#34;weight&#34;: 0.55
+      },
+      &#34;surface&#34;: {
+        &#34;missing&#34;: -0.5,
+        &#34;other&#34;: -1,
+        &#34;priority&#34;: 1,
+        &#34;weight&#34;: 0.3
+      },
+      &#34;width&#34;: {
+        &#34;missing&#34;: -0.5,
+        &#34;other&#34;: -1,
+        &#34;priority&#34;: 1,
+        &#34;weight&#34;: 0.15
+      },
+      &#34;width_threshold_m&#34;: 3
+    },
+    &#34;step_limit_penalty&#34;: -50,
+    &#34;success_bonus&#34;: 100
+  },
+  &#34;scenario&#34;: &#34;B&#34;,
+  &#34;training&#34;: {
+    &#34;alpha&#34;: 0.15,
+    &#34;episodes&#34;: 300000,
+    &#34;epsilon_decay_episodes&#34;: 100000,
+    &#34;epsilon_end&#34;: 0.05,
+    &#34;epsilon_start&#34;: 1,
+    &#34;gamma&#34;: 0.95,
+    &#34;max_workers&#34;: 5,
+    &#34;runs&#34;: 5,
+    &#34;seeds&#34;: null
+  }
+}</pre></section>
+<section><details><summary>Complete recorded configuration and provenance</summary><p>Includes reward parameters, actual seeds, graph identity, algorithm rules, build information, and available evaluation summaries.</p><button id="copy" type="button">Copy metadata</button><span id="copy-status" role="status"></span><pre id="metadata">{
+  &#34;access_policy&#34;: &#34;way, source node, and destination node must each have blank, yes, or permissive access; normalized scalar values; foot does not override; combined values rejected; barrier alone does not block; permissive penalty uses way access only&#34;,
+  &#34;access_policy_version&#34;: &#34;edge_and_endpoint_whitelist_v1&#34;,
+  &#34;action_identity&#34;: &#34;(next_node, key); sorted numerically by (next_node, key)&#34;,
+  &#34;action_mask&#34;: &#34;fresh &#43; permitted node revisits &#43; valid closing; shared by exploration, greedy, and bootstrap&#34;,
+  &#34;actual_workers&#34;: 5,
+  &#34;artifacts&#34;: [
+    &#34;history.csv&#34;,
+    &#34;evaluation.csv&#34;,
+    &#34;routes.html&#34;,
+    &#34;report.html&#34;,
+    &#34;metadata.json&#34;,
+    &#34;seed-\u003cseed\u003e/qtable.csv&#34;,
+    &#34;seed-\u003cseed\u003e/evaluation-steps.csv&#34;,
+    &#34;seed-\u003cseed\u003e/metadata.json&#34;
+  ],
+  &#34;automatic_seeds&#34;: true,
+  &#34;build&#34;: {
+    &#34;go_version&#34;: &#34;go1.27.2&#34;,
+    &#34;module&#34;: &#34;github.com/davidimannuel/go-running-route-q-learning&#34;,
+    &#34;platform&#34;: &#34;darwin/arm64&#34;
+  },
+  &#34;catalog&#34;: {
+    &#34;id&#34;: &#34;depan-uwika&#34;,
+    &#34;description&#34;: &#34;start depan Universitas Wijaya Kusuma&#34;,
+    &#34;seed&#34;: &#34;9988407548480542851&#34;,
+    &#34;profile&#34;: &#34;b-horizon-100000-total-300000&#34;,
+    &#34;scenario&#34;: &#34;B&#34;,
+    &#34;distance_m&#34;: 5527.495151345757,
+    &#34;added_at&#34;: &#34;2026-11-12T09:44:38.402719Z&#34;,
+    &#34;source_completed_at&#34;: &#34;2026-11-12T09:40:00.746214Z&#34;,
+    &#34;source_html_sha256&#34;: &#34;7922ffd6f002597625bfba1035446d7c507e35d3241cd2b9fff8c71b0e24bb01&#34;,
+    &#34;map_mode&#34;: &#34;standard&#34;,
+    &#34;field_validation&#34;: &#34;not_recorded&#34;
+  },
+  &#34;completed_at&#34;: &#34;2026-11-12T09:40:00.746214Z&#34;,
+  &#34;config&#34;: {
+    &#34;environment&#34;: {
+      &#34;allow_revisit&#34;: true,
+      &#34;distance_tolerance&#34;: 0.2,
+      &#34;max_node_visits&#34;: 2,
+      &#34;max_snap_distance_m&#34;: 100,
+      &#34;max_steps&#34;: 500,
+      &#34;progress_bins&#34;: 25,
+      &#34;revisit_after_ratio&#34;: 0.5,
+      &#34;target_distance_m&#34;: 5000
+    },
+    &#34;reward&#34;: {
+      &#34;distance_error_penalty_per_100m&#34;: -5,
+      &#34;no_action_penalty&#34;: -50,
+      &#34;outward_penalty_scale&#34;: 0,
+      &#34;over_distance_penalty&#34;: -50,
+      &#34;permissive_penalty_per_100m&#34;: -0.1,
+      &#34;return_phase_ratio&#34;: 0.5,
+      &#34;return_reward_scale&#34;: 1.2,
+      &#34;revisit_penalty&#34;: -10,
+      &#34;road&#34;: {
+        &#34;highway&#34;: {
+          &#34;missing&#34;: -2,
+          &#34;other&#34;: -10,
+          &#34;priority&#34;: 1,
+          &#34;secondary_priority&#34;: 0.5,
+          &#34;weight&#34;: 0.55
+        },
+        &#34;surface&#34;: {
+          &#34;missing&#34;: -0.5,
+          &#34;other&#34;: -1,
+          &#34;priority&#34;: 1,
+          &#34;weight&#34;: 0.3
+        },
+        &#34;width&#34;: {
+          &#34;missing&#34;: -0.5,
+          &#34;other&#34;: -1,
+          &#34;priority&#34;: 1,
+          &#34;weight&#34;: 0.15
+        },
+        &#34;width_threshold_m&#34;: 3
+      },
+      &#34;step_limit_penalty&#34;: -50,
+      &#34;success_bonus&#34;: 100
+    },
+    &#34;scenario&#34;: &#34;B&#34;,
+    &#34;training&#34;: {
+      &#34;alpha&#34;: 0.15,
+      &#34;episodes&#34;: 300000,
+      &#34;epsilon_decay_episodes&#34;: 100000,
+      &#34;epsilon_end&#34;: 0.05,
+      &#34;epsilon_start&#34;: 1,
+      &#34;gamma&#34;: 0.95,
+      &#34;max_workers&#34;: 5,
+      &#34;runs&#34;: 5,
+      &#34;seeds&#34;: null
+    }
+  },
+  &#34;config_path&#34;: &#34;/Users/david/development/go-running-route-q-learning/workdirs/testing/config.yaml&#34;,
+  &#34;directed_edges&#34;: 59848,
+  &#34;distance_error_reward&#34;: {
+    &#34;application&#34;: &#34;once at episode termination: success, over_distance, no_available_action, or step_limit&#34;,
+    &#34;formula&#34;: &#34;distance_error_penalty_per_100m * abs(total_distance_m - target_distance_m) / 100&#34;,
+    &#34;fractional_100m&#34;: true,
+    &#34;zero_disables&#34;: true
+  },
+  &#34;epsilon_formula&#34;: &#34;end &#43; (start-end)*(1-min(episode_zero_based/max(1,horizon-1),1)); null horizon follows total episodes&#34;,
+  &#34;evaluation_epsilon&#34;: 0,
+  &#34;evaluation_seed_offset&#34;: 100000,
+  &#34;evaluations&#34;: [
+    {
+      &#34;absolute_distance_error_m&#34;: 1006.3629315544804,
+      &#34;closing_action_available&#34;: false,
+      &#34;distance_to_start_at_end_m&#34;: 567.9881922289549,
+      &#34;is_loop&#34;: false,
+      &#34;mean_comfort&#34;: 0.8271334703200263,
+      &#34;overlap_ratio&#34;: 0.08,
+      &#34;q_state_count&#34;: 136305,
+      &#34;return_progress_ratio&#34;: 0.6186440677966102,
+      &#34;revisit_count&#34;: 16,
+      &#34;scenario&#34;: &#34;B&#34;,
+      &#34;seed&#34;: &#34;16026744465294737446&#34;,
+      &#34;steps&#34;: 175,
+      &#34;termination_reason&#34;: &#34;over_distance&#34;,
+      &#34;total_distance_m&#34;: 6006.36293155448,
+      &#34;total_reward&#34;: -200.31220342291272
+    },
+    {
+      &#34;absolute_distance_error_m&#34;: 524.2396559258032,
+      &#34;closing_action_available&#34;: true,
+      &#34;distance_to_start_at_end_m&#34;: 0,
+      &#34;is_loop&#34;: true,
+      &#34;mean_comfort&#34;: 0.8946230078857805,
+      &#34;overlap_ratio&#34;: 0,
+      &#34;q_state_count&#34;: 132047,
+      &#34;return_progress_ratio&#34;: 0.7076923076923077,
+      &#34;revisit_count&#34;: 0,
+      &#34;scenario&#34;: &#34;B&#34;,
+      &#34;seed&#34;: &#34;4278980482946739367&#34;,
+      &#34;steps&#34;: 123,
+      &#34;termination_reason&#34;: &#34;success&#34;,
+      &#34;total_distance_m&#34;: 5524.239655925803,
+      &#34;total_reward&#34;: 136.14915652320553
+    },
+    {
+      &#34;absolute_distance_error_m&#34;: 527.4951513457572,
+      &#34;closing_action_available&#34;: true,
+      &#34;distance_to_start_at_end_m&#34;: 0,
+      &#34;is_loop&#34;: true,
+      &#34;mean_comfort&#34;: 0.9157588473563261,
+      &#34;overlap_ratio&#34;: 0,
+      &#34;q_state_count&#34;: 133086,
+      &#34;return_progress_ratio&#34;: 0.7283950617283951,
+      &#34;revisit_count&#34;: 0,
+      &#34;scenario&#34;: &#34;B&#34;,
+      &#34;seed&#34;: &#34;9988407548480542851&#34;,
+      &#34;steps&#34;: 133,
+      &#34;termination_reason&#34;: &#34;success&#34;,
+      &#34;total_distance_m&#34;: 5527.495151345757,
+      &#34;total_reward&#34;: 138.2269062519843
+    },
+    {
+      &#34;absolute_distance_error_m&#34;: 247.58182719479828,
+      &#34;closing_action_available&#34;: true,
+      &#34;distance_to_start_at_end_m&#34;: 0,
+      &#34;is_loop&#34;: true,
+      &#34;mean_comfort&#34;: 0.859438314794321,
+      &#34;overlap_ratio&#34;: 0,
+      &#34;q_state_count&#34;: 141882,
+      &#34;return_progress_ratio&#34;: 0.7441860465116279,
+      &#34;revisit_count&#34;: 0,
+      &#34;scenario&#34;: &#34;B&#34;,
+      &#34;seed&#34;: &#34;7360114982603736782&#34;,
+      &#34;steps&#34;: 138,
+      &#34;termination_reason&#34;: &#34;success&#34;,
+      &#34;total_distance_m&#34;: 5247.581827194798,
+      &#34;total_reward&#34;: 146.36715831712215
+    },
+    {
+      &#34;absolute_distance_error_m&#34;: 667.4205066032127,
+      &#34;closing_action_available&#34;: true,
+      &#34;distance_to_start_at_end_m&#34;: 0,
+      &#34;is_loop&#34;: true,
+      &#34;mean_comfort&#34;: 0.923307853067111,
+      &#34;overlap_ratio&#34;: 0,
+      &#34;q_state_count&#34;: 136302,
+      &#34;return_progress_ratio&#34;: 0.7662337662337663,
+      &#34;revisit_count&#34;: 0,
+      &#34;scenario&#34;: &#34;B&#34;,
+      &#34;seed&#34;: &#34;5346582512530713817&#34;,
+      &#34;steps&#34;: 128,
+      &#34;termination_reason&#34;: &#34;success&#34;,
+      &#34;total_distance_m&#34;: 5667.420506603213,
+      &#34;total_reward&#34;: 132.54139902309043
+    }
+  ],
+  &#34;graph_simplified&#34;: false,
+  &#34;map&#34;: {
+    &#34;latitude&#34;: -7.281885,
+    &#34;longitude&#34;: 112.711476,
+    &#34;radius_m&#34;: 3025,
+    &#34;timeout_sec&#34;: 90
+  },
+  &#34;nodes&#34;: 27129,
+  &#34;overlap_basis&#34;: &#34;physical_road_traversal_count&#34;,
+  &#34;overlap_formula&#34;: &#34;(total traversals - unique physical roads) / total traversals; NaN if empty&#34;,
+  &#34;physical_road_identity&#34;: &#34;canonical straight-segment endpoint coordinates; reverse/identical parallel geometry share identity&#34;,
+  &#34;q_formula&#34;: &#34;Q \u003c- Q &#43; alpha * (reward &#43; gamma * max_legal_next_Q - Q); terminal bootstrap=0&#34;,
+  &#34;reference&#34;: &#34;rute_lari_core.py and scenario_A/B/C.ipynb (active November 2026 rules)&#34;,
+  &#34;representative_seed&#34;: 7360114982603736782,
+  &#34;representative_selection&#34;: &#34;valid loops first; smallest absolute distance error, then higher comfort/return progress, then seed; failed ties also use end distance&#34;,
+  &#34;reset_previous_node&#34;: -1,
+  &#34;resolved_seeds&#34;: [
+    16026744465294737446,
+    4278980482946739367,
+    9988407548480542851,
+    7360114982603736782,
+    5346582512530713817
+  ],
+  &#34;reward_constants&#34;: {
+    &#34;distance_error_penalty_per_100m&#34;: -5,
+    &#34;no_action_penalty&#34;: -50,
+    &#34;outward_penalty_scale&#34;: 0,
+    &#34;over_distance_penalty&#34;: -50,
+    &#34;permissive_penalty_per_100m&#34;: -0.1,
+    &#34;return_phase_ratio&#34;: 0.5,
+    &#34;return_reward_scale&#34;: 1.2,
+    &#34;revisit_penalty&#34;: -10,
+    &#34;road&#34;: {
+      &#34;highway&#34;: {
+        &#34;missing&#34;: -2,
+        &#34;other&#34;: -10,
+        &#34;priority&#34;: 1,
+        &#34;secondary_priority&#34;: 0.5,
+        &#34;weight&#34;: 0.55
+      },
+      &#34;surface&#34;: {
+        &#34;missing&#34;: -0.5,
+        &#34;other&#34;: -1,
+        &#34;priority&#34;: 1,
+        &#34;weight&#34;: 0.3
+      },
+      &#34;width&#34;: {
+        &#34;missing&#34;: -0.5,
+        &#34;other&#34;: -1,
+        &#34;priority&#34;: 1,
+        &#34;weight&#34;: 0.15
+      },
+      &#34;width_threshold_m&#34;: 3
+    },
+    &#34;step_limit_penalty&#34;: -50,
+    &#34;success_bonus&#34;: 100
+  },
+  &#34;reward_scheme&#34;: &#34;configurable_signed_unclipped_distance_error_v2&#34;,
+  &#34;rng&#34;: &#34;math/rand/v2 PCG(seed, 0); one independent RNG per seed; not NumPy-equivalent&#34;,
+  &#34;road_score&#34;: {
+    &#34;highway&#34;: {
+      &#34;missing&#34;: -2,
+      &#34;other&#34;: -10,
+      &#34;priority&#34;: 1,
+      &#34;secondary_priority&#34;: 0.5,
+      &#34;weight&#34;: 0.55
+    },
+    &#34;surface&#34;: {
+      &#34;missing&#34;: -0.5,
+      &#34;other&#34;: -1,
+      &#34;priority&#34;: 1,
+      &#34;weight&#34;: 0.3
+    },
+    &#34;width&#34;: {
+      &#34;missing&#34;: -0.5,
+      &#34;other&#34;: -1,
+      &#34;priority&#34;: 1,
+      &#34;weight&#34;: 0.15
+    },
+    &#34;width_threshold_m&#34;: 3
+  },
+  &#34;schema_version&#34;: 1,
+  &#34;snap_distance_m&#34;: 2.719313652518084,
+  &#34;snapshot_path&#34;: &#34;/Users/david/development/go-running-route-q-learning/workdirs/testing/output/osm.json&#34;,
+  &#34;snapshot_sha256&#34;: &#34;9d1f792175018fb07627ee42098793ed867fad7fd8240773d9c7ee29ea477a43&#34;,
+  &#34;start_distance_method&#34;: &#34;Haversine; mean Earth radius 6371009 m; precomputed once per node&#34;,
+  &#34;start_node&#34;: 311431485,
+  &#34;start_selection&#34;: &#34;nearest Haversine node; ties by smaller node ID&#34;,
+  &#34;started_at&#34;: &#34;2026-11-12T09:39:32.105197Z&#34;,
+  &#34;state_fields&#34;: {
+    &#34;A&#34;: [
+      &#34;current_node&#34;
+    ],
+    &#34;B&#34;: [
+      &#34;current_node&#34;,
+      &#34;progress_bin&#34;
+    ],
+    &#34;C&#34;: [
+      &#34;current_node&#34;,
+      &#34;previous_node&#34;,
+      &#34;progress_bin&#34;
+    ]
+  },
+  &#34;status&#34;: &#34;completed&#34;,
+  &#34;tie_break&#34;: &#34;uniform among np.isclose-equivalent values; rtol=1e-5, atol=1e-8&#34;,
+  &#34;training_profile&#34;: &#34;b-horizon-100000-total-300000&#34;,
+  &#34;workdir_config&#34;: {
+    &#34;cache_dir&#34;: &#34;cache&#34;,
+    &#34;export&#34;: {
+      &#34;map_mode&#34;: &#34;standard&#34;
+    },
+    &#34;map&#34;: {
+      &#34;latitude&#34;: -7.281885,
+      &#34;longitude&#34;: 112.711476,
+      &#34;radius_m&#34;: 3025,
+      &#34;timeout_sec&#34;: 90
+    },
+    &#34;output_dir&#34;: &#34;output&#34;,
+    &#34;qlearning&#34;: {
+      &#34;environment&#34;: {
+        &#34;allow_revisit&#34;: true,
+        &#34;distance_tolerance&#34;: 0.2,
+        &#34;max_node_visits&#34;: 2,
+        &#34;max_snap_distance_m&#34;: 100,
+        &#34;max_steps&#34;: 500,
+        &#34;progress_bins&#34;: 25,
+        &#34;revisit_after_ratio&#34;: 0.5,
+        &#34;target_distance_m&#34;: 5000
+      },
+      &#34;reward&#34;: {
+        &#34;distance_error_penalty_per_100m&#34;: -5,
+        &#34;no_action_penalty&#34;: -50,
+        &#34;outward_penalty_scale&#34;: 0,
+        &#34;over_distance_penalty&#34;: -50,
+        &#34;permissive_penalty_per_100m&#34;: -0.1,
+        &#34;return_phase_ratio&#34;: 0.5,
+        &#34;return_reward_scale&#34;: 1.2,
+        &#34;revisit_penalty&#34;: -10,
+        &#34;road&#34;: {
+          &#34;highway&#34;: {
+            &#34;missing&#34;: -2,
+            &#34;other&#34;: -10,
+            &#34;priority&#34;: 1,
+            &#34;secondary_priority&#34;: 0.5,
+            &#34;weight&#34;: 0.55
+          },
+          &#34;surface&#34;: {
+            &#34;missing&#34;: -0.5,
+            &#34;other&#34;: -1,
+            &#34;priority&#34;: 1,
+            &#34;weight&#34;: 0.3
+          },
+          &#34;width&#34;: {
+            &#34;missing&#34;: -0.5,
+            &#34;other&#34;: -1,
+            &#34;priority&#34;: 1,
+            &#34;weight&#34;: 0.15
+          },
+          &#34;width_threshold_m&#34;: 3
+        },
+        &#34;step_limit_penalty&#34;: -50,
+        &#34;success_bonus&#34;: 100
+      },
+      &#34;scenario&#34;: &#34;&#34;,
+      &#34;training&#34;: {
+        &#34;alpha&#34;: 0.15,
+        &#34;episodes&#34;: 10000,
+        &#34;epsilon_decay_episodes&#34;: null,
+        &#34;epsilon_end&#34;: 0.05,
+        &#34;epsilon_start&#34;: 1,
+        &#34;gamma&#34;: 0.95,
+        &#34;max_workers&#34;: 5,
+        &#34;profiles&#34;: [
+          {
+            &#34;episodes&#34;: 300000,
+            &#34;epsilon_decay_episodes&#34;: 100000,
+            &#34;name&#34;: &#34;b-horizon-100000-total-300000&#34;,
+            &#34;scenario&#34;: &#34;B&#34;
+          }
+        ],
+        &#34;runs&#34;: 5,
+        &#34;seeds&#34;: null
+      }
+    },
+    &#34;schema_version&#34;: 1
+  }
+}</pre></details></section>
+</main><script>document.getElementById('copy').addEventListener('click',async()=>{const status=document.getElementById('copy-status');try{await navigator.clipboard.writeText(document.getElementById('metadata').textContent);status.textContent=' Copied';}catch{status.textContent=' Select the metadata text to copy it.';}});</script></body></html>

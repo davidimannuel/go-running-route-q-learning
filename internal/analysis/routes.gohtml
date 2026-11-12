@@ -7,6 +7,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;color:#182733;background:#f5f7fa}#map{height:100vh;width:100%}.panel{position:absolute;z-index:1000;top:16px;left:16px;width:310px;max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #dce3ea;border-radius:14px;box-shadow:0 6px 28px #172b4d24;padding:18px}h1{font-size:19px;margin:0 0 6px}.muted{color:#5a6b7b;font-size:12px;line-height:1.5}label{display:block;font-weight:600;margin:16px 0 6px}select{width:100%;min-width:0;font:inherit;padding:9px;border:1px solid #c4ced8;border-radius:7px;background:#fff}.status{display:inline-block;margin:13px 0 4px;padding:5px 9px;border-radius:6px;font-weight:600;background:#e8f6ed;color:#136839}.status.failed{background:#fcebea;color:#a92b31}dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:14px 0}dt{color:#536475}dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}.legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.legend span{font-size:11px}.legend i{display:inline-block;width:15px;height:4px;vertical-align:middle;margin-right:4px}.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 7px #0005;display:grid;place-items:center}.pin svg{width:17px;height:17px;transform:rotate(45deg);fill:white}.km{background:white;border:3px solid var(--color);border-radius:50%;width:28px;height:28px;text-align:center;line-height:22px;font-weight:700;color:#263748;box-shadow:0 1px 5px #0003}.leaflet-popup-content{font:13px/1.5 system-ui,sans-serif;margin:14px 18px;overflow-wrap:anywhere}.popup-title{font-size:15px;margin-bottom:9px;font-weight:700}.popup-table{display:grid;grid-template-columns:110px 1fr;gap:5px 10px}.popup-table dt{color:#627383}.popup-table dd{text-align:left;margin:0}.foot{border-top:1px solid #e8edf2;margin-top:12px;padding-top:10px}#error{color:#b42318;font-weight:600}button{padding:7px 10px;border:1px solid #c4ced8;border-radius:6px;background:white;cursor:pointer}.leaflet-control-layers{max-width:230px;font:13px/1.5 system-ui,sans-serif}.leaflet-control-layers label{font-weight:400;margin:4px 0}.leaflet-control-layers input{margin-right:5px}.route-options{border-top:1px solid #e8edf2;margin-top:12px;padding-top:2px}.route-options .check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;margin:10px 0}.route-options input{margin:0;accent-color:#2457f5}.route-options .muted{margin:8px 0}.route-arrow{pointer-events:none!important}.route-arrow svg{width:20px;height:20px;display:block;filter:drop-shadow(0 1px 2px #0005)}.traversal-select{margin-bottom:10px}.repeat-key{display:inline-block;width:22px;border-top:4px dashed #be123c;vertical-align:middle;margin-right:5px}
 .seed-nav{display:grid;grid-template-columns:38px minmax(0,1fr) 38px;gap:6px;align-items:center}.seed-nav button{height:38px;font-size:20px;padding:0}.seed-nav button:disabled{opacity:.35;cursor:default}.seed-id{display:block;font-size:12px;overflow-wrap:anywhere;margin:7px 0 4px}#seed-info{margin:0 0 10px}
+.map-actions{display:flex;flex-wrap:wrap;gap:6px}#gpx-status{margin:7px 0}
 @media(max-width:600px){.panel{width:calc(100% - 24px);top:12px;left:12px;max-height:43vh;padding:12px}h1{font-size:16px}dl{gap:4px;margin:8px 0}}
 </style>
 {{template "map-panel-style"}}
@@ -14,7 +15,8 @@
 <body><div id="map"></div>
 <aside class="panel" aria-label="Route information"><details id="map-panel" open><summary class="panel-heading"><span>Route information</span><span class="panel-toggle-label"><span class="panel-when-closed">Show details ＋</span><span class="panel-when-open">Minimize −</span></span></summary><div class="panel-body"><nav style="display:flex;gap:16px;margin-bottom:12px"><a href="{{.HTML.IndexURL}}" target="_top">All results</a><a href="{{.HTML.DetailsURL}}">{{if .HTML.Catalog}}Route details{{else}}Training details{{end}}</a></nav><h1>{{if .HTML.Title}}{{.HTML.Title}}{{else}}Running routes · {{.Scenario}}{{end}}</h1>{{if .HTML.Description}}<p style="white-space:pre-wrap;overflow-wrap:anywhere">{{.HTML.Description}}</p>{{end}}{{if .HTML.Catalog}}<div class="muted">Selected saved loop · field validation not recorded.</div>{{end}}<div class="muted">Final greedy evaluation · epsilon = 0</div>
 <label for="seed">Training seed</label><div class="seed-nav"><button id="seed-prev" type="button" aria-label="Previous seed" title="Previous seed">←</button><select id="seed" aria-describedby="seed-id seed-info"></select><button id="seed-next" type="button" aria-label="Next seed" title="Next seed">→</button></div><code id="seed-id" class="seed-id"></code><details class="muted"><summary id="seed-summary">About this seed</summary><div id="seed-info" aria-live="polite"></div></details><div id="status" class="status"></div><dl id="metrics"></dl>
-<button id="fit">Fit selected route</button>
+<div class="map-actions"><button id="fit">Fit selected route</button><button id="download-gpx" type="button" disabled>Download GPX</button></div>
+<div id="gpx-status" class="muted" role="status" aria-live="polite"></div>
 <div class="route-options">
 <label for="kilometer">Route distance</label><select id="kilometer"><option value="all">All kilometers</option></select>
 <label class="check"><input type="checkbox" id="show-overlap">Highlight repeated roads</label>
@@ -76,6 +78,67 @@ function moveSeed(offset){
  select.value=String(index);select.dispatchEvent(new Event('change'));
 }
 previousSeed.addEventListener('click',()=>moveSeed(-1));nextSeed.addEventListener('click',()=>moveSeed(1));
+
+const downloadGPX=document.getElementById('download-gpx'),gpxStatus=document.getElementById('gpx-status');
+// GPX 1.1: https://www.topografix.com/GPX/1/1/
+// Export the full saved traversal, never the kilometer-filtered display geometry.
+function trackPoints(trial){
+ if(!trial.Segments.length)throw new Error('This seed has no saved route steps.');
+ const points=[routeData.Start];let previousNode=routeData.StartNode;
+ const valid=point=>Array.isArray(point)&&point.length===2&&point.every(Number.isFinite)&&point[0]>=-90&&point[0]<=90&&point[1]>=-180&&point[1]<180;
+ if(!valid(routeData.Start))throw new Error('The saved start coordinate is invalid for GPX.');
+ for(const segment of trial.Segments){
+  const [from,to]=segment.Coordinates,previous=points.at(-1);
+  if(!valid(from)||!valid(to)||segment.From!==previousNode||from[0]!==previous[0]||from[1]!==previous[1]){
+   throw new Error('The saved route contains invalid coordinates or disconnected steps.');
+  }
+  points.push(to);previousNode=segment.To;
+ }
+ const end=points.at(-1);
+ if(trial.IsLoop&&(previousNode!==routeData.StartNode||end[0]!==points[0][0]||end[1]!==points[0][1])){
+  throw new Error('The saved loop does not return to its start.');
+ }
+ return points;
+}
+function buildGPX(trial){
+ const points=trackPoints(trial),namespace='http://www.topografix.com/GPX/1/1';
+ const xml=document.implementation.createDocument(namespace,'gpx',null),root=xml.documentElement;
+ root.setAttribute('version','1.1');root.setAttribute('creator','Running Route Q-Learning');
+ // DOM textContent and XMLSerializer escape names/descriptions as XML text.
+ function add(parent,tag,text){
+  const node=xml.createElementNS(namespace,tag);
+  if(text!==undefined)node.textContent=text;
+  parent.append(node);return node;
+ }
+ const label=routeData.HTML.Title||`Running route - Scenario ${routeData.Scenario}`;
+ const name=`${label} - Seed ${trial.Seed}`;
+ const description=[routeData.HTML.Description,
+  `Scenario ${routeData.Scenario}; seed ${trial.Seed}; saved graph distance ${trial.DistanceM} m; evaluation ${trial.Termination}.`,
+  'Planned route generated from OpenStreetMap, not a recorded GPS activity.'
+ ].filter(Boolean).join(' ');
+ const metadata=add(root,'metadata');add(metadata,'name',name);add(metadata,'desc',description);
+ const track=add(root,'trk');add(track,'name',name);add(track,'desc',description);add(track,'src','OpenStreetMap contributors');
+ const segment=add(track,'trkseg');
+ for(const [lat,lon] of points){
+  const point=add(segment,'trkpt');
+  // GPX uses xsd:decimal: fixed notation avoids scientific notation near zero.
+  const longitude=lon.toFixed(10);
+  if(Number(longitude)>=180)throw new Error('A longitude rounds outside the GPX range.');
+  point.setAttribute('lat',lat.toFixed(10));point.setAttribute('lon',longitude);
+ }
+ const stem=(label.replace(/^Route · /,'').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'running-route').toLowerCase();
+ return {xml:'<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(xml)+'\n',filename:`${stem}-seed-${trial.Seed}.gpx`};
+}
+downloadGPX.addEventListener('click',()=>{
+ try{
+  const result=buildGPX(routeData.Trials[Number(select.value)]);
+  const url=URL.createObjectURL(new Blob([result.xml],{type:'application/gpx+xml;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download=result.filename;
+  document.body.append(link);
+  try{link.click();gpxStatus.textContent=`GPX prepared: ${result.filename}`;}
+  finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+ }catch(err){gpxStatus.textContent=`GPX export failed: ${err.message}`;}
+});
 
 document.getElementById('snap').textContent=`Start node ${routeData.StartNode} · ${fmt(routeData.SnapM,1)} m from input. Distances use Haversine; the graph is not simplified.`;
 // Keep the inspection palette and bins aligned with road-analysis.html.
@@ -238,6 +301,7 @@ function render(fit=true){
  updateSeedInfo();
  nodeInspector.clear();
  layer.clearLayers();const trial=routeData.Trials[Number(select.value)],status=document.getElementById('status');
+ downloadGPX.disabled=trial.Segments.length===0;gpxStatus.textContent=downloadGPX.disabled?'This seed has no saved route steps.':'';
  status.className='status'+(trial.IsLoop?'':' failed');status.textContent=trial.IsLoop?'Valid loop':`Failed · ${trial.Termination.replaceAll('_',' ')}`;
  const metrics=document.getElementById('metrics');metrics.replaceChildren();
  const rows=[['Distance',`${fmt(trial.DistanceM)} m`],['Absolute target error',`${fmt(trial.ErrorM)} m`],['Total reward',fmt(trial.Reward)],['Mean comfort',fmt(trial.Comfort,4)],['Overlap',Number.isFinite(Number(trial.Overlap))?`${fmt(Number(trial.Overlap)*100)}%`:'—'],['Return progress',Number.isFinite(Number(trial.ReturnProgress))?`${fmt(Number(trial.ReturnProgress)*100)}%`:'—'],['End to start',`${fmt(trial.EndDistance)} m`],['Steps / revisits',`${trial.Steps} / ${trial.Revisits}`],['Closing was available',trial.ClosingAvailable?'Yes':'No']];

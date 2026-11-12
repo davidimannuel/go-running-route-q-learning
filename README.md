@@ -4,6 +4,10 @@ Core Go untuk TA rekomendasi rute lari loop berbasis OpenStreetMap. Go menangani
 OSM, graf, reward, Q-learning, CSV, dan peta HTML. Python/Jupyter membaca hasil
 untuk analisis dan diagram laporan.
 
+**Katalog publik:** [Buka katalog rute lari](https://davidimannuel.github.io/go-running-route-q-learning/).
+GitHub Pages sudah aktif; katalog menampilkan hasil pilihan yang disimpan
+sebelumnya, tanpa menjalankan training di browser.
+
 Target rute adalah kembali ke node start mendekati **5.000 meter**. Konfigurasi
 aktif memakai toleransi **20% (4.000–6.000 meter)**; checkpoint lama memakai 10%.
 Skor highway/surface/width adalah preferensi penelitian, bukan ukuran keamanan
@@ -12,7 +16,7 @@ atau hasil survei kenyamanan pelari.
 ## Struktur proyek
 
 ```text
-cmd/cli/             download, analyze, train, serve, dan penyimpanan hasil
+cmd/cli/             run, download, analyze, train, catalog, export, serve
 internal/osm/        Overpass, cache, graf mentah, Haversine, parsing width
 internal/qlearning/  state A/B/C, action, reward, environment, Q-table, metrik
 internal/analysis/   CSV, HTML peta, dan halaman metadata hasil
@@ -89,8 +93,7 @@ go run ./cmd/cli analyze --workdir workdirs/testing
 # Profil testing aktif dengan lima seed acak bersama.
 go run ./cmd/cli train --workdir workdirs/testing
 
-# Atau pilih satu konfigurasi testing; awalan a/b/c menentukan scenario.
-go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
+# Testing kini hanya mengaktifkan profil B horizon berikut.
 go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
 
 # Buat ulang HTML dari hasil tersimpan, tanpa training ulang.
@@ -133,8 +136,8 @@ atau menambahkan rute ke katalog.
 
 `train` tanpa `--profile` menjalankan seluruh profil secara berurutan.
 Rancangan penuh memakai 12 profil × lima seed, total **13.500.000 episode**.
-Profil aktif mengikuti YAML; testing saat ini memilih dua profil B total 300k
-(dinamis dan horizon), yaitu **3.000.000 episode**. Training memakai seed tetap
+Profil aktif mengikuti YAML; testing saat ini memilih B horizon100k-total300k,
+yaitu **1.500.000 episode** untuk lima seed. Training memakai seed tetap
 0–4; testing memilih lima seed acak sekali
 per command untuk seluruh profil yang dipilih. Setiap profil dimulai dari Q-table
 kosong. Hasil yang sudah ada tidak membuat profil dilewati otomatis.
@@ -149,7 +152,7 @@ Profil yang tersedia untuk `--profile`:
 | Horizon 100k, total 300k | `a-horizon-100000-total-300000` | `b-horizon-100000-total-300000` | `c-horizon-100000-total-300000` |
 
 Keempat konfigurasi ada di `workdirs/training`; testing saat ini mengaktifkan
-hanya `b-dynamic-300000` dan `b-horizon-100000-total-300000`. Scenario dipilih melalui profil di YAML. Tidak ada flag
+hanya `b-horizon-100000-total-300000`. Scenario dipilih melalui profil di YAML. Tidak ada flag
 `--scenario`. Jalankan `go run ./cmd/cli --help` untuk ringkasan command dan contoh
 terbaru; `run --help`, `download --help`, `analyze --help`, `train --help`, dan `serve --help`
 menampilkan panduan yang sama.
@@ -221,7 +224,7 @@ Setiap profil menentukan `name`, `scenario`, `episodes`, dan
 nama tersebut juga menjadi direktori hasil. Config penelitian memuat empat
 kombinasi per skenario: dinamis 150k/300k dan horizon 100k dengan total 150k/300k.
 Config testing dapat memilih subset dari definisi profil yang sama; saat ini
-hanya B dinamis300k dan horizon100k-total300k aktif. Koordinat dan cara pemilihan
+hanya B horizon100k-total300k aktif. Koordinat dan cara pemilihan
 seed berbeda dari workdir penelitian.
 
 `epsilon_decay_episodes: null` menurunkan epsilon secara linear dari 1,00 ke 0,05
@@ -713,7 +716,7 @@ menyimpulkan kualitas dari reward atau satu loop berhasil saja.
 - [Model graf jaringan OSMnx](https://osmnx.readthedocs.io/en/stable/getting-started.html#modeling-a-network).
 - [Perhitungan jarak OSMnx/Haversine](https://github.com/gboeing/osmnx/blob/v2.1.1/osmnx/distance.py#L68-L112).
 
-## Ekspor HTML dan katalog statis
+## Perbarui HTML dari hasil tersimpan
 
 Pengaturan workdir hanya memengaruhi tampilan:
 
@@ -742,37 +745,45 @@ Sesudah training, regenerasi presentasi dari hasil tersimpan:
 go run ./cmd/cli export --workdir workdirs/training
 go run ./cmd/cli export --workdir workdirs/testing
 
-# Opsional: katalog hanya berisi satu profil tersimpan.
+# Opsional: perbarui HTML satu profil tersimpan saja.
 go run ./cmd/cli export --workdir workdirs/training \
   --profile b-horizon-100000-total-300000
 
 go run ./cmd/cli serve --dir workdirs --port 8080
 ```
 
-Buka katalog baru (bukan HTML rute lama):
+Buka indeks server di `http://127.0.0.1:8080/`, lalu pilih peta hasil yang sama
+seperti sebelumnya. Contoh URL langsung:
 
-- Training: `http://127.0.0.1:8080/files/training/output/site/index.html`
-- Testing: `http://127.0.0.1:8080/files/testing/output/site/index.html`
+- Training: `http://127.0.0.1:8080/files/training/output/training/b-horizon-100000-total-300000/routes.html`
+- Testing: `http://127.0.0.1:8080/files/testing/output/training/b-horizon-100000-total-300000/routes.html`
 
-Command `export` tidak melakukan unduhan/training atau mengubah HTML/CSV/Q-table/
-metadata sumber. Data graf, skor, rute, dan reward dibaca dari payload HTML lama;
-konfigurasi dan sumber seed dibaca dari metadata hasil tersebut, bukan parameter
-training di YAML saat ini. Hasil analisis yang lama tetap memakai skor dan tanggal
-lamanya; jalankan `analyze` dahulu bila memang ingin menghitung analisis baru.
-Format HTML tanpa payload yang didukung atau metadata yang tidak cocok ditolak.
+Command `export` **menimpa HTML di lokasi aslinya**, tanpa membuat salinan `site/`.
+Tanpa `--profile`, peta analisis yang tersedia dan seluruh profil tersimpan
+(termasuk seed gagal) diperbarui. Dengan `--profile`, hanya `routes.html` dan
+`report.html` profil terpilih yang diperbarui; profil lain serta analisis tetap.
+Navigasi All results kembali ke indeks CLI server yang sudah tersedia.
 
-Setiap ekspor mengganti seluruh `<output_dir>/site/` sebagai satu paket. Dengan
-`--profile`, profil lain dan analisis tidak ikut dalam paket baru. Tanpa flag itu,
-semua profil tersimpan serta analisis yang tersedia disertakan, termasuk rute gagal.
-Filter katalog dapat menampilkan profil yang memiliki loop valid; semua seed tetap
-tersedia untuk pemeriksaan. Jika ekspor gagal, paket sebelumnya dipertahankan.
+Tidak ada unduhan/training atau perubahan CSV, Q-table, snapshot, YAML maupun
+metadata penelitian. Graf, skor, rute dan reward dibaca dari payload HTML lama;
+konfigurasi/sumber seed dibaca dari metadata tersimpan, bukan parameter training
+YAML saat ini. `export.map_mode` menentukan mode presentasi terbaru. Analisis
+lama mempertahankan skor/tanggal lamanya; jalankan `analyze` untuk menghitung
+analisis baru. Jangan menjalankan export bersamaan dengan train/analyze yang
+sedang menulis hasil workdir yang sama.
 
-Paket berisi `index.html`, peta, halaman detail lengkap, serta `export.json` yang
-mencatat mode, tanggal ekspor, tanggal hasil, dan SHA-256 HTML sumber. CSV/Q-table,
-snapshot, dan YAML tidak disalin. Katalog standard dapat diunggah sebagai folder
-statis dengan tautan relatif, termasuk di subfolder hosting. Untuk Q-values pada
-katalog advanced, pertahankan hasil asli dan jalankan CLI server dengan root yang
-mencakup `site` serta hasil aslinya seperti command di atas.
+Semua HTML disiapkan dan diperiksa dahulu. Kesalahan publikasi atau pembatalan
+memulihkan file sebelumnya; ini bukan transaksi tahan crash sistem. Manifest
+`<output_dir>/export.json` (schema 2) mencatat pembaruan terakhir: mode, tanggal,
+hasil yang diperbarui dan SHA-256 HTML sebelum pembaruan. Metadata eksperimen
+asli tetap utuh. Advanced membaca Q-table dari direktori hasil yang sama.
+
+Folder `site/` dari versi export lama dibersihkan setelah ekspor berhasil. Hanya
+folder dengan manifest versi lama yang cocok dengan workdir dan struktur file
+hasil ekspor yang boleh dihapus. Bila ada file tambahan/symlink atau manifest
+tidak cocok, ekspor berhenti tanpa perubahan; pindahkan file tersebut dahulu.
+`web-catalog/` tetap terpisah, tidak diubah oleh export. Gunakan `catalog add`
+untuk menyiapkan rute pilihan bagi hosting statis/GitHub Pages.
 
 Tombol ←/→ berpindah antar-run tanpa membungkus dari akhir ke awal; tombol dinonaktifkan
 pada batas daftar. Dropdown memakai nomor run agar seed panjang tidak terpotong;
@@ -780,6 +791,83 @@ seed uint64 lengkap ditampilkan di bawahnya. Buka **seed information** untuk sum
 seed tetap/acak, arti run independen, dan alasan pemilihan representative. Seed
 representative bukan jaminan rute terbaik di lapangan. Tautan `routes.html?seed=...`
 memilih seed tertentu; **Copy link** pada katalog menyimpan profil dan seed terpilih.
+
+## Download GPX untuk pemeriksaan lapangan
+
+Pada HTML peta rute yang dibuat dengan versi ini, pilih **Training seed** lalu
+klik **Download GPX** di sebelah **Fit selected route**. Tersedia pada standard,
+advanced, dan peta katalog. GPX dibentuk di browser dari data lintasan tertanam;
+tidak ada request endpoint GPX, tambahan library, file server, atau CLI baru.
+Nama file memuat label rute/scenario dan seed uint64 utuh.
+
+**Kontrak file GPX:**
+
+- XML UTF-8, GPX1.1, namespace `http://www.topografix.com/GPX/1/1`, atribut
+  `version="1.1"` dan `creator="Running Route Q-Learning"`.
+- Satu `trk`, satu `trkseg`, berisi `trkpt` dengan atribut `lat`/`lon` WGS84 dalam
+  derajat desimal (10 angka di belakang titik, tanpa notasi eksponen).
+- Titik pertama adalah node start hasil snapping. Selanjutnya satu titik tujuan
+  untuk setiap segmen sesuai urutan langkah; N segmen menghasilkan N+1 titik.
+  Kunjungan ulang/arah balik tetap ada. Segmen terputus atau koordinat tidak valid
+  ditolak; rute berlabel loop wajib berakhir di node dan koordinat start.
+- Seluruh rute seed terpilih diekspor, walaupun tampilan hanya menunjukkan KM
+  tertentu atau layer rute disembunyikan. Data tidak disederhanakan untuk GPX.
+- Nama/deskripsi mencatat scenario, seed, jarak graf tersimpan, dan alasan
+  terminasi; sumber track adalah OpenStreetMap contributors. Teks dibentuk lewat
+  DOM XML/`textContent` dan `XMLSerializer`, bukan interpolasi string XML mentah.
+- Seed tanpa segmen menonaktifkan tombol. Seed gagal yang mempunyai lintasan
+  tetap bisa diekspor untuk inspeksi, dengan status gagal dalam deskripsi.
+- Tidak mengisi waktu aktivitas, elevasi, kecepatan, atau rekaman GPS rekaan.
+  File ini lintasan rencana. Jarak graf dicatat sebagai teks deskripsi; aplikasi
+  penerima dapat menghitung jarak sendiri dari koordinat. Rekaman aktivitas GPS
+  di lapangan tetap pembanding terpisah.
+
+Unduhan memakai `Blob` bertipe `application/gpx+xml;charset=utf-8`, object URL,
+dan tautan `download`. Object URL dilepas sesudah browser diberi waktu memproses
+unduhan. Semua fitur ini bekerja tanpa backend GPX di situs statis.
+
+Implementasi ada di `internal/analysis/routes.gohtml`: `trackPoints`, `buildGPX`,
+dan handler tombol `download-gpx`. Ini alat bantu pengguna; tidak mengubah reward,
+training, metrik, status validasi lapangan, atau menambah pembahasan skripsi.
+HTML lama tidak berubah otomatis. Pengguna akan membuat hasil HTML baru sendiri;
+agent tidak menjalankan training, meregenerasi katalog, atau melakukan deployment.
+Jika hanya memperbarui presentasi, `cli export` menimpa HTML di lokasi hasil
+aslinya tanpa training ulang; folder web-catalog tetap alur terpisah.
+
+Pengujian implementasi memakai HTML pratinjau di /tmp dan unduhan browser nyata:
+standard/advanced/katalog, pergantian seed, filter KM, seed kosong, serta lintasan
+terputus. File diuji dengan schema XSD resmi memakai `xmllint`; urutan151titik
+untuk150segmen, loop, revisits, seed uint64 dan escaping XML diperiksa. GPX filter
+KM identik dengan GPX seluruh rute. Ini verifikasi ekspor, bukan validasi lapangan.
+
+Referensi kontrak dan API implementasi:
+
+- [Schema dan dokumentasi GPX1.1](https://www.topografix.com/GPX/1/1/): struktur
+  `gpx`/`trk`/`trkseg`/`trkpt`, WGS84, batas latitude/longitude, dan field opsional.
+- [Schema XSD GPX1.1 resmi](https://www.topografix.com/GPX/1/1/gpx.xsd): acuan
+  validasi file XML, termasuk urutan elemen dan tipe desimal.
+- [MDN XMLSerializer.serializeToString](https://developer.mozilla.org/en-US/docs/Web/API/XMLSerializer/serializeToString): serialisasi DOM XML.
+- [MDN URL.createObjectURL](https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static): URL sementara untuk `Blob`.
+- [MDN URL.revokeObjectURL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static): pelepasan object URL setelah digunakan.
+
+## Kandidat validasi lapangan — 12 November 2026
+
+Pengguna memilih **tiga rute dari tiga titik awal berbeda**, seluruhnya dari
+`b-horizon-100000-total-300000` (B, 300.000 episode, horizon epsilon100.000).
+Katalog lokal menyimpan pilihan berikut secara mandiri dari output testing:
+
+| ID rute | Seed | Jarak graf tersimpan |
+|---|---|---:|
+| `depan-gang-sebelah-toko9` | `13916397716709765191` | 5.151,87 m |
+| `depan-indomaret-dkb` | `16261264761017114444` | 5.298,84 m |
+| `depan-uwika` | `9988407548480542851` | 5.527,50 m |
+
+Ketiganya masih `field_validation=not_recorded`: kandidat yang akan diperiksa,
+bukan hasil validasi. Catat kesesuaian lintasan/loop, jarak aktivitas GPS dan
+selisihnya terhadap graf, akses/hambatan, serta penyimpangan yang diperlukan.
+Pertahankan temuan gagal; validasi terbatas pada rute dan waktu pemeriksaan,
+bukan generalisasi ke seluruh wilayah. Pengujian ini terpisah dari eksperimen
+perbandingan state. Commit katalog bersifat lokal sampai push/deployment.
 
 ## Menambahkan rute pilihan ke web-catalog
 
@@ -894,6 +982,13 @@ preview Go. Saat dipublikasikan, tautan relatif bekerja di root/subfolder situs.
 
 ### GitHub Pages
 
+**Sudah aktif:** [Katalog rute lari](https://davidimannuel.github.io/go-running-route-q-learning/).
+Source menggunakan **GitHub Actions**. Pada pemeriksaan 12 November 2026,
+indeks publik saat itu menampilkan satu rute pilihan, `depan-gang-sebelah-toko9`.
+Katalog lokal kemudian diperbarui menjadi tiga kandidat pada tabel di atas;
+status publik berikutnya mengikuti push/deployment, belum diperiksa ulang.
+Status ini menunjukkan publikasi berhasil; pemeriksaan lapangan tetap terpisah.
+
 Leaflet berjalan di browser dengan HTML/CSS/JavaScript; backend Go tidak diperlukan.
 Leaflet 1.9.4 dimuat lewat HTTPS dari CDN dan tile OSM lewat HTTPS. Attribution
 OSM tetap terlihat dan referrer normal dipertahankan. Internet tetap diperlukan;
@@ -911,7 +1006,14 @@ Workflow hanya mengunggah `web-catalog/`, tanpa training/unduhan/build Go di Git
 
 Workflow juga dapat dijalankan manual melalui Actions. Proyek dengan GitHub Free
 menggunakan repositori publik; lihat [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
-Menyiapkan workflow di repo lokal belum berarti situs sudah dipublikasikan.
+Pengaturan di atas sudah dilakukan untuk repository ini. Untuk perubahan
+katalog berikutnya, commit/push perubahan `web-catalog/` ke `main`, lalu periksa
+workflow **Deploy route catalog to GitHub Pages** di tab Actions. Jika run pertama
+gagal dengan `Get Pages site failed`/404 sebelum Pages diaktifkan, pastikan Source
+sudah GitHub Actions lalu pilih **Re-run jobs → Re-run all jobs**. Tidak perlu
+membuat workflow tambahan lewat tombol Configure pada template GitHub.
+File `.nojekyll` dipertahankan; deployment ini langsung mengunggah situs statis
+melalui Actions sehingga tidak membutuhkan pemrosesan Jekyll.
 Status pemeriksaan lapangan awalnya not_recorded; loop valid di graf bukan bukti
 kelayakan lapangan. Pemilihan seed untuk katalog terpisah dari sampel eksperimen
 A/B/C yang tetap dilaporkan seluruhnya.

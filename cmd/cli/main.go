@@ -75,10 +75,10 @@ Commands:
             rm <id> removes one route and updates the index; other catalog routes remain.
             clear removes all catalog routes and rebuilds an empty index/manifest.
             It repairs incomplete catalogs; download/training results are retained.
-  export    Read saved HTML and metadata; regenerate a portable catalog in <output_dir>/site/.
-            Uses export.map_mode (standard or advanced). No training/download or source changes.
-            --profile exports only that saved profile; each export replaces the whole site.
-            Standard supports static hosting; advanced Q-values require the original output and CLI serve.
+  export    Refresh existing maps and reports in place from saved HTML and metadata.
+            Uses export.map_mode (standard or advanced). No training/download or research-data changes.
+            --profile updates only that saved profile; other results remain unchanged.
+            Removes verified legacy site exports. Advanced Q-values use the same result and CLI serve.
   serve     Browse HTML maps and recorded settings on 127.0.0.1.
             Defaults: --dir . --port 8080. Open the printed URL; Ctrl+C stops the server.
             Q-values load per node on demand. Raw CSV/JSON/YAML, hidden paths, and symlinks stay private.
@@ -97,14 +97,13 @@ Examples (from the repository root):
   go run ./cmd/cli download --workdir workdirs/testing
   go run ./cmd/cli analyze --workdir workdirs/testing
   go run ./cmd/cli train --workdir workdirs/testing
-  go run ./cmd/cli train --workdir workdirs/testing --profile b-dynamic-300000
   go run ./cmd/cli train --workdir workdirs/testing --profile b-horizon-100000-total-300000
   go run ./cmd/cli catalog add --workdir workdirs/testing --profile b-horizon-100000-total-300000 --seed <saved-seed>
   go run ./cmd/cli export --workdir workdirs/training
   go run ./cmd/cli export --workdir workdirs/testing
   go run ./cmd/cli serve --dir workdirs --port 8080
 
-Training has 12 A/B/C profiles; testing currently selects two B/300k profiles.
+Training has 12 A/B/C profiles; testing currently selects B horizon100k-total300k.
 Export preserves every saved seed and evaluation, including failed routes.
 Share a map seed with ?seed=<actual-seed>; catalog links preserve result and seed.
 Training uses seeds 0-4; testing resolves five random seeds once for all selected profiles.
