@@ -1,5 +1,22 @@
 # Repository Guidelines
 
+## Real OSM way Haversine evidence — 15 November 2026
+
+Added internal/osm/verification_haversine_test.go and testdata/way_533112673.json
+on user request. Three original nodes/one complete way from training snapshot
+d2402df59465909a6dbe85c7f860dbd6cd3789d375b09ce3642694e18453ff66, not synthetic.
+TestVerificationWay533112673Haversine runs Load -> Graph.LoadOSM, then checks
+all four edge lengths against independent references (absolute 1e-6 m) and
+production GreatCircleDistanceM. Logs node coordinates, R6371009, lengths
+51.764378387238/161.293877105247 m (reverse same) and forward sum213.058255492484.
+README has exact verbose uncached command. Fixture local, no download/output
+dependency. All tests/vet/build and diff-check pass. Existing production Go,
+YAML, OSM/CSV sources unchanged by hash. No training/reward/results/catalog/Word
+changes, commit or push. Actual log and independent calculation manifest kept in
+TA docs/assets/bab_3_go/subbab_3_3_2_lengkap_20261115/bukti_haversine/.
+This checks model distances, not field accuracy. Do not expand log/test scope
+without need; user wants concise evidence for thesis screenshots.
+
 ## Perbandingan training dengan backup — 15 November 2026
 
 Pengguna melatih ulang workdir training dan menyimpan pembanding pada

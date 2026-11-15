@@ -734,6 +734,27 @@ Workdir aktif memakai batas 500 langkah dan lima worker untuk percobaan graf
 mentah. Unit test bukan validasi lapangan; rute gagal tetap dilaporkan. Jangan
 menyimpulkan kualitas dari reward atau satu loop berhasil saja.
 
+### Verifikasi panjang way OSM nyata
+
+```bash
+go test ./internal/osm -run '^TestVerificationWay533112673Haversine$' -v -count=1
+```
+
+Test `internal/osm/verification_haversine_test.go` memakai kutipan lokal
+`internal/osm/testdata/way_533112673.json` dari snapshot training dengan acuan
+data OSM 11 November 2026 pukul 15:35:44 UTC (SHA-256
+`d2402df59465909a6dbe85c7f860dbd6cd3789d375b09ce3642694e18453ff66`).
+Tiga node dan way 533112673 disalin utuh, termasuk ID, koordinat dan tags.
+Fixture hanya kutipan, bukan seluruh unduhan; tidak memerlukan internet,
+output training lokal, atau training ulang.
+
+Alur produksi `Load` → `Graph.LoadOSM` → Haversine membentuk empat edge.
+Log menunjukkan koordinat sumber, radius 6.371.009 m, panjang setiap edge,
+serta jumlah panjang dua segmen maju. Panjang yang diharapkan diperiksa
+terhadap hitungan independen dengan toleransi 0,000001 m; bukan dibaca
+dari `edges.csv`. Hasil sekitar 51,764378 m dan 161,293877 m adalah jarak
+model Haversine dari koordinat OSM, bukan hasil pengukuran lapangan.
+
 ### Verifikasi dua episode per skenario
 
 ```bash
