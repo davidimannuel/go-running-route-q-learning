@@ -72,7 +72,7 @@ func TestStateScenariosResetAndZero(t *testing.T) {
 		}
 		e.current, e.previous, e.distance = 1, 0, 2750
 		got := e.State()
-		wantBin := 8
+		wantBin := 11
 		if s == ScenarioA {
 			wantBin = 0
 		}
@@ -85,9 +85,9 @@ func TestStateScenariosResetAndZero(t *testing.T) {
 		if s != ScenarioC && got.PreviousNode != -1 {
 			t.Fatal("inactive previous node must remain -1")
 		}
-		e.distance = 5500
-		if s != ScenarioA && e.State().ProgressBin != 15 {
-			t.Fatal("upper boundary must be bin 15")
+		e.distance = 6000
+		if s != ScenarioA && e.State().ProgressBin != 24 {
+			t.Fatal("upper boundary must be bin 24")
 		}
 		e.Reset()
 		if e.State() != reset || len(e.path) != 0 || e.visits[0] != 1 || e.closingAvailable {
@@ -129,14 +129,14 @@ func TestMaskRevisitClosingAndParallelActions(t *testing.T) {
 	}
 	// Overshooting a non-start node remains an action; failure happens in Step.
 	e.current = 1
-	e.distance = 5499
+	e.distance = 5999
 	if len(e.Available()) != 3 {
 		t.Fatal("non-start overshoot edges were incorrectly pruned")
 	}
 }
 
 func TestLoopBoundsTerminalPriorityAndClosingExemption(t *testing.T) {
-	for _, distance := range []int{4500, 5500} {
+	for _, distance := range []int{4000, 6000} {
 		p := testPreparedGraph(t, [][3]int{{0, 1, 2500}, {1, 2, distance - 3000}, {2, 0, 500}})
 		cfg := DefaultConfig().Environment
 		cfg.MaxSteps = 3
@@ -176,7 +176,7 @@ func TestFailureBoundariesAndIllegalActions(t *testing.T) {
 		t.Fatal("illegal parallel key changed state")
 	}
 	e.current = 1
-	e.distance = 5500
+	e.distance = 6000
 	tr, err := e.Step(ActionID{2, 0})
 	if err != nil {
 		t.Fatal(err)
@@ -207,9 +207,9 @@ func TestDirectionPhaseCrossingAndRevisitReward(t *testing.T) {
 		name                  string
 		distance, after, want float64
 	}{
-		{"early approach", 1000, 50, -0.3}, {"early away", 1000, 150, 0},
-		{"crossing approach still early penalty", 2490, 50, -0.3},
-		{"return approach", 2500, 50, 0.3}, {"return away", 2500, 150, -0.3},
+		{"early approach disabled", 1000, 50, 0}, {"early away", 1000, 150, 0},
+		{"crossing approach still uses disabled early penalty", 2490, 50, 0},
+		{"return approach", 2500, 50, 0.6}, {"return away", 2500, 150, -0.6},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := testPreparedGraph(t, [][3]int{{0, 1, 100}, {1, 2, 100}, {2, 3, 100}})
@@ -287,15 +287,15 @@ func TestDeadEndPenaltyBeforeUpdateAndInitialNoAction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// No legal return at 200 m: r=1-50=-49; terminal bootstrap=0;
-	// Q=2+0.15*(-49-2)=-5.65. No second terminal -50 is added.
+	// No legal return at 200 m: road=1, dead end=-50, final error=-245.
+	// Total=-294; Q=2+0.15*(-294-2)=-42.4; no terminal bootstrap.
 	near(t, got.RewardStep, 1)
-	near(t, got.StopPenalty, -50)
-	near(t, got.Reward, -49)
+	near(t, got.StopPenalty, -295)
+	near(t, got.Reward, -294)
 	near(t, got.Components.Terminal, 0)
-	near(t, got.Components.Total(), -49)
+	near(t, got.Components.Total(), -294)
 	near(t, got.MaxNextQ, 0)
-	near(t, got.QAfter, -5.65)
+	near(t, got.QAfter, -42.4)
 	if !got.Done || got.Termination != NoAvailableAction || !got.QUpdated {
 		t.Fatalf("result=%+v", got)
 	}
@@ -308,8 +308,8 @@ func TestDeadEndPenaltyBeforeUpdateAndInitialNoAction(t *testing.T) {
 	if got.ActionTaken || got.QUpdated || len(q) != 0 {
 		t.Fatal("initial dead end updated an absent action")
 	}
-	near(t, got.Reward, -50)
-	metrics := e.Metrics(-50)
+	near(t, got.Reward, -300)
+	metrics := e.Metrics(-300)
 	if !math.IsNaN(metrics.MeanComfort) || !math.IsNaN(metrics.OverlapRatio) || !math.IsNaN(metrics.ReturnProgressRatio) {
 		t.Fatal("undefined metrics must remain NaN")
 	}
@@ -349,7 +349,7 @@ func TestSuccessfulTerminalDoesNotBootstrap(t *testing.T) {
 	id := ActionID{NextNode: 0}
 	q[e.State()] = map[ActionID]float64{id: 2}
 	// This terminal state's large value must not enter the target.
-	terminal := State{Scenario: ScenarioC, CurrentNode: 0, PreviousNode: 2, ProgressBin: 14}
+	terminal := State{Scenario: ScenarioC, CurrentNode: 0, PreviousNode: 2, ProgressBin: 20}
 	q[terminal] = map[ActionID]float64{{NextNode: 1}: 1000000}
 	got, err := TrainStep(e, q, rand.New(rand.NewPCG(0, 0)), DefaultConfig().Training, 0, &id)
 	if err != nil {

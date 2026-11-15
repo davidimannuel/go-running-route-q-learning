@@ -12,7 +12,7 @@ type AttributeScoreConfig struct {
 }
 
 // HighwayScoreConfig adds a preference for highway=secondary only.
-// A missing secondary_priority keeps the legacy Other score; zero is valid.
+// A nil secondary_priority falls back to Other; zero is a valid explicit score.
 type HighwayScoreConfig struct {
 	AttributeScoreConfig `yaml:",inline"`
 	SecondaryPriority    *float64 `yaml:"secondary_priority,omitempty" json:"secondary_priority,omitempty"`
@@ -33,7 +33,7 @@ type RoadScoreConfig struct {
 }
 
 // RewardConfig contains every numeric road and journey reward parameter.
-// Defaults follow the reference; changing YAML starts a different experiment.
+// Defaults match the active workdirs; changing YAML starts a different experiment.
 type RewardConfig struct {
 	Road                        RoadScoreConfig `yaml:"road" json:"road"`
 	ReturnPhaseRatio            float64         `yaml:"return_phase_ratio" json:"return_phase_ratio"`
@@ -48,18 +48,21 @@ type RewardConfig struct {
 	StepLimitPenalty            float64         `yaml:"step_limit_penalty" json:"step_limit_penalty"`
 }
 
-// DefaultRewardConfig preserves the agreed reference values when YAML omits a field.
+// DefaultRewardConfig uses the reward values of the active training/testing workdirs.
+// YAML overrides these defaults; saved metadata is decoded into its recorded values.
 func DefaultRewardConfig() RewardConfig {
+	secondary := 0.5
 	return RewardConfig{
 		Road: RoadScoreConfig{
-			Highway:         HighwayScoreConfig{AttributeScoreConfig: AttributeScoreConfig{Weight: 0.55, Priority: 1, Other: -1, Missing: -0.5}},
+			Highway:         HighwayScoreConfig{AttributeScoreConfig: AttributeScoreConfig{Weight: 0.55, Priority: 1, Other: -10, Missing: -2}, SecondaryPriority: &secondary},
 			Surface:         AttributeScoreConfig{Weight: 0.30, Priority: 1, Other: -1, Missing: -0.5},
 			Width:           AttributeScoreConfig{Weight: 0.15, Priority: 1, Other: -1, Missing: -0.5},
 			WidthThresholdM: 3,
 		},
-		ReturnPhaseRatio: 0.5, OutwardPenaltyScale: 0.6, ReturnRewardScale: 0.6,
+		ReturnPhaseRatio: 0.5, OutwardPenaltyScale: 0, ReturnRewardScale: 1.2,
 		PermissivePenaltyPer100M: -0.1, RevisitPenalty: -10, SuccessBonus: 100,
-		OverDistancePenalty: -50, NoActionPenalty: -50, StepLimitPenalty: -50,
+		DistanceErrorPenaltyPer100M: -5,
+		OverDistancePenalty:         -50, NoActionPenalty: -50, StepLimitPenalty: -50,
 	}
 }
 

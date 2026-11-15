@@ -1,5 +1,6 @@
 /workdirs/**/cache/
 /workdirs/**/output/
+/workdirs/**/output*/
 
 # Local Python environments and generated notebook/cache files.
 .venv/

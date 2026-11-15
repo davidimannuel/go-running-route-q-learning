@@ -91,7 +91,7 @@ func TestRouteMapAllSeedsEscapingAndFailure(t *testing.T) {
 		if edge.Access == "private" {
 			privateEdges++
 		}
-		checkScores(t, edge.RoadScores, qlearning.RoadScores{HighwayScore: -0.5, SurfaceScore: -0.5, WidthScore: -0.5, ComfortScore: -0.5})
+		checkScores(t, edge.RoadScores, qlearning.RoadScores{HighwayScore: -2, SurfaceScore: -0.5, WidthScore: -0.5, ComfortScore: -1.325})
 	}
 	if privateEdges != 2 {
 		t.Fatal("inspection must retain blocked roads without adding them to the route")

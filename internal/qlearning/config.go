@@ -85,14 +85,16 @@ type TrainingConfig struct {
 	MaxWorkers int      `yaml:"max_workers" json:"max_workers"`
 }
 
+// DefaultConfig uses the shared environment and learning settings of the active
+// workdirs. Profiles, episode budgets, and seed selection are supplied by YAML.
 func DefaultConfig() Config {
 	return Config{
 		Reward: DefaultRewardConfig(),
-		Environment: EnvironmentConfig{TargetDistanceM: 5000, DistanceTolerance: 0.10,
-			ProgressBins: 16, MaxSteps: 220, AllowRevisit: true, RevisitAfterRatio: 0.50,
+		Environment: EnvironmentConfig{TargetDistanceM: 5000, DistanceTolerance: 0.20,
+			ProgressBins: 25, MaxSteps: 500, AllowRevisit: true, RevisitAfterRatio: 0.50,
 			MaxNodeVisits: 2, MaxSnapDistanceM: 100},
 		Training: TrainingConfig{Episodes: 10000, Alpha: 0.15, Gamma: 0.95,
-			EpsilonStart: 1, EpsilonEnd: 0.05, MaxWorkers: 1},
+			EpsilonStart: 1, EpsilonEnd: 0.05, MaxWorkers: 5},
 	}
 }
 

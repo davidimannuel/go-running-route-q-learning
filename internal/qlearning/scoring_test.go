@@ -15,9 +15,9 @@ func TestScoreRoadManualExamples(t *testing.T) {
 		want                    RoadScores
 	}{
 		{"residential", "asphalt", "3 m", RoadScores{1, 1, 1, 1}},
-		{"service", "", "", RoadScores{-1, -0.5, -0.5, -0.775}},
-		{"", "", "", RoadScores{-0.5, -0.5, -0.5, -0.5}},
-		{"residential;service", "paved", "3,5", RoadScores{-1, 1, 1, -0.1}},
+		{"service", "", "", RoadScores{-10, -0.5, -0.5, -5.725}},
+		{"", "", "", RoadScores{-2, -0.5, -0.5, -1.325}},
+		{"residential;service", "paved", "3,5", RoadScores{-10, 1, 1, -5.05}},
 		{"tertiary", "unknown", "2", RoadScores{1, -1, -1, 0.1}},
 		{"living_street", "", "2", RoadScores{1, -0.5, -1, 0.25}},
 	} {
@@ -40,7 +40,12 @@ func checkScores(t *testing.T, got, want RoadScores) {
 
 func TestScoresMatchReferencePython(t *testing.T) {
 	// These frozen expectations were produced by the actual reference functions,
-	// not by this Go mapping. Manual examples above provide an independent check.
+	// not by this Go mapping. Keep that historical score configuration explicit;
+	// current-default manual examples are checked separately above.
+	reference := DefaultRewardConfig().Road
+	reference.Highway.Other = -1
+	reference.Highway.Missing = -0.5
+	reference.Highway.SecondaryPriority = nil
 	contents, err := os.ReadFile("testdata/scoring_reference.json")
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +75,7 @@ func TestScoresMatchReferencePython(t *testing.T) {
 			}
 			for nodeID := range graph.Nodes {
 				for _, edge := range graph.OutgoingEdges(nodeID) {
-					checkScores(t, ScoreEdge(edge), tc.Expected)
+					checkScores(t, reference.ScoreEdge(edge), tc.Expected)
 				}
 			}
 		})
@@ -107,11 +112,11 @@ func TestSecondaryHighwayPriority(t *testing.T) {
 		{" Secondary ", RoadScores{0.5, -0.5, -0.5, 0.05}},
 		{"residential", RoadScores{1, -0.5, -0.5, 0.325}},
 		{"tertiary", RoadScores{1, -0.5, -0.5, 0.325}},
-		{"service", RoadScores{-1, -0.5, -0.5, -0.775}},
-		{"secondary_link", RoadScores{-1, -0.5, -0.5, -0.775}},
-		{"", RoadScores{-0.5, -0.5, -0.5, -0.5}},
+		{"service", RoadScores{-10, -0.5, -0.5, -5.725}},
+		{"secondary_link", RoadScores{-10, -0.5, -0.5, -5.725}},
+		{"", RoadScores{-2, -0.5, -0.5, -1.325}},
 		{"residential;secondary", RoadScores{0.5, -0.5, -0.5, 0.05}},
-		{"secondary;service", RoadScores{-1, -0.5, -0.5, -0.775}},
+		{"secondary;service", RoadScores{-10, -0.5, -0.5, -5.725}},
 		{"['residential', 'secondary']", RoadScores{0.5, -0.5, -0.5, 0.05}},
 	} {
 		t.Run(tc.highway, func(t *testing.T) {
@@ -126,6 +131,7 @@ func TestSecondaryHighwayPriority(t *testing.T) {
 func TestSecondaryHighwayLegacyFallbackAndZero(t *testing.T) {
 	cfg := DefaultRewardConfig().Road
 	cfg.Highway.Other = -2
+	cfg.Highway.SecondaryPriority = nil
 	checkScores(t, cfg.ScoreRoad("secondary", "", 0, false), RoadScores{-2, -0.5, -0.5, -1.325})
 	zero := 0.0
 	cfg.Highway.SecondaryPriority = &zero

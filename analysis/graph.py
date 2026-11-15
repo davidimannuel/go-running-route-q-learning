@@ -13,7 +13,7 @@ ATTRIBUTES = ["highway", "surface", "width", "access"]
 NODE_COLUMNS = ["node_id", "latitude", "longitude"]
 EDGE_COLUMNS = [
     "from", "to", "key", "way_id", "length_m", "name",
-    "highway", "surface", "width", "access",
+    "highway", "surface", "width", "access", "comfort_score",
 ]
 
 
@@ -32,7 +32,7 @@ class GraphAnalysis:
 
     def load(self):
         """Read original node/edge CSV values for the selected workdir."""
-        for name in ("length_figure", "completeness_figure", "attributes_figure"):
+        for name in ("length_figure", "completeness_figure", "attributes_figure", "score_figure"):
             if hasattr(self, name):
                 plt.close(getattr(self, name))
                 delattr(self, name)
@@ -54,7 +54,7 @@ class GraphAnalysis:
             self.output_dir / "edges.csv", usecols=EDGE_COLUMNS,
             dtype={
                 "from": "int64", "to": "int64", "key": "int64", "way_id": "int64",
-                "length_m": "float64", "name": "string",
+                "length_m": "float64", "comfort_score": "float64", "name": "string",
                 **{attribute: "string" for attribute in ATTRIBUTES},
             },
             keep_default_na=False,
@@ -77,6 +77,7 @@ class GraphAnalysis:
             {"check": "Missing destination nodes", "violations": int((~self.edges["to"].isin(self.nodes["node_id"])).sum())},
             {"check": "Invalid coordinates", "violations": int((~finite_coordinates | ~coordinates_in_range).sum())},
             {"check": "Invalid segment lengths", "violations": int((~finite_lengths | self.edges["length_m"].lt(0)).sum())},
+            {"check": "Invalid road character scores", "violations": int((~self.edges["comfort_score"].map(math.isfinite)).sum())},
         ])
         display(self.checks)
         if self.checks["violations"].gt(0).any():
@@ -174,10 +175,78 @@ class GraphAnalysis:
         self.combinations["percentage"] = self.combinations["edge_count"] / self.edge_count * 100
         display(self.combinations.round(2))
 
+    def show_score_distribution(self):
+        """Summarize saved Go road scores without recomputing reward or legality."""
+        scores = self.edges["comfort_score"]
+        if scores.empty or not scores.map(math.isfinite).all():
+            raise ValueError("Road character scores must be non-empty and finite.")
+
+        self.score_groups = pd.DataFrame([
+            {"score_group": "positive", "edge_count": int(scores.gt(0).sum())},
+            {"score_group": "zero", "edge_count": int(scores.eq(0).sum())},
+            {"score_group": "negative", "edge_count": int(scores.lt(0).sum())},
+        ])
+        self.score_groups["percentage"] = self.score_groups["edge_count"] / self.edge_count * 100
+        self.score_statistics = pd.DataFrame([
+            {"statistic": "minimum", "value": scores.min()},
+            {"statistic": "maximum", "value": scores.max()},
+        ])
+
+        # This width controls the figure only; original scores remain unchanged.
+        bin_width = 0.25
+        lower = min(math.floor(scores.min() / bin_width), 0)
+        upper = max(math.ceil(scores.max() / bin_width), 0)
+        if lower == upper:
+            upper += 1
+        bin_edges = [index * bin_width for index in range(lower, upper + 1)]
+        names = {"negative": "Negatif", "zero": "Nol", "positive": "Positif"}
+        grouped = self.score_groups.set_index("score_group")
+        labels = [
+            f"{names[group]}: " + f"{int(grouped.loc[group, 'edge_count']):,}".replace(",", ".")
+            + " (" + f"{grouped.loc[group, 'percentage']:.2f}%".replace(".", ",") + ")"
+            for group in names
+        ]
+
+        self.score_figure, ax = plt.subplots(figsize=(10, 5.5), layout="constrained")
+        counts, _, _ = ax.hist(
+            [scores[scores.lt(0)], scores[scores.eq(0)], scores[scores.gt(0)]],
+            bins=bin_edges, stacked=True, label=labels,
+            color=["#a65a46", "#b8b8b8", "#35698a"], edgecolor="black", linewidth=0.5,
+        )
+        totals = counts[-1]
+        self.score_intervals = pd.DataFrame({
+            "lower_bound": bin_edges[:-1], "upper_bound": bin_edges[1:],
+            "upper_inclusive": [False] * (len(totals) - 1) + [True],
+            "edge_count": totals.astype(int),
+        })
+        self.score_intervals["percentage"] = self.score_intervals["edge_count"] / self.edge_count * 100
+        for left, right, count in zip(bin_edges[:-1], bin_edges[1:], totals):
+            if count:
+                ax.annotate(
+                    f"{int(count):,}".replace(",", "."), xy=((left + right) / 2, count),
+                    xytext=(0, 4), textcoords="offset points", rotation=90,
+                    ha="center", va="bottom", fontsize=9,
+                )
+        number = f"{self.edge_count:,}".replace(",", ".")
+        minimum = f"{scores.min():.2f}".replace(".", ",")
+        maximum = f"{scores.max():.2f}".replace(".", ",")
+        ax.set(
+            title=f"Distribusi Skor Karakter Ruas Jalan\n{number} edge | Rentang {minimum} sampai {maximum} | Interval 0,25",
+            xlabel="Nilai skor karakter ruas jalan", ylabel="Jumlah edge",
+            xlim=(bin_edges[0], bin_edges[-1]),
+        )
+        ax.axvline(0, color="black", linestyle="--", linewidth=0.8)
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3, frameon=False, fontsize=9)
+        ax.margins(y=0.25)
+        ax.set_axisbelow(True)
+        ax.grid(axis="y", alpha=0.2)
+        plt.show()
+
     def save(self):
         """Export the completed report tables and figures without changing inputs."""
         required = ("summary", "length_statistics", "completeness", "distributions",
-                    "width_quality", "combinations", "length_figure", "completeness_figure", "attributes_figure")
+                    "width_quality", "combinations", "score_groups", "score_statistics", "score_intervals",
+                    "length_figure", "completeness_figure", "attributes_figure", "score_figure")
         if any(not hasattr(self, name) for name in required):
             raise RuntimeError("Run the graph report sections before saving; use Run All in the notebook.")
         self.analysis_dir.mkdir(parents=True, exist_ok=True)
@@ -192,6 +261,9 @@ class GraphAnalysis:
             "attribute_distributions.csv": all_distributions,
             "width_quality.csv": self.width_quality,
             "attribute_availability_combinations.csv": self.combinations,
+            "road_score_groups.csv": self.score_groups,
+            "road_score_statistics.csv": self.score_statistics,
+            "road_score_intervals.csv": self.score_intervals,
         }
         for filename, table in tables.items():
             table.to_csv(self.analysis_dir / filename, index=False)
@@ -200,6 +272,7 @@ class GraphAnalysis:
             "segment_lengths.png": self.length_figure,
             "attribute_completeness.png": self.completeness_figure,
             "attribute_distributions.png": self.attributes_figure,
+            "road_score_distribution.png": self.score_figure,
         }
         for filename, figure in figures.items():
             figure.savefig(self.analysis_dir / filename, dpi=180, bbox_inches="tight")

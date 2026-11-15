@@ -87,8 +87,8 @@ func TestEdgeToCSV(t *testing.T) {
 		}
 		// Expected signed scores are independent of the export implementation.
 		for i, scores := range [][4]float64{
-			{-0.5, -0.5, -0.5, -0.5}, {-0.5, -0.5, 1, -0.275}, {1, 1, -0.5, 0.775},
-			{-0.5, -0.5, -0.5, -0.5}, {-0.5, -0.5, 1, -0.275}, {1, 1, -0.5, 0.775},
+			{-2, -0.5, -0.5, -1.325}, {-2, -0.5, 1, -1.1}, {1, 1, -0.5, 0.775},
+			{-2, -0.5, -0.5, -1.325}, {-2, -0.5, 1, -1.1}, {1, 1, -0.5, 0.775},
 		} {
 			for j, wantScore := range scores {
 				value, err := strconv.ParseFloat(got[i+1][10+j], 64)

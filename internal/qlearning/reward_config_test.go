@@ -51,6 +51,8 @@ func TestConfiguredTerminalAndDeadEndRewards(t *testing.T) {
 	reward.StepLimitPenalty = -9
 	reward.OverDistancePenalty = -11
 	reward.RevisitPenalty = -3
+	// Isolate custom terminal/dead-end bonuses from the separate error penalty.
+	reward.DistanceErrorPenaltyPer100M = 0
 	reward.OutwardPenaltyScale = 0
 	reward.ReturnRewardScale = 0
 	p, err := NewPreparedGraph(p.graph, 0, reward)
@@ -105,7 +107,8 @@ func TestSecondaryRewardJSONCompatibility(t *testing.T) {
 		{`{"road":{"highway":{"other":-1,"secondary_priority":0.5}}}`, 0.5},
 		{`{"road":{"highway":{"other":-1,"secondary_priority":0}}}`, 0},
 	} {
-		cfg := DefaultRewardConfig()
+		// Archived JSON is decoded without applying today's defaults.
+		var cfg RewardConfig
 		if err := json.Unmarshal([]byte(tc.body), &cfg); err != nil {
 			t.Fatal(err)
 		}
@@ -176,6 +179,7 @@ func TestSecondaryRewardReachesBellmanAndCacheCheck(t *testing.T) {
 		t.Fatal("changed secondary score accepted by evaluation")
 	}
 	legacy := DefaultRewardConfig()
+	legacy.Road.Highway.SecondaryPriority = nil
 	explicit := legacy
 	fallback := legacy.Road.Highway.Other
 	explicit.Road.Highway.SecondaryPriority = &fallback

@@ -51,7 +51,7 @@ func TestSecondaryPriorityConfig(t *testing.T) {
 		value string
 		want  float64
 	}{
-		{"", -2}, {", secondary_priority: 0.5", 0.5}, {", secondary_priority: 0", 0},
+		{"", 0.5}, {", secondary_priority: null", -2}, {", secondary_priority: 0.5", 0.5}, {", secondary_priority: 0", 0},
 	} {
 		cfg, err := loadYAML(t, validYAML+fmt.Sprintf("qlearning:\n  reward:\n    road:\n      highway: {other: -2%s}\n", tc.value))
 		if err != nil {

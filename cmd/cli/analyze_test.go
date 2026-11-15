@@ -84,7 +84,7 @@ func TestAnalyze(t *testing.T) {
 				t.Fatalf("edges=%v, error=%v", edges, err)
 			}
 			mapHTML := string(readFile(t, filepath.Join(output, "road-analysis.html")))
-			if !strings.Contains(mapHTML, `"center":[-7.282187,112.709282]`) || !strings.Contains(mapHTML, `"comfort_score":-0.5`) || !strings.Contains(mapHTML, `"key":1`) {
+			if !strings.Contains(mapHTML, `"center":[-7.282187,112.709282]`) || !strings.Contains(mapHTML, `"comfort_score":-1.325`) || !strings.Contains(mapHTML, `"key":1`) {
 				t.Fatal("map is missing input location, scores, or parallel edge identity")
 			}
 			if !bytes.Equal(original, readFile(t, filepath.Join(output, "osm.json"))) {

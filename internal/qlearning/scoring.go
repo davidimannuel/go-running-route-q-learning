@@ -22,7 +22,7 @@ func ScoreEdge(e osm.OSMEdge) RoadScores {
 	return DefaultRewardConfig().Road.ScoreEdge(e)
 }
 
-// ScoreRoad uses the reference highway/surface/width mapping by default.
+// ScoreRoad uses the active default highway/surface/width preferences.
 // Configured secondary_priority gives highway=secondary its own preference.
 // Width comes from osm.ParseWidthM at graph loading; its validity flag separates
 // missing data from a usable measurement. Access is a separate reward component.

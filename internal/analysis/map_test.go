@@ -56,7 +56,7 @@ func TestMapToHTMLPreservesGraphAndScores(t *testing.T) {
 		if e.WayID == "100" {
 			checkScores(t, e.RoadScores, qlearning.RoadScores{HighwayScore: 1, SurfaceScore: 1, WidthScore: 1, ComfortScore: 1})
 		} else {
-			checkScores(t, e.RoadScores, qlearning.RoadScores{HighwayScore: -0.5, SurfaceScore: -0.5, WidthScore: -0.5, ComfortScore: -0.5})
+			checkScores(t, e.RoadScores, qlearning.RoadScores{HighwayScore: -2, SurfaceScore: -0.5, WidthScore: -0.5, ComfortScore: -1.325})
 		}
 	}
 	if !reflect.DeepEqual(before, sortedEdges(g)) {

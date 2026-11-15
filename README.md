@@ -240,6 +240,15 @@ metadata ke `seeds` untuk mengulangi batch. Jangan mengisi `runs` dan `seeds`
 bersamaan. Memilih satu profil pada command terpisah dengan seed otomatis akan
 menghasilkan daftar seed baru.
 
+`DefaultConfig()` dan `DefaultRewardConfig()` sekarang mengikuti parameter bersama
+workdir training/testing: target5.000m, toleransi20%, 25kategori, maks500langkah,
+5worker, outward0/return1,20, highwayother−10/missing−2/secondary+0,5,
+serta penalti galat akhir−5/100m. Alpha0,15/gamma0,95/epsilon1→0,05 tetap.
+Profil, jumlah episode, durasi epsilon, dan seed tetap dipilih melalui YAML;
+fallback episode untuk konfigurasi tanpa profil tetap10.000 dan bukan profil
+penelitian. TestReferenceWorkdirConfigurations membandingkan default lingkungan,
+seluruh reward, serta parameter training bersama dengan YAML aktif.
+
 Reward yang tidak dicantumkan mendapat default dari `DefaultRewardConfig()`.
 Override parsial didukung, termasuk angka nol. Bobot digunakan langsung tanpa
 normalisasi, dan skor tidak di-clip. Perubahan reward berlaku pada training,
@@ -253,9 +262,11 @@ service/kategori lain saat ini `−10`, dan highway kosong `−2`. Surface/width
 memakai missing `−0.5`. `secondary_link` tetap memakai `other`. Dengan
 surface/width kosong, skor gabungan secondary adalah `0.05`, dibanding service
 `−5.725`. Aturan ini preferensi penelitian lokal, bukan penilaian keamanan.
-Jika parameter dihilangkan atau null, secondary memakai `other` seperti versi
-lama; angka `0` merupakan override yang sah. Default core tetap kompatibel dengan
-aturan lama. Nilai eksplisit ikut direkam pada config/road_score metadata dan
+Dalam YAML baru, parameter yang dihilangkan memakai default secondary`0.5`;
+`null` memilih fallback`other`, dan angka`0` adalah override yang sah. Metadata
+JSON lama dibaca ke struktur kosong, sehingga secondary yang tidak tercatat
+tetap memakai nilai`other` yang direkam; tidak ditambahi default baru. Nilai
+eksplisit ikut direkam pada config/road_score metadata dan
 halaman Recorded settings. CSV, peta analisis, peta rute, dan reward training
 memakai pemetaan yang sama; hasil tersimpan tidak berubah sebelum command terkait
 dijalankan ulang.
@@ -272,8 +283,9 @@ reward_distance_error = -5 * abs(total_distance_m - target_distance_m) / 100
 Jarak memakai total panjang rute, bukan jarak langsung ke start. Selisih 50m
 mendapat −2,5; 250m mendapat −12,5; 500m mendapat −25; 1.000m mendapat −50.
 Kekurangan dan kelebihan diperlakukan sama. Pada langkah nonterminal komponen
-ini nol. Nilai nol/field yang dihilangkan menonaktifkannya, termasuk ketika
-membaca metadata lama. Nilai harus finite dan tidak positif.
+ini nol. Nilai nol menonaktifkannya. Field yang dihilangkan pada YAML baru memakai
+default−5; pada metadata JSON lama yang tidak mencatatnya, nilainya tetap0.
+Nilai harus finite dan tidak positif.
 
 Penalti ditambahkan pada sukses, over_distance, step_limit, maupun buntu, termasuk
 buntu sebelum action pertama. Buntu setelah bergerak memasukkannya sekali ke
@@ -680,6 +692,20 @@ seluruh episode. Judul grafik cukup menampilkan scenario dan nama profil,
 misalnya `Scenario A | a-dynamic-150000`.
 Hasil turunan disimpan di `output/analysis/`.
 
+Pada `analisa.ipynb`, bagian **9. Distribusi Skor Karakter Ruas Jalan** memanggil
+`report.show_score_distribution()`. Skor dibaca dari kolom `comfort_score` pada
+`edges.csv`, tanpa menghitung ulang aturan reward. Satu histogram menampilkan
+interval skor selebar 0,25, jumlah edge tiap interval, rentang nilai, serta legenda
+jumlah/persentase positif, nol dan negatif. Tabel ringkasan tidak ditampilkan
+lagi. Interval kosong tetap ada; batas kiri termasuk, batas kanan tidak, kecuali
+interval terakhir mencakup kedua batas. Skor asli tidak dibulatkan/dipotong.
+Seluruh edge berarah dihitung sebelum penyaringan akses/perjalanan. Nol tetap
+dihitung terpisah di legenda; nilai tidak finite ditolak. Distribusi bukan skor
+rute hasil training atau bukti keamanan lapangan. Bagian10 menyimpan
+`road_score_groups.csv`, `road_score_statistics.csv`, `road_score_intervals.csv`,
+dan `road_score_distribution.png`. Tidak perlu training atau unduhan ulang jika
+CSV analisis sudah tersedia.
+
 Untuk dependensi baru gunakan `uv add <package>` atau `uv add --group dev <package>`,
 lalu commit `pyproject.toml` dan `uv.lock` bersama. Setup ulang memakai
 `uv sync --locked`. Jangan mengedit `uv.lock` secara manual.
@@ -707,6 +733,73 @@ OSMnx/proyeksi UTM/NumPy. Seed yang sama tidak menjamin rute identik lintas baha
 Workdir aktif memakai batas 500 langkah dan lima worker untuk percobaan graf
 mentah. Unit test bukan validasi lapangan; rute gagal tetap dilaporkan. Jangan
 menyimpulkan kualitas dari reward atau satu loop berhasil saja.
+
+### Verifikasi dua episode per skenario
+
+```bash
+go test ./internal/qlearning -run '^TestVerificationEpisodes$' -v -count=1
+```
+
+`internal/qlearning/verification_test.go` memiliki subtest A, B, dan C. Masing-masing
+mulai dengan Q-table kosong, menjalankan dua episode, dan mempertahankan Q-table
+saat environment di-reset. Q-table antarskenario terpisah. Action diberikan
+langsung dengan key0; pemilihan epsilon-greedy dilewati, sedangkan action mask,
+reward, terminasi, dan pembaruan Q memakai `TrainStep` produksi.
+
+| Skenario | Episode pertama | Episode kedua |
+| --- | --- | --- |
+| A | 1→2→3→6, no_available_action, 2.318,3 m | 1→2→3→4→5→1, success, 4.995,7 m |
+| B | 1→2→3→4→5→4→3, over_distance, 6.161,0 m | 1→2→3→4→5→1, success, 4.995,7 m |
+| C | 1→2→3→4→3→2, step_limit, 5.122,2 m | 1→2→3→4→5→1, success, 4.995,7 m |
+
+Skenario C sengaja memakai max_steps=5 pada test saja, agar kasus batas langkah
+singkat. Episode kedua C berhasil tepat pada langkah5, memeriksa prioritas sukses
+terhadap batas langkah. Default dan konfigurasi training tetap500; A/B memakai500.
+Semua parameter reward, target/toleransi,25bin,alpha0,15/gamma0,95 memakai DefaultConfig.
+
+Graf reusable tetap7node/9ruasdua-arah,18edge dan panjang beragam. Jarak radial
+sintetis ke start:1=0,2=973,4,3=1600,4=1400,5=864,7,6=1750,7=1100m.
+Ini input buatan untuk reward arah, bukan pengukuran Haversine/GPS. Geometri,
+overlap dan pembacaan OSM bukan cakupan enam episode ini. Graf/PlantUML tidak berubah.
+
+Log setiap langkah menunjukkan action mask (available/blocked beserta alasan),
+state sebelum/sesudah dan akumulasi jarak, skor/reward ruas, serta perhitungan Q.
+State B menampilkan bin; C menambahkan previous node(-1 saat reset).
+Reward total tambahan muncul hanya saat komponen selain ruas aktif.
+
+Daftar action legal dibandingkan dengan daftar harapan yang ditulis terpisah,
+bukan hanya dicetak. Kasus memperlihatkan akses way/node private ditolak,
+penutupan terlalu awal ditolak, ruas paralel tetap berbeda, revisit sebelum2.500m
+ditolak dan sesudahnya diperbolehkan. Setelah terminasi, daftar legal harus kosong.
+Bukti ini belum mencakup seluruh nilai akses/batas kunjungan; test lain tetap ada.
+
+Nilai harapan transisi penuh, bin, previous node, jarak tiap langkah, reward,
+Qbefore/maxnext/Qafter/Qtersimpan, terminasi/penalti akhir/total episode dan jumlah
+pasangan Q diperiksa dengan toleransi1e-10 untuk float. Pada B, progress bin di
+akhir over_distance dibatasi ke24. Terminal memakai maxnext0; nilai Q transisi
+gagal tetap tersimpan setelah episode berikutnya. Episode1 seluruh Qbefore0;
+episode2 memperbarui pasangan yang sudah terisi.
+
+Q-table dicetak dan diekspor setelah setiap episode ke folder Git-ignored:
+
+- `playground/verification/A/episode_1_q_table.csv` dan `episode_2_q_table.csv` (3/6pasangan).
+- `playground/verification/B/episode_1_q_table.csv` dan `episode_2_q_table.csv` (6/7pasangan).
+- `playground/verification/C/episode_1_q_table.csv` dan `episode_2_q_table.csv` (5/7pasangan).
+
+CSV memakai scenario,state_node,progress_bin,previous_node,next_node,key,q_value.
+Field state yang tidak digunakan dibiarkan kosong; Q presisi penuh dan hanya
+pasangan tersimpan diekspor (pasangan lain bernilai0). File ditimpa saat test diulang.
+Fungsi penulisan tetap di file test tanpa ketergantungan pada kode di playground.
+Log tampil di terminal; perintah Go tidak menulis ulang file verification.log.
+Bukti lama dalam aset TA serta CSV lama di root playground/verification adalah
+riwayat sebelum subfolder A/B/C, jangan digunakan sebagai bukti terbaru.
+
+Untuk melihat satu skenario saja:
+
+```bash
+go test ./internal/qlearning -run '^TestVerificationEpisodes$/B$' -v -count=1
+go test ./internal/qlearning -run '^TestVerificationEpisodes$/C$' -v -count=1
+```
 
 ## Referensi
 

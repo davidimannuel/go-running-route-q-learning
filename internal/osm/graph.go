@@ -3,6 +3,7 @@ package osm
 import (
 	"fmt"
 	"maps"
+	"math"
 )
 
 // Graph stores a directed multigraph as a list of outgoing edges for each node.
@@ -128,6 +129,41 @@ func (g *Graph) addEdge(edge OSMEdge) {
 		}
 	}
 	g.adjList[edge.From] = append(g.adjList[edge.From], edge)
+}
+
+// AddRoad inserts one bidirectional synthetic road with an explicit length.
+// Missing endpoints are created without geographic coordinates. Set coordinates
+// separately if geographic distances or geometry-based metrics are needed.
+// Like LoadOSM, attributes are parsed from tags and parallel keys are automatic.
+// Call only before preparing the graph for training; tags are cloned on insertion.
+func (g *Graph) AddRoad(from, to int, lengthM float64, tags Tags) error {
+	if math.IsNaN(lengthM) || math.IsInf(lengthM, 0) || lengthM <= 0 {
+		return fmt.Errorf("add road: length must be positive and finite")
+	}
+	wayID := 1
+	for _, edges := range g.adjList {
+		for _, edge := range edges {
+			if edge.WayID >= wayID {
+				wayID = edge.WayID + 1
+			}
+		}
+	}
+	for _, id := range []int{from, to} {
+		if _, exists := g.Nodes[id]; !exists {
+			g.Nodes[id] = Element{Type: TypeNode, ID: id}
+		}
+	}
+	widthM, widthValid := ParseWidthM(tags.Get("width"))
+	edge := OSMEdge{
+		From: from, To: to, WayID: wayID, LengthM: lengthM,
+		Name: tags.Get("name"), Highway: tags.Get("highway"),
+		Surface: tags.Get("surface"), Access: tags.Get("access"),
+		Width: widthM, WidthValid: widthValid, Tags: maps.Clone(tags),
+	}
+	g.addEdge(edge)
+	edge.From, edge.To = to, from
+	g.addEdge(edge)
+	return nil
 }
 
 // OutgoingEdges returns the directed edges leaving nodeID, including parallel

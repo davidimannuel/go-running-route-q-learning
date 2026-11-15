@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/davidimannuel/go-running-route-q-learning/internal/qlearning"
 )
 
 func TestTrainingDefaultsOverridesAndStrictFields(t *testing.T) {
@@ -14,7 +16,7 @@ func TestTrainingDefaultsOverridesAndStrictFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	q := cfg.QLearning
-	if q.Environment.MaxSteps != 220 || q.Environment.TargetDistanceM != 5000 || !q.Environment.AllowRevisit || q.Training.Alpha != 0.15 || q.Training.Episodes != 25 || q.Training.Runs == nil || *q.Training.Runs != 2 || q.Training.Seeds != nil {
+	if q.Environment.MaxSteps != 500 || q.Environment.DistanceTolerance != 0.20 || q.Environment.ProgressBins != 25 || q.Environment.TargetDistanceM != 5000 || !q.Environment.AllowRevisit || q.Training.Alpha != 0.15 || q.Training.Episodes != 25 || q.Training.Runs == nil || *q.Training.Runs != 2 || q.Training.Seeds != nil {
 		t.Fatalf("config=%+v", q)
 	}
 	for _, suffix := range []string{
@@ -47,6 +49,14 @@ func TestReferenceWorkdirConfigurations(t *testing.T) {
 	cfg, err := Load(filepath.Join("..", "..", "workdirs", "training"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	defaults := qlearning.DefaultConfig()
+	if defaults.Environment != cfg.QLearning.Environment || !defaults.Reward.Equal(cfg.QLearning.Reward) {
+		t.Fatal("default environment/reward must match the active workdir")
+	}
+	wantTraining := cfg.QLearning.Training
+	if defaults.Training.Alpha != wantTraining.Alpha || defaults.Training.Gamma != wantTraining.Gamma || defaults.Training.EpsilonStart != wantTraining.EpsilonStart || defaults.Training.EpsilonEnd != wantTraining.EpsilonEnd || defaults.Training.MaxWorkers != wantTraining.MaxWorkers {
+		t.Fatal("default shared training settings must match the active workdir")
 	}
 	highway := cfg.QLearning.Reward.Road.Highway
 	if highway.SecondaryPriority == nil || *highway.SecondaryPriority != 0.5 {

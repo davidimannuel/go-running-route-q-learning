@@ -25,8 +25,8 @@ func TestDistanceErrorOnlyAtSuccessfulEndAndNoBootstrap(t *testing.T) {
 		length, bin        int
 		penalty, reward, q float64
 	}{
-		{4750, 13, -12.5, 92.5, 15.575}, {5000, 14, 0, 105, 17.45},
-		{5250, 15, -12.5, 92.5, 15.575}, {5050, 14, -2.5, 102.5, 17.075},
+		{4750, 19, -12.5, 92.5, 15.575}, {5000, 20, 0, 105, 17.45},
+		{5250, 21, -12.5, 92.5, 15.575}, {5050, 21, -2.5, 102.5, 17.075},
 	} {
 		p := distancePenaltyGraph(t, [][3]int{{0, 1, 2000}, {1, 2, tc.length - 2500}, {2, 0, 500}}, -5)
 		e := testEnvironment(t, p, ScenarioC)
@@ -76,7 +76,7 @@ func TestDistanceErrorAddedOnceToAllFailurePaths(t *testing.T) {
 		reason                                           Termination
 		errorReward, stepReward, stopReward, totalReward float64
 	}{
-		{"over distance", [][3]int{{0, 1, 3000}, {1, 2, 2600}}, 220, []int{1, 2}, OverDistance, -30, -54, 0, -54},
+		{"over distance", [][3]int{{0, 1, 3000}, {1, 2, 3100}}, 500, []int{1, 2}, OverDistance, -55, -74, 0, -74},
 		{"step limit", [][3]int{{0, 1, 100}}, 1, []int{1}, StepLimit, -245, -294, 0, -294},
 		{"dead end after moving", [][3]int{{0, 1, 100}}, 220, []int{1}, NoAvailableAction, -245, 1, -295, -294},
 		{"initial dead end", nil, 220, nil, NoAvailableAction, -250, 0, -300, -300},
@@ -127,7 +127,7 @@ func TestDistanceErrorBackwardCompatibilityAndEvaluation(t *testing.T) {
 		t.Fatal(err)
 	}
 	near(t, old.DistanceErrorPenaltyPer100M, 0)
-	near(t, DefaultRewardConfig().DistanceErrorPenaltyPer100M, 0)
+	near(t, DefaultRewardConfig().DistanceErrorPenaltyPer100M, -5)
 	p := distancePenaltyGraph(t, [][3]int{{0, 1, 100}}, -5)
 	cfg := DefaultConfig()
 	cfg.Scenario = ScenarioB
